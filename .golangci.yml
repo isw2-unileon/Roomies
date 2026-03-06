@@ -1,0 +1,92 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    # Error handling
+    - errcheck
+    - errorlint
+
+    # Code quality
+    - staticcheck
+    - govet
+    - gocritic
+    - revive
+
+    # Complexity
+    - gocyclo
+    - gocognit
+    - funlen
+
+    # Code hygiene
+    - unconvert
+    - ineffassign
+    - unused
+    - unparam
+    - dupl
+
+    # Security
+    - gosec
+
+    # Best practices
+    - nolintlint
+    - misspell
+
+  settings:
+    gocyclo:
+      min-complexity: 15
+
+    gocognit:
+      min-complexity: 20
+
+    funlen:
+      lines: -1
+      statements: 50
+
+    dupl:
+      threshold: 100
+
+    gocritic:
+      enabled-checks:
+        - boolExprSimplify
+        - builtinShadow
+        - commentedOutCode
+        - deferInLoop
+        - nilValReturn
+        - regexpSimplify
+        - unnecessaryBlock
+        - unnecessaryDefer
+        - weakCond
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: indent-error-flow
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-naming
+        - name: var-declaration
+        - name: var-naming
+
+  exclusions:
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      - path: "_test\\.go$"
+        linters:
+          - dupl
+          - funlen
+          - gosec
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
