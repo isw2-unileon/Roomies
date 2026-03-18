@@ -17,9 +17,9 @@ In addition, the platform allows flexible management of housing occupancy. For e
 
 | Name | Email |
 |------|-------|
-| Diego Fuerte | - |
-| Sergio Lopez | - |
-| Aitor Fernandes | - |
+| Diego Fuertes | dfuerl00@estudiantes.unileon.es |
+| Sergio López | sloper00@estudiantes.unileon.es |
+| Aitor Fernandes | afernf38@estudiantes.unileon.es |
 | Jairo Ugidos | jugidh00@estudiantes.unileon.es |
 
 ---
