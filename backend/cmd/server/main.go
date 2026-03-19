@@ -31,8 +31,10 @@ func main() {
 	})
 
 	api := r.Group("/api")
+	// Hello World endpoint consumed by the frontend to verify API connectivity.
 	api.GET("/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
+		// Response contract expected by frontend/src/components/HelloWorld.tsx.
+		c.JSON(http.StatusOK, gin.H{"message": "Hello from Roomies backend!"})
 	})
 
 	srv := &http.Server{

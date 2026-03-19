@@ -1,12 +1,16 @@
+import HelloWorld from './components/HelloWorld'
+
 export default function App() {
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">App</h1>
-        <p className="text-gray-500">
-          Edit <code className="bg-gray-100 px-2 py-1 rounded">src/App.tsx</code> to get started.
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+      <div className="w-full max-w-2xl space-y-6 text-center">
+        <h1 className="text-4xl font-bold text-gray-900">Roomies</h1>
+        <p className="text-gray-600">Frontend + backend hello world connection</p>
+        <div className="flex justify-center">
+          {/* Component that calls /api/hello and renders loading/success/error states. */}
+          <HelloWorld />
+        </div>
       </div>
     </main>
-  );
+  )
 }
