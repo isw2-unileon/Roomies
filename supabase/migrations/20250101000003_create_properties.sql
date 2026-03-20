@@ -7,8 +7,8 @@ CREATE TABLE properties (
   area TEXT,
   total_rooms INT NOT NULL,
   available_rooms INT NOT NULL,
-  base_rent INT NOT NULL,        -- precio base total del piso
-  current_rent INT NOT NULL,     -- precio actual (puede subir si hay menos inquilinos)
+  base_rent INT NOT NULL,       
+  current_rent INT NOT NULL,    
   status TEXT CHECK (status IN ('open', 'closed', 'full')) DEFAULT 'open',
   images TEXT[],
   created_at TIMESTAMPTZ DEFAULT NOW()

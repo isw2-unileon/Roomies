@@ -3,9 +3,9 @@ CREATE TABLE matches (
   tenant_id UUID REFERENCES users(id),
   property_id UUID REFERENCES properties(id),
   status TEXT CHECK (status IN (
-    'pending',       -- esperando respuestas
-    'approved',      -- todos aprobaron
-    'rejected'       -- alguno rechazó
+    'pending',      
+    'approved',      
+    'rejected'     
   )) DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

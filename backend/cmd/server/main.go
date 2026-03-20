@@ -12,6 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
+	"github.com/joho/godotenv"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -19,7 +21,15 @@ var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 func main() {
 	ctx := context.Background()
 
+	godotenv.Load()
+
 	cfg := config.Load()
+
+	if err := database.Connect(cfg.DatabaseURL); err != nil {
+		logger.Error("database connection failed", "error", err)
+		os.Exit(1)
+	}
+	defer database.Close()
 
 	gin.SetMode(cfg.GinMode)
 
