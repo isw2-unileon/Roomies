@@ -10,6 +10,7 @@ type Config struct {
 	CORSAllowOrigin string
 	DatabaseURL     string
 	SupabaseURL     string
+	SupabaseAPIKey  string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -20,6 +21,7 @@ func Load() *Config {
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
 		DatabaseURL:     getEnv("DATABASE_URL", ""),
 		SupabaseURL:     getEnv("SUPABASE_URL", ""),
+		SupabaseAPIKey:  getEnv("SUPABASE_PUBLISHABLE_KEY", ""),
 	}
 }
 
