@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 	"github.com/joho/godotenv"
@@ -35,6 +37,27 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		allowOrigin := cfg.CORSAllowOrigin
+		if allowOrigin == "*" || (origin != "" && strings.EqualFold(origin, allowOrigin)) {
+			if origin != "" && allowOrigin != "*" {
+				c.Header("Access-Control-Allow-Origin", origin)
+			} else {
+				c.Header("Access-Control-Allow-Origin", allowOrigin)
+			}
+			c.Header("Vary", "Origin")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		}
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	})
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -46,6 +69,33 @@ func main() {
 		// Response contract expected by frontend/src/components/HelloWorld.tsx.
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from Roomies backend!"})
 	})
+
+	authService, err := auth.NewService(cfg.SupabaseURL, cfg.SupabaseAPIKey)
+	if err != nil {
+		logger.Warn("auth service disabled", "error", err)
+	} else {
+		api.POST("/auth/login", func(c *gin.Context) {
+			var input auth.LoginInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			result, err := authService.Login(c.Request.Context(), input)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"message":       "login successful",
+				"access_token":  result.AccessToken,
+				"refresh_token": result.RefreshToken,
+				"token_type":    result.TokenType,
+				"expires_in":    result.ExpiresIn,
+			})
+		})
+	}
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
