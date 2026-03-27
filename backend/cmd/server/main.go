@@ -95,6 +95,29 @@ func main() {
 				"expires_in":    result.ExpiresIn,
 			})
 		})
+
+		api.POST("/auth/register", func(c *gin.Context) {
+			var input auth.RegisterInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			result, err := authService.Register(c.Request.Context(), input)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusCreated, gin.H{
+				"message":       "registration successful",
+				"access_token":  result.AccessToken,
+				"refresh_token": result.RefreshToken,
+				"token_type":    result.TokenType,
+				"expires_in":    result.ExpiresIn,
+				"user_id":       result.UserID,
+			})
+		})
 	}
 
 	srv := &http.Server{
