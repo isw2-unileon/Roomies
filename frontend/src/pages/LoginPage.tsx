@@ -10,14 +10,18 @@ interface LoginApiResponse {
   message?: string
   access_token?: string
   refresh_token?: string
+  user_id?: string
+  role?: 'tenant' | 'owner'
+  needs_onboarding?: boolean
   error?: string
 }
 
 interface LoginPageProps {
   onNavigateToRegister: () => void
+  onLoginSuccess: (payload: { role?: 'tenant' | 'owner'; needsOnboarding?: boolean }) => void
 }
 
-export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
+export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -28,9 +32,9 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
 
   const buttonLabel = useMemo(() => {
     if (isLoading) {
-      return 'Signing in...'
+      return 'Iniciando sesion...'
     }
-    return 'Sign in'
+    return 'Iniciar sesion'
   }, [isLoading])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -66,6 +70,11 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
         localStorage.setItem('roomies.refresh_token', data.refresh_token)
       }
 
+      onLoginSuccess({
+        role: data.role,
+        needsOnboarding: data.needs_onboarding,
+      })
+
       setNotice({
         kind: 'success',
         message: data.message || 'Login correcto. Ya puedes continuar en la app.',
@@ -88,26 +97,26 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
             <div>
               <img src={logo} alt="Roomies logo" className="h-14 w-auto" />
               <p className="mt-8 max-w-sm text-base leading-relaxed text-[var(--rm-text-soft)]">
-                Find your next home with people that match your lifestyle, budget, and vibe.
+                Encuentra tu proximo hogar con personas que encajen con tu estilo de vida, presupuesto y forma de vivir.
               </p>
             </div>
-            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Simple matching. Better room sharing.</p>
+            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Matching simple. Mejor convivencia.</p>
           </aside>
 
           <div className="flex items-center justify-center p-6 sm:p-8 md:p-10">
             <div className="w-full max-w-md">
               <div className="mb-8 text-center md:text-left">
                 <img src={logo} alt="Roomies" className="mx-auto h-16 w-auto md:mx-0 md:hidden" />
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">Welcome back</h1>
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">Bienvenido de nuevo</h1>
                 <p className="mt-3 text-sm text-[var(--rm-text-soft)] sm:text-base">
-                  Sign in with your email and password to access your account.
+                  Inicia sesion con tu correo y contrasena para acceder a tu cuenta.
                 </p>
               </div>
 
               <form className="space-y-5" noValidate onSubmit={handleSubmit}>
                 <div>
                   <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Email
+                    Correo electronico
                   </label>
                   <input
                     id="email"
@@ -116,7 +125,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     autoComplete="email"
-                    placeholder="you@example.com"
+                    placeholder="tu@ejemplo.com"
                     required
                     className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
                   />
@@ -124,7 +133,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
 
                 <div>
                   <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Password
+                    Contrasena
                   </label>
                   <input
                     id="password"
@@ -133,7 +142,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     autoComplete="current-password"
-                    placeholder="Enter your password"
+                    placeholder="Introduce tu contrasena"
                     required
                     minLength={6}
                     className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
@@ -166,7 +175,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
                   onClick={onNavigateToRegister}
                   className="w-full rounded-xl border border-[var(--rm-border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--rm-text-strong)] transition hover:border-emerald-900/30 hover:bg-emerald-50/60"
                 >
-                  Create an account
+                  Crear una cuenta
                 </button>
               </form>
             </div>

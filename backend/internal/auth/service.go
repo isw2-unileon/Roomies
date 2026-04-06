@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
+	"github.com/jackc/pgx/v5"
 )
 
 type Service struct {
@@ -37,6 +38,9 @@ type LoginResult struct {
 	RefreshToken string `json:"refresh_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
+	UserID       string `json:"user_id"`
+	Role         string `json:"role"`
+	NeedsTenant  bool   `json:"needs_tenant_profile"`
 }
 
 type RegisterResult struct {
@@ -45,6 +49,8 @@ type RegisterResult struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
 	UserID       string `json:"user_id"`
+	Role         string `json:"role"`
+	NeedsTenant  bool   `json:"needs_tenant_profile"`
 }
 
 type tokenResponse struct {
@@ -70,6 +76,11 @@ type signUpResponse struct {
 	User         struct {
 		ID string `json:"id"`
 	} `json:"user"`
+}
+
+type authUserResponse struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
 }
 
 func NewService(baseURL, apiKey string) (*Service, error) {
@@ -148,11 +159,29 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, er
 		return nil, errors.New(errMessage)
 	}
 
+	authUser, err := s.fetchUser(ctx, parsed.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	role, err := lookupRoleByUserID(ctx, authUser.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	needsTenant, err := needsTenantProfile(ctx, authUser.ID, role)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LoginResult{
 		AccessToken:  parsed.AccessToken,
 		RefreshToken: parsed.RefreshToken,
 		TokenType:    parsed.TokenType,
 		ExpiresIn:    parsed.ExpiresIn,
+		UserID:       authUser.ID,
+		Role:         role,
+		NeedsTenant:  needsTenant,
 	}, nil
 }
 
@@ -261,7 +290,102 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		TokenType:    parsed.TokenType,
 		ExpiresIn:    parsed.ExpiresIn,
 		UserID:       parsed.User.ID,
+		Role:         role,
+		NeedsTenant:  role == "tenant",
 	}, nil
+}
+
+func (s *Service) fetchUser(ctx context.Context, accessToken string) (*authUserResponse, error) {
+	requestURL := s.baseURL + "/auth/v1/user"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create user request: %w", err)
+	}
+
+	req.Header.Set("apikey", s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request user endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read user response: %w", err)
+	}
+
+	var parsed authUserResponse
+	if err := json.Unmarshal(responseBody, &parsed); err != nil {
+		return nil, fmt.Errorf("decode user response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("could not fetch authenticated user")
+	}
+
+	if strings.TrimSpace(parsed.ID) == "" {
+		return nil, errors.New("authenticated user id is missing")
+	}
+
+	return &parsed, nil
+}
+
+func ResolveUserIDFromAccessToken(ctx context.Context, service *Service, accessToken string) (string, error) {
+	if strings.TrimSpace(accessToken) == "" {
+		return "", errors.New("access token is required")
+	}
+
+	user, err := service.fetchUser(ctx, accessToken)
+	if err != nil {
+		return "", err
+	}
+
+	return user.ID, nil
+}
+
+func LookupRoleByUserID(ctx context.Context, userID string) (string, error) {
+	return lookupRoleByUserID(ctx, userID)
+}
+
+func NeedsTenantProfile(ctx context.Context, userID, role string) (bool, error) {
+	return needsTenantProfile(ctx, userID, role)
+}
+
+func lookupRoleByUserID(ctx context.Context, userID string) (string, error) {
+	if strings.TrimSpace(userID) == "" {
+		return "", errors.New("user id is required")
+	}
+
+	var role string
+	err := database.DB.QueryRow(ctx, `SELECT role FROM public.users WHERE id = $1`, userID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", errors.New("user profile not found")
+		}
+		return "", fmt.Errorf("load user role: %w", err)
+	}
+
+	return strings.ToLower(strings.TrimSpace(role)), nil
+}
+
+func needsTenantProfile(ctx context.Context, userID, role string) (bool, error) {
+	if role != "tenant" {
+		return false, nil
+	}
+
+	var exists bool
+	err := database.DB.QueryRow(
+		ctx,
+		`SELECT EXISTS (SELECT 1 FROM public.tenant_profiles WHERE user_id = $1)`,
+		userID,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check tenant profile: %w", err)
+	}
+
+	return !exists, nil
 }
 
 func defaultFullNameFromEmail(email string) string {
