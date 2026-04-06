@@ -164,7 +164,8 @@ cp backend/.env.example backend/.env
 4. Start backend (Terminal 1):
 
 ```bash
-go run ./backend/cmd/server
+cd backend
+go run ./cmd/server
 ```
 
 5. Start frontend (Terminal 2):
