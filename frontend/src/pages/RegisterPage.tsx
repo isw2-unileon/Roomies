@@ -10,14 +10,17 @@ interface RegisterApiResponse {
   access_token?: string
   refresh_token?: string
   user_id?: string
+  role?: 'tenant' | 'owner'
+  needs_onboarding?: boolean
   error?: string
 }
 
 interface RegisterPageProps {
   onNavigateToLogin: () => void
+  onRegisterSuccess: (payload: { role?: 'tenant' | 'owner'; needsOnboarding?: boolean }) => void
 }
 
-export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
+export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: RegisterPageProps) {
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
@@ -31,10 +34,10 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
 
   const buttonLabel = useMemo(() => {
     if (isLoading) {
-      return 'Creating account...'
+      return 'Creando cuenta...'
     }
 
-    return 'Create account'
+    return 'Crear cuenta'
   }, [isLoading])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -94,6 +97,11 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
         localStorage.setItem('roomies.refresh_token', data.refresh_token)
       }
 
+      onRegisterSuccess({
+        role: data.role,
+        needsOnboarding: data.needs_onboarding,
+      })
+
       setNotice({
         kind: 'success',
         message: data.message || 'Cuenta creada correctamente. Ya puedes iniciar sesion.',
@@ -116,19 +124,19 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
             <div>
               <img src={logo} alt="Roomies logo" className="h-14 w-auto" />
               <p className="mt-8 max-w-sm text-base leading-relaxed text-[var(--rm-text-soft)]">
-                Start your Roomies profile and connect with people that fit your lifestyle and budget.
+                Crea tu perfil en Roomies y conecta con personas que encajen con tu estilo de vida y presupuesto.
               </p>
             </div>
-            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Create your account. Find your next room.</p>
+            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Crea tu cuenta. Encuentra tu proxima habitacion.</p>
           </aside>
 
           <div className="flex items-center justify-center p-6 sm:p-8 md:p-10">
             <div className="w-full max-w-md">
               <div className="mb-8 text-center md:text-left">
                 <img src={logo} alt="Roomies" className="mx-auto h-16 w-auto md:mx-0 md:hidden" />
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">Create account</h1>
+                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">Crear cuenta</h1>
                 <p className="mt-3 text-sm text-[var(--rm-text-soft)] sm:text-base">
-                  Complete your details to start using Roomies.
+                  Completa tus datos para empezar a usar Roomies.
                 </p>
               </div>
 
@@ -170,7 +178,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
 
                 <div>
                   <label htmlFor="full-name" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Full name
+                    Nombre completo
                   </label>
                   <input
                     id="full-name"
@@ -179,7 +187,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
                     autoComplete="name"
-                    placeholder="Your full name"
+                    placeholder="Tu nombre completo"
                     required
                     minLength={2}
                     className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
@@ -188,7 +196,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
 
                 <div>
                   <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Email
+                    Correo electronico
                   </label>
                   <input
                     id="email"
@@ -197,7 +205,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     autoComplete="email"
-                    placeholder="you@example.com"
+                    placeholder="tu@ejemplo.com"
                     required
                     className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
                   />
@@ -205,7 +213,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
 
                 <div>
                   <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Password
+                    Contrasena
                   </label>
                   <input
                     id="password"
@@ -214,7 +222,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     autoComplete="new-password"
-                    placeholder="At least 6 characters"
+                    placeholder="Minimo 6 caracteres"
                     required
                     minLength={6}
                     className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
@@ -226,7 +234,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                     htmlFor="confirm-password"
                     className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]"
                   >
-                    Confirm password
+                    Confirmar contrasena
                   </label>
                   <input
                     id="confirm-password"
@@ -235,7 +243,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     autoComplete="new-password"
-                    placeholder="Repeat your password"
+                    placeholder="Repite tu contrasena"
                     required
                     minLength={6}
                     className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
@@ -268,7 +276,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                   onClick={onNavigateToLogin}
                   className="w-full rounded-xl border border-[var(--rm-border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--rm-text-strong)] transition hover:border-emerald-900/30 hover:bg-emerald-50/60"
                 >
-                  Back to sign in
+                  Volver al inicio de sesion
                 </button>
               </form>
             </div>
