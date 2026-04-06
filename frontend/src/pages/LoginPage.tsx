@@ -13,7 +13,11 @@ interface LoginApiResponse {
   error?: string
 }
 
-export default function LoginPage() {
+interface LoginPageProps {
+  onNavigateToRegister: () => void
+}
+
+export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -155,6 +159,14 @@ export default function LoginPage() {
                   className="w-full rounded-xl bg-[var(--rm-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--rm-primary-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {buttonLabel}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onNavigateToRegister}
+                  className="w-full rounded-xl border border-[var(--rm-border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--rm-text-strong)] transition hover:border-emerald-900/30 hover:bg-emerald-50/60"
+                >
+                  Create an account
                 </button>
               </form>
             </div>

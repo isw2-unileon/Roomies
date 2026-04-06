@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 )
 
 type Service struct {
@@ -23,11 +25,26 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
+type RegisterInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
+}
+
 type LoginResult struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
+}
+
+type RegisterResult struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
+	UserID       string `json:"user_id"`
 }
 
 type tokenResponse struct {
@@ -37,7 +54,22 @@ type tokenResponse struct {
 	ExpiresIn    int64  `json:"expires_in"`
 	Error        string `json:"error"`
 	Description  string `json:"error_description"`
+	Message      string `json:"message"`
 	Msg          string `json:"msg"`
+}
+
+type signUpResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
+	Error        string `json:"error"`
+	Description  string `json:"error_description"`
+	Message      string `json:"message"`
+	Msg          string `json:"msg"`
+	User         struct {
+		ID string `json:"id"`
+	} `json:"user"`
 }
 
 func NewService(baseURL, apiKey string) (*Service, error) {
@@ -104,6 +136,9 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, er
 			errMessage = parsed.Msg
 		}
 		if errMessage == "" {
+			errMessage = parsed.Message
+		}
+		if errMessage == "" {
 			errMessage = parsed.Error
 		}
 		if errMessage == "" {
@@ -119,4 +154,127 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, er
 		TokenType:    parsed.TokenType,
 		ExpiresIn:    parsed.ExpiresIn,
 	}, nil
+}
+
+func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterResult, error) {
+	if strings.TrimSpace(input.Email) == "" {
+		return nil, errors.New("email is required")
+	}
+
+	if strings.TrimSpace(input.Password) == "" {
+		return nil, errors.New("password is required")
+	}
+
+	role := strings.ToLower(strings.TrimSpace(input.Role))
+	if role != "tenant" && role != "owner" {
+		return nil, errors.New("role must be tenant or owner")
+	}
+
+	payload := struct {
+		Email    string                 `json:"email"`
+		Password string                 `json:"password"`
+		Data     map[string]interface{} `json:"data"`
+	}{
+		Email:    input.Email,
+		Password: input.Password,
+		Data: map[string]interface{}{
+			"role": role,
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal register payload: %w", err)
+	}
+
+	requestURL := s.baseURL + "/auth/v1/signup"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request signup endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read signup response: %w", err)
+	}
+
+	var parsed signUpResponse
+	if err := json.Unmarshal(responseBody, &parsed); err != nil {
+		return nil, fmt.Errorf("decode signup response: %w", err)
+	}
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		errMessage := parsed.Description
+		if errMessage == "" {
+			errMessage = parsed.Msg
+		}
+		if errMessage == "" {
+			errMessage = parsed.Message
+		}
+		if errMessage == "" {
+			errMessage = parsed.Error
+		}
+		if errMessage == "" {
+			errMessage = "could not create account"
+		}
+
+		return nil, errors.New(errMessage)
+	}
+
+	if strings.TrimSpace(parsed.User.ID) == "" {
+		return nil, errors.New("signup succeeded but user id is missing")
+	}
+
+	fullName := strings.TrimSpace(input.FullName)
+	if fullName == "" {
+		fullName = defaultFullNameFromEmail(input.Email)
+	}
+
+	_, err = database.DB.Exec(ctx,
+		`INSERT INTO public.users (id, email, full_name, role) VALUES ($1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE SET
+			email = EXCLUDED.email,
+			full_name = EXCLUDED.full_name,
+			role = EXCLUDED.role`,
+		parsed.User.ID,
+		input.Email,
+		fullName,
+		role,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("store user profile: %w", err)
+	}
+
+	return &RegisterResult{
+		AccessToken:  parsed.AccessToken,
+		RefreshToken: parsed.RefreshToken,
+		TokenType:    parsed.TokenType,
+		ExpiresIn:    parsed.ExpiresIn,
+		UserID:       parsed.User.ID,
+	}, nil
+}
+
+func defaultFullNameFromEmail(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "New user"
+	}
+
+	parts := strings.Split(email, "@")
+	name := strings.TrimSpace(parts[0])
+	if name == "" {
+		return "New user"
+	}
+
+	return name
 }
