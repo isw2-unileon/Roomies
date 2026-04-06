@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 )
 
 type Service struct {
@@ -26,6 +28,7 @@ type LoginInput struct {
 type RegisterInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	FullName string `json:"full_name"`
 	Role     string `json:"role"`
 }
 
@@ -228,6 +231,30 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		return nil, errors.New(errMessage)
 	}
 
+	if strings.TrimSpace(parsed.User.ID) == "" {
+		return nil, errors.New("signup succeeded but user id is missing")
+	}
+
+	fullName := strings.TrimSpace(input.FullName)
+	if fullName == "" {
+		fullName = defaultFullNameFromEmail(input.Email)
+	}
+
+	_, err = database.DB.Exec(ctx,
+		`INSERT INTO public.users (id, email, full_name, role) VALUES ($1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE SET
+			email = EXCLUDED.email,
+			full_name = EXCLUDED.full_name,
+			role = EXCLUDED.role`,
+		parsed.User.ID,
+		input.Email,
+		fullName,
+		role,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("store user profile: %w", err)
+	}
+
 	return &RegisterResult{
 		AccessToken:  parsed.AccessToken,
 		RefreshToken: parsed.RefreshToken,
@@ -235,4 +262,19 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		ExpiresIn:    parsed.ExpiresIn,
 		UserID:       parsed.User.ID,
 	}, nil
+}
+
+func defaultFullNameFromEmail(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "New user"
+	}
+
+	parts := strings.Split(email, "@")
+	name := strings.TrimSpace(parts[0])
+	if name == "" {
+		return "New user"
+	}
+
+	return name
 }

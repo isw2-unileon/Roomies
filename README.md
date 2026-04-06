@@ -138,6 +138,49 @@ make run-frontend
 
 The Vite dev server proxies `/api` requests to the backend automatically.
 
+### Detailed run guide (without `make`)
+
+Use this flow if you do not have `make` installed (common on Windows).
+
+1. Install dependencies from project root:
+
+```bash
+go mod download
+cd frontend && npm ci
+cd ../e2e && npm ci
+cd ..
+```
+
+2. Configure backend environment:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+3. Set a valid `DATABASE_URL` in `backend/.env`.
+   - The backend starts only if database connection succeeds.
+   - `SUPABASE_URL` and `DATABASE_URL` should point to the same Supabase project.
+
+4. Start backend (Terminal 1):
+
+```bash
+go run ./backend/cmd/server
+```
+
+5. Start frontend (Terminal 2):
+
+```bash
+cd frontend && npm run dev
+```
+
+6. Open the app:
+   - Frontend: `http://localhost:5173`
+   - Backend health check: `http://localhost:8080/health`
+
+7. Quick verification:
+   - If backend is running correctly, `/health` returns `{ "status": "ok" }`.
+   - Frontend requests to `/api/*` are proxied to backend automatically.
+
 ### Production build
 
 ```bash

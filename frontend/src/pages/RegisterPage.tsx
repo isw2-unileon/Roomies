@@ -9,6 +9,7 @@ interface RegisterApiResponse {
   message?: string
   access_token?: string
   refresh_token?: string
+  user_id?: string
   error?: string
 }
 
@@ -18,6 +19,7 @@ interface RegisterPageProps {
 
 export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
   const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<UserRole>('tenant')
@@ -55,6 +57,14 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
       return
     }
 
+    if (fullName.trim().length < 2) {
+      setNotice({
+        kind: 'error',
+        message: 'El nombre completo debe tener al menos 2 caracteres.',
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -63,7 +73,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password, full_name: fullName.trim(), role }),
       })
 
       const data = (await response.json()) as RegisterApiResponse
@@ -156,6 +166,24 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
                       </span>
                     </label>
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="full-name" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
+                    Full name
+                  </label>
+                  <input
+                    id="full-name"
+                    name="full-name"
+                    type="text"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    autoComplete="name"
+                    placeholder="Your full name"
+                    required
+                    minLength={2}
+                    className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
+                  />
                 </div>
 
                 <div>
