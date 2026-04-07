@@ -4,6 +4,7 @@ import logo from '@/assets/logo.png'
 import DashboardPlaceholderPage from './pages/DashboardPlaceholderPage'
 import LoginPage from './pages/LoginPage'
 import OwnerComingSoonPage from './pages/OwnerComingSoonPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import RegisterPage from './pages/RegisterPage'
 import TenantOnboardingPage from './pages/TenantOnboardingPage'
 
@@ -58,6 +59,10 @@ export default function App() {
 
   if (path === '/register') {
     return <RegisterPage onNavigateToLogin={() => navigateTo('/')} onRegisterSuccess={handleAuthSuccess} />
+  }
+
+  if (path === '/auth/callback') {
+    return <AuthCallbackPage onResolved={handleAuthSuccess} onNavigateToLogin={() => navigateTo('/')} />
   }
 
   if (path === '/onboarding/tenant') {

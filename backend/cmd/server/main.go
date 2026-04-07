@@ -107,7 +107,8 @@ func main() {
 				return
 			}
 
-			result, err := authService.Register(c.Request.Context(), input)
+			emailRedirectTo := strings.TrimRight(cfg.FrontendURL, "/") + "/auth/callback"
+			result, err := authService.Register(c.Request.Context(), input, emailRedirectTo)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
@@ -123,6 +124,22 @@ func main() {
 				"role":             result.Role,
 				"needs_onboarding": result.NeedsTenant,
 			})
+		})
+
+		api.POST("/auth/forgot-password", func(c *gin.Context) {
+			var input auth.ForgotPasswordInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			redirectTo := strings.TrimRight(cfg.FrontendURL, "/") + "/reset-password"
+			if err := authService.ForgotPassword(c.Request.Context(), input, redirectTo); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "password recovery email sent"})
 		})
 
 		api.GET("/profile/status", func(c *gin.Context) {

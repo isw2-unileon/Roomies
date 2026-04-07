@@ -26,6 +26,10 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
+type ForgotPasswordInput struct {
+	Email string `json:"email"`
+}
+
 type RegisterInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -69,11 +73,18 @@ type signUpResponse struct {
 	RefreshToken string `json:"refresh_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
+	ID           string `json:"id"`
 	Error        string `json:"error"`
 	Description  string `json:"error_description"`
 	Message      string `json:"message"`
 	Msg          string `json:"msg"`
-	User         struct {
+	Session      struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int64  `json:"expires_in"`
+	} `json:"session"`
+	User struct {
 		ID string `json:"id"`
 	} `json:"user"`
 }
@@ -185,7 +196,7 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResult, er
 	}, nil
 }
 
-func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterResult, error) {
+func (s *Service) Register(ctx context.Context, input RegisterInput, emailRedirectTo string) (*RegisterResult, error) {
 	if strings.TrimSpace(input.Email) == "" {
 		return nil, errors.New("email is required")
 	}
@@ -200,12 +211,14 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 	}
 
 	payload := struct {
-		Email    string                 `json:"email"`
-		Password string                 `json:"password"`
-		Data     map[string]interface{} `json:"data"`
+		Email           string                 `json:"email"`
+		Password        string                 `json:"password"`
+		EmailRedirectTo string                 `json:"email_redirect_to,omitempty"`
+		Data            map[string]interface{} `json:"data"`
 	}{
-		Email:    input.Email,
-		Password: input.Password,
+		Email:           input.Email,
+		Password:        input.Password,
+		EmailRedirectTo: strings.TrimSpace(emailRedirectTo),
 		Data: map[string]interface{}{
 			"role": role,
 		},
@@ -260,8 +273,33 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 		return nil, errors.New(errMessage)
 	}
 
-	if strings.TrimSpace(parsed.User.ID) == "" {
+	userID := strings.TrimSpace(parsed.User.ID)
+	if userID == "" {
+		userID = strings.TrimSpace(parsed.ID)
+	}
+
+	if userID == "" {
 		return nil, errors.New("signup succeeded but user id is missing")
+	}
+
+	accessToken := strings.TrimSpace(parsed.AccessToken)
+	if accessToken == "" {
+		accessToken = strings.TrimSpace(parsed.Session.AccessToken)
+	}
+
+	refreshToken := strings.TrimSpace(parsed.RefreshToken)
+	if refreshToken == "" {
+		refreshToken = strings.TrimSpace(parsed.Session.RefreshToken)
+	}
+
+	tokenType := strings.TrimSpace(parsed.TokenType)
+	if tokenType == "" {
+		tokenType = strings.TrimSpace(parsed.Session.TokenType)
+	}
+
+	expiresIn := parsed.ExpiresIn
+	if expiresIn == 0 {
+		expiresIn = parsed.Session.ExpiresIn
 	}
 
 	fullName := strings.TrimSpace(input.FullName)
@@ -275,7 +313,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 			email = EXCLUDED.email,
 			full_name = EXCLUDED.full_name,
 			role = EXCLUDED.role`,
-		parsed.User.ID,
+		userID,
 		input.Email,
 		fullName,
 		role,
@@ -285,14 +323,81 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterR
 	}
 
 	return &RegisterResult{
-		AccessToken:  parsed.AccessToken,
-		RefreshToken: parsed.RefreshToken,
-		TokenType:    parsed.TokenType,
-		ExpiresIn:    parsed.ExpiresIn,
-		UserID:       parsed.User.ID,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    tokenType,
+		ExpiresIn:    expiresIn,
+		UserID:       userID,
 		Role:         role,
 		NeedsTenant:  role == "tenant",
 	}, nil
+}
+
+func (s *Service) ForgotPassword(ctx context.Context, input ForgotPasswordInput, redirectTo string) error {
+	if strings.TrimSpace(input.Email) == "" {
+		return errors.New("email is required")
+	}
+
+	if strings.TrimSpace(redirectTo) == "" {
+		return errors.New("redirect URL is required")
+	}
+
+	payload := struct {
+		Email      string `json:"email"`
+		RedirectTo string `json:"redirect_to"`
+	}{
+		Email:      strings.TrimSpace(input.Email),
+		RedirectTo: strings.TrimSpace(redirectTo),
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal forgot password payload: %w", err)
+	}
+
+	requestURL := s.baseURL + "/auth/v1/recover"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request recover endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read recover response: %w", err)
+	}
+
+	var parsed tokenResponse
+	_ = json.Unmarshal(responseBody, &parsed)
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		errMessage := parsed.Description
+		if errMessage == "" {
+			errMessage = parsed.Msg
+		}
+		if errMessage == "" {
+			errMessage = parsed.Message
+		}
+		if errMessage == "" {
+			errMessage = parsed.Error
+		}
+		if errMessage == "" {
+			errMessage = "could not start password recovery"
+		}
+
+		return errors.New(errMessage)
+	}
+
+	return nil
 }
 
 func (s *Service) fetchUser(ctx context.Context, accessToken string) (*authUserResponse, error) {
