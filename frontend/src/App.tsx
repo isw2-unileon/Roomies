@@ -6,12 +6,51 @@ import LoginPage from './pages/LoginPage'
 import OwnerComingSoonPage from './pages/OwnerComingSoonPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import RegisterPage from './pages/RegisterPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import TenantOnboardingPage from './pages/TenantOnboardingPage'
 
+function normalizePath(pathname: string) {
+  if (!pathname) {
+    return '/'
+  }
+
+  const normalized = pathname.replace(/\/+$/, '')
+  return normalized === '' ? '/' : normalized
+}
+
+function resolvePathFromLocation() {
+  const pathname = normalizePath(window.location.pathname)
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const queryParams = new URLSearchParams(window.location.search)
+
+  const flowType = (hashParams.get('type') || queryParams.get('type') || '').trim().toLowerCase()
+  const hasAccessToken = (hashParams.get('access_token') || queryParams.get('access_token') || '').trim().length > 0
+  const hasTokenHash = (hashParams.get('token_hash') || queryParams.get('token_hash') || '').trim().length > 0
+
+  if (pathname === '/') {
+    if (flowType === 'recovery' && hasAccessToken) {
+      return '/reset-password'
+    }
+
+    if ((flowType === 'signup' || hasTokenHash) && (hasAccessToken || hasTokenHash)) {
+      return '/auth/callback'
+    }
+  }
+
+  return pathname
+}
+
 export default function App() {
-  const [path, setPath] = useState(() => window.location.pathname)
+  const [path, setPath] = useState(() => resolvePathFromLocation())
 
   useEffect(() => {
+    const resolvedPath = resolvePathFromLocation()
+    const currentPath = normalizePath(window.location.pathname)
+    if (resolvedPath !== currentPath) {
+      window.history.replaceState({}, '', `${resolvedPath}${window.location.search}${window.location.hash}`)
+      setPath(resolvedPath)
+    }
+
     document.title = 'Roomies'
 
     const favicon = document.querySelector("link[rel='icon']") ?? document.createElement('link')
@@ -24,7 +63,7 @@ export default function App() {
     }
 
     const handlePopState = () => {
-      setPath(window.location.pathname)
+      setPath(resolvePathFromLocation())
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -35,12 +74,13 @@ export default function App() {
   }, [])
 
   function navigateTo(nextPath: string) {
-    if (window.location.pathname === nextPath) {
+    const normalizedPath = normalizePath(nextPath)
+    if (normalizePath(window.location.pathname) === normalizedPath) {
       return
     }
 
-    window.history.pushState({}, '', nextPath)
-    setPath(nextPath)
+    window.history.pushState({}, '', normalizedPath)
+    setPath(normalizedPath)
   }
 
   function handleAuthSuccess(payload: { role?: 'tenant' | 'owner'; needsOnboarding?: boolean }) {
@@ -63,6 +103,10 @@ export default function App() {
 
   if (path === '/auth/callback') {
     return <AuthCallbackPage onResolved={handleAuthSuccess} onNavigateToLogin={() => navigateTo('/')} />
+  }
+
+  if (path === '/reset-password') {
+    return <ResetPasswordPage onNavigateToLogin={() => navigateTo('/')} />
   }
 
   if (path === '/onboarding/tenant') {

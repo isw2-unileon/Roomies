@@ -57,6 +57,13 @@ type RegisterResult struct {
 	NeedsTenant  bool   `json:"needs_tenant_profile"`
 }
 
+type VerifyResult struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
+}
+
 type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -398,6 +405,175 @@ func (s *Service) ForgotPassword(ctx context.Context, input ForgotPasswordInput,
 	}
 
 	return nil
+}
+
+func (s *Service) UpdatePassword(ctx context.Context, accessToken, newPassword string) error {
+	accessToken = strings.TrimSpace(accessToken)
+	if accessToken == "" {
+		return errors.New("access token is required")
+	}
+
+	newPassword = strings.TrimSpace(newPassword)
+	if len(newPassword) < 6 {
+		return errors.New("password must be at least 6 characters")
+	}
+
+	payload := struct {
+		Password string `json:"password"`
+	}{
+		Password: newPassword,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal update password payload: %w", err)
+	}
+
+	requestURL := s.baseURL + "/auth/v1/user"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, requestURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create update password request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request update password endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read update password response: %w", err)
+	}
+
+	var parsed tokenResponse
+	_ = json.Unmarshal(responseBody, &parsed)
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		errMessage := parsed.Description
+		if errMessage == "" {
+			errMessage = parsed.Msg
+		}
+		if errMessage == "" {
+			errMessage = parsed.Message
+		}
+		if errMessage == "" {
+			errMessage = parsed.Error
+		}
+		if errMessage == "" {
+			errMessage = "could not update password"
+		}
+
+		return errors.New(errMessage)
+	}
+
+	return nil
+}
+
+func (s *Service) VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*VerifyResult, error) {
+	tokenHash = strings.TrimSpace(tokenHash)
+	token = strings.TrimSpace(token)
+	if tokenHash == "" && token == "" {
+		return nil, errors.New("token is required")
+	}
+
+	verifyType = strings.TrimSpace(verifyType)
+	if verifyType == "" {
+		verifyType = "signup"
+	}
+
+	if tokenHash != "" {
+		result, err := s.verifyEmailWithPayload(ctx, struct {
+			Type      string `json:"type"`
+			TokenHash string `json:"token_hash"`
+		}{
+			Type:      verifyType,
+			TokenHash: tokenHash,
+		})
+		if err == nil {
+			return result, nil
+		}
+
+		if token == "" {
+			return nil, err
+		}
+	}
+
+	return s.verifyEmailWithPayload(ctx, struct {
+		Type  string `json:"type"`
+		Token string `json:"token"`
+		Email string `json:"email,omitempty"`
+	}{
+		Type:  verifyType,
+		Token: token,
+		Email: strings.TrimSpace(email),
+	})
+}
+
+func (s *Service) verifyEmailWithPayload(ctx context.Context, payload interface{}) (*VerifyResult, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal verify payload: %w", err)
+	}
+
+	requestURL := s.baseURL + "/auth/v1/verify"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create verify request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request verify endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read verify response: %w", err)
+	}
+
+	var parsed tokenResponse
+	if err := json.Unmarshal(responseBody, &parsed); err != nil {
+		return nil, fmt.Errorf("decode verify response: %w", err)
+	}
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		errMessage := parsed.Description
+		if errMessage == "" {
+			errMessage = parsed.Msg
+		}
+		if errMessage == "" {
+			errMessage = parsed.Message
+		}
+		if errMessage == "" {
+			errMessage = parsed.Error
+		}
+		if errMessage == "" {
+			errMessage = "could not verify account"
+		}
+
+		return nil, errors.New(errMessage)
+	}
+
+	if strings.TrimSpace(parsed.AccessToken) == "" {
+		return nil, errors.New("verification succeeded but access token is missing")
+	}
+
+	return &VerifyResult{
+		AccessToken:  strings.TrimSpace(parsed.AccessToken),
+		RefreshToken: strings.TrimSpace(parsed.RefreshToken),
+		TokenType:    strings.TrimSpace(parsed.TokenType),
+		ExpiresIn:    parsed.ExpiresIn,
+	}, nil
 }
 
 func (s *Service) fetchUser(ctx context.Context, accessToken string) (*authUserResponse, error) {

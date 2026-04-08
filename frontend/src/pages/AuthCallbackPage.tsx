@@ -15,7 +15,7 @@ interface AuthCallbackPageProps {
   onNavigateToLogin: () => void
 }
 
-const DEFAULT_ERROR_MESSAGE = 'No se pudo confirmar tu cuenta. Intenta iniciar sesion manualmente.'
+const DEFAULT_ERROR_MESSAGE = 'No se pudo confirmar tu cuenta. Abre de nuevo el enlace del correo o solicita uno nuevo.'
 
 function getAuthDataFromUrl() {
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
@@ -23,11 +23,19 @@ function getAuthDataFromUrl() {
 
   const accessToken = hashParams.get('access_token') || queryParams.get('access_token') || ''
   const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token') || ''
+  const tokenHash = hashParams.get('token_hash') || queryParams.get('token_hash') || ''
+  const token = hashParams.get('token') || queryParams.get('token') || ''
+  const email = hashParams.get('email') || queryParams.get('email') || ''
+  const verifyType = hashParams.get('type') || queryParams.get('type') || ''
   const error = hashParams.get('error_description') || hashParams.get('error') || queryParams.get('error') || ''
 
   return {
     accessToken: accessToken.trim(),
     refreshToken: refreshToken.trim(),
+    tokenHash: tokenHash.trim(),
+    token: token.trim(),
+    email: email.trim(),
+    verifyType: verifyType.trim(),
     error: error.trim(),
   }
 }
@@ -59,16 +67,55 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
         return
       }
 
-      if (!authData.accessToken) {
+      let accessToken = authData.accessToken
+      let refreshToken = authData.refreshToken
+
+      if (!accessToken && (authData.tokenHash || authData.token)) {
+        try {
+          const confirmResponse = await fetch('/api/auth/confirm', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              token_hash: authData.tokenHash,
+              token: authData.token,
+              type: authData.verifyType || 'signup',
+              email: authData.email,
+            }),
+          })
+
+          const confirmData = (await confirmResponse.json()) as {
+            access_token?: string
+            refresh_token?: string
+            error?: string
+          }
+
+          if (!confirmResponse.ok) {
+            throw new Error(confirmData.error || DEFAULT_ERROR_MESSAGE)
+          }
+
+          accessToken = (confirmData.access_token || '').trim()
+          refreshToken = (confirmData.refresh_token || '').trim()
+        } catch (error) {
+          if (!cancelled) {
+            const message = error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE
+            setNotice({ kind: 'error', message })
+          }
+          return
+        }
+      }
+
+      if (!accessToken) {
         if (!cancelled) {
           setNotice({ kind: 'error', message: DEFAULT_ERROR_MESSAGE })
         }
         return
       }
 
-      localStorage.setItem('roomies.access_token', authData.accessToken)
-      if (authData.refreshToken) {
-        localStorage.setItem('roomies.refresh_token', authData.refreshToken)
+      localStorage.setItem('roomies.access_token', accessToken)
+      if (refreshToken) {
+        localStorage.setItem('roomies.refresh_token', refreshToken)
       }
 
       window.history.replaceState({}, '', '/auth/callback')
@@ -76,7 +123,7 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
       try {
         const response = await fetch('/api/profile/status', {
           headers: {
-            Authorization: `Bearer ${authData.accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         })
 
