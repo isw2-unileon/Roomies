@@ -5,287 +5,263 @@
 
 # Roomies
 
-Roomies is a web application designed to make it easier to find rooms and roommates through a user compatibility system. Unlike traditional rental platforms, the application focuses not only on the property itself but also on the people who will live together, taking into account their habits, preferences, and lifestyle.
-
-Users looking for accommodation can create a profile including information such as budget, preferred area, move-in date, and living preferences. Based on this data, the platform recommends compatible homes and potential roommates. The matching process requires approval from the property owner and, if there are already people living in the apartment, from the current roommates as well, ensuring that all parties agree with the new tenant joining.
-
-In addition, the platform allows flexible management of housing occupancy. For example, in an apartment with multiple available spots, tenants can propose to the owner to close the apartment for fewer occupants in exchange for paying a higher total rent. This allows the use of the property to be adapted to the living preferences of the users.
+Roomies is a web application to help people find compatible roommates and housing.
+Beyond standard listing platforms, the focus is on *living compatibility* (habits, schedule, cleanliness, budget, noise tolerance) so owners and tenants can make better decisions.
 
 ---
 
-## 🧑‍💻 Team Members
+## Why Roomies
+
+- Match people by lifestyle, not only by property details
+- Support both tenant and owner roles
+- Provide onboarding to capture tenant preferences early
+- Keep authentication secure with Supabase email confirmation and password recovery flows
+
+---
+
+## Current Functional Scope
+
+### Authentication
+- Login with email + password
+- Register account with role selection (`tenant` or `owner`)
+- Email confirmation flow via callback page (`/auth/callback`)
+- Forgot password email flow
+- Password reset page (`/reset-password`) with new password confirmation
+
+### Tenant onboarding
+- Tenant users are redirected to onboarding when profile data is still missing
+- Onboarding saves profile preferences to `tenant_profiles`
+
+### Role routing
+- Tenant with pending onboarding -> `/onboarding/tenant`
+- Owner -> `/owner/coming-soon`
+- Authenticated user with completed flow -> `/app`
+
+---
+
+## Architecture
+
+### Backend
+- **Go 1.24+**
+- **Gin** for HTTP API
+- **pgx/pgxpool** for PostgreSQL connectivity
+- **Supabase Auth API** integration for login/signup/verification/recovery
+
+### Frontend
+- **React 19 + TypeScript 5.7**
+- **Vite 6**
+- **Tailwind CSS 4**
+- Lightweight client-side routing based on `window.history`
+
+### Testing and quality
+- Go tests: `go test -v -race ./...`
+- Frontend unit tests: `npm run test`
+- E2E: Playwright (`make e2e`)
+- Linting: `golangci-lint` + `ESLint`
+
+---
+
+## Project Structure
+
+```text
+.
+├── backend/
+│   ├── cmd/server/                 # Backend entrypoint
+│   └── internal/
+│       ├── auth/                   # Auth service + profile status helpers
+│       ├── config/                 # Environment loading
+│       └── database/               # DB connection/pool setup
+├── frontend/
+│   └── src/
+│       ├── App.tsx                 # Route resolution and page switching
+│       └── pages/                  # Login/Register/Callback/Reset/Onboarding pages
+├── e2e/                            # Playwright tests
+├── supabase/                       # Supabase config and SQL migrations
+└── .github/workflows/              # CI pipelines
+```
+
+---
+
+## Team Members
 
 | Name | Email |
 |------|-------|
 | Diego Fuertes | dfuerl00@estudiantes.unileon.es |
-| Sergio López | sloper00@estudiantes.unileon.es |
+| Sergio Lopez | sloper00@estudiantes.unileon.es |
 | Aitor Fernandes | afernf38@estudiantes.unileon.es |
 | Jairo Ugidos | jugidh00@estudiantes.unileon.es |
 
 ---
 
-## 🛠️ Tech Stack
+## Prerequisites
 
-### Backend
-- **Go** 1.24+
-- **Gin** - HTTP web framework
-- **slog** - Structured logging
-
-### Frontend
-- **React** 19
-- **TypeScript** 5.7
-- **Vite** 6
-- **Tailwind CSS** 4
-
-### Testing & DevOps
-- **Vitest** - Unit testing
-- **Playwright** - E2E testing
-- **golangci-lint** - Go linting
-- **ESLint** - JS/TS linting
-
----
-
-## 📁 Project Structure
-
-```
-├── backend/                  # Go API server (Gin)
-│   ├── cmd/server/           # Entry point
-│   ├── internal/
-│   │   └── config/           # Environment configuration
-│   └── .air.toml             # Hot reload config
-│
-├── frontend/                 # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   └── index.css
-│   ├── eslint.config.js
-│   ├── vitest.config.ts
-│   └── package.json
-│
-├── e2e/                      # Playwright E2E tests
-│   ├── tests/
-│   ├── playwright.config.ts
-│   └── package.json
-│
-├── .github/workflows/        # CI/CD pipelines
-├── Makefile                   # Development commands
-├── go.mod                     # Go module definition
-└── .golangci.yml              # Go linter configuration
-```
-
----
-
-## 📋 Prerequisites
-
-- [Go](https://go.dev/dl/) **1.24+**
-- [Node.js](https://nodejs.org/) **22+**
+- [Go](https://go.dev/dl/) `1.24+`
+- [Node.js](https://nodejs.org/) `22+`
 - [Git](https://git-scm.com/)
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### 1. Clone the repository
+### 1) Clone
 
 ```bash
-git clone https://github.com/isw2-unileon/Grupo-14.git
-cd Grupo-14
+git clone https://github.com/isw2-unileon/Roomies.git
+cd Roomies
 ```
 
-### 2. Install dependencies
+### 2) Install dependencies
 
 ```bash
 make install
 ```
 
-This will install:
-- Air (Go hot reload)
-- golangci-lint (Go linter)
-- Go modules
-- Frontend npm dependencies
-- E2E npm dependencies
-
-### 3. Configure environment variables
-
-Create a `.env` file in the `backend/` directory:
+### 3) Configure backend environment
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Available environment variables:
+Recommended variables in `backend/.env`:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Server port | `8080` |
-| `GIN_MODE` | Gin mode (debug/release) | `debug` |
-| `CORS_ALLOW_ORIGIN` | CORS allowed origin | `*` |
-| `FRONTEND_URL` | Frontend URL used for password recovery redirect | `http://localhost:5173` |
+| `PORT` | Backend server port | `8080` |
+| `GIN_MODE` | Gin mode | `debug` |
+| `CORS_ALLOW_ORIGIN` | Allowed CORS origin | `*` |
+| `DATABASE_URL` | PostgreSQL connection URL | - |
+| `SUPABASE_URL` | Supabase project URL | - |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase API key used by backend auth calls | - |
+| `FRONTEND_URL` | Frontend base URL for redirects | `http://localhost:5173` |
+
+Important:
+- `SUPABASE_URL` and `DATABASE_URL` must target the same project
+- Backend starts only if DB connection succeeds
 
 ---
 
-## 🏃 Running the Project
+## Run in Development
 
-### Development mode
+### Using `make`
 
 ```bash
-# Terminal 1 - Backend with hot reload (port 8080)
+# Terminal 1
 make run-backend
 
-# Terminal 2 - Frontend dev server (port 5173)
+# Terminal 2
 make run-frontend
 ```
 
-The Vite dev server proxies `/api` requests to the backend automatically.
-
-### Detailed run guide (without `make`)
-
-Use this flow if you do not have `make` installed (common on Windows).
-
-1. Install dependencies from project root:
+### Without `make` (common on Windows)
 
 ```bash
+# from repo root
 go mod download
 cd frontend && npm ci
 cd ../e2e && npm ci
+
+# start backend
 cd ..
+go run ./backend/cmd/server
+
+# in another terminal, start frontend
+cd frontend
+npm run dev
 ```
 
-2. Configure backend environment:
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-3. Set a valid `DATABASE_URL` in `backend/.env`.
-   - The backend starts only if database connection succeeds.
-   - `SUPABASE_URL` and `DATABASE_URL` should point to the same Supabase project.
-
-4. Start backend (Terminal 1):
-
-```bash
-cd backend
-go run ./cmd/server
-```
-
-5. Start frontend (Terminal 2):
-
-```bash
-cd frontend && npm run dev
-```
-
-6. Open the app:
-   - Frontend: `http://localhost:5173`
-   - Backend health check: `http://localhost:8080/health`
-
-7. Quick verification:
-   - If backend is running correctly, `/health` returns `{ "status": "ok" }`.
-   - Frontend requests to `/api/*` are proxied to backend automatically.
-
-### Production build
-
-```bash
-# Build backend
-make build-backend
-
-# Build frontend
-make build-frontend
-```
+Frontend: `http://localhost:5173`  
+Backend health: `http://localhost:8080/health`
 
 ---
 
-## 🗄️ Database Migrations
+## Supabase Email Redirect Setup (Important)
 
-> *(To be implemented)*
+For registration confirmation and password recovery to work correctly, configure Supabase as follows:
 
-```bash
-# Coming soon
-make migrate
-```
+1. **Authentication -> URL Configuration**
+   - `Site URL`: `http://localhost:5173`
+   - Add Redirect URLs:
+     - `http://localhost:5173/`
+     - `http://localhost:5173/auth/callback`
+     - `http://localhost:5173/reset-password`
+
+2. **Email templates**
+   - Use `{{ .ConfirmationURL }}` in both templates:
+     - Confirm signup
+     - Reset password
+
+Do not hardcode links like `/auth/callback` or `/reset-password` without the Supabase token payload.
 
 ---
 
-## 🧪 Running Tests
+## Main API Endpoints
 
-### All tests (backend + frontend)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/api/hello` | Connectivity test |
+| `POST` | `/api/auth/login` | Login with email/password |
+| `POST` | `/api/auth/register` | Register new account |
+| `POST` | `/api/auth/confirm` | Confirm account via token/token_hash |
+| `POST` | `/api/auth/forgot-password` | Send recovery email |
+| `POST` | `/api/auth/reset-password` | Update password (requires bearer token from recovery link) |
+| `GET` | `/api/profile/status` | Resolve user role and onboarding state |
+| `POST` | `/api/tenant-profile` | Save tenant onboarding profile |
+
+---
+
+## Testing
 
 ```bash
+# all
 make test
-```
 
-### Backend tests only
-
-```bash
+# backend
 go test -v -race ./...
-```
 
-### Frontend tests only
-
-```bash
+# frontend
 cd frontend && npm run test
-```
 
-### Run a single test file
-
-```bash
-# Backend
-go test -v -race ./backend/...
-
-# Frontend
-npx vitest run src/components/MyComponent.test.tsx
-```
-
-### E2E tests
-
-```bash
+# e2e
 make e2e
 ```
 
+Typecheck frontend:
+
+```bash
+cd frontend && npx tsc --noEmit
+```
+
 ---
 
-## 🔍 Linting
+## Linting
 
 ```bash
 make lint
 ```
 
-This runs both Go and frontend linters.
+---
+
+## Build
+
+```bash
+make build-backend
+make build-frontend
+```
 
 ---
 
-## 📡 API Endpoints
+## Contributing
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/api/hello` | Sample endpoint |
+1. Create a feature branch
+2. Implement and test changes
+3. Run lint + tests before pushing
+4. Open a Pull Request
 
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-
-- Follow the guidelines in [AGENTS.md](./AGENTS.md)
-- Run `make lint` before committing
-- Ensure all tests pass with `make test`
+Project coding rules are documented in [`AGENTS.md`](./AGENTS.md).
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [Gin](https://github.com/gin-gonic/gin) for the backend
-- Built with [React](https://react.dev/) + [Vite](https://vitejs.dev/) for the frontend
+MIT - see [`LICENSE`](LICENSE).
