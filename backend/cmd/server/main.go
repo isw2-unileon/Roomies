@@ -107,14 +107,15 @@ func main() {
 				return
 			}
 
-			result, err := authService.Register(c.Request.Context(), input)
+			emailRedirectTo := strings.TrimRight(cfg.FrontendURL, "/") + "/auth/callback"
+			result, err := authService.Register(c.Request.Context(), input, emailRedirectTo)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
 
 			c.JSON(http.StatusCreated, gin.H{
-				"message":          "registration successful",
+				"message":          "registration successful, please confirm your email",
 				"access_token":     result.AccessToken,
 				"refresh_token":    result.RefreshToken,
 				"token_type":       result.TokenType,
@@ -123,6 +124,76 @@ func main() {
 				"role":             result.Role,
 				"needs_onboarding": result.NeedsTenant,
 			})
+		})
+
+		api.POST("/auth/forgot-password", func(c *gin.Context) {
+			var input auth.ForgotPasswordInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			redirectTo := strings.TrimRight(cfg.FrontendURL, "/") + "/reset-password"
+			if err := authService.ForgotPassword(c.Request.Context(), input, redirectTo); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "password recovery email sent"})
+		})
+
+		api.POST("/auth/confirm", func(c *gin.Context) {
+			type confirmInput struct {
+				TokenHash string `json:"token_hash"`
+				Token     string `json:"token"`
+				Type      string `json:"type"`
+				Email     string `json:"email"`
+			}
+
+			var input confirmInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			result, err := authService.VerifyEmail(c.Request.Context(), input.TokenHash, input.Token, input.Type, input.Email)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"message":       "account verification successful",
+				"access_token":  result.AccessToken,
+				"refresh_token": result.RefreshToken,
+				"token_type":    result.TokenType,
+				"expires_in":    result.ExpiresIn,
+			})
+		})
+
+		api.POST("/auth/reset-password", func(c *gin.Context) {
+			type resetPasswordInput struct {
+				Password string `json:"password"`
+			}
+
+			var input resetPasswordInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			if err := authService.UpdatePassword(c.Request.Context(), accessToken, input.Password); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "password updated successfully"})
 		})
 
 		api.GET("/profile/status", func(c *gin.Context) {

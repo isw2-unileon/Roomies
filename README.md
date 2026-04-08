@@ -121,6 +121,7 @@ Available environment variables:
 | `PORT` | Server port | `8080` |
 | `GIN_MODE` | Gin mode (debug/release) | `debug` |
 | `CORS_ALLOW_ORIGIN` | CORS allowed origin | `*` |
+| `FRONTEND_URL` | Frontend URL used for password recovery redirect | `http://localhost:5173` |
 
 ---
 

@@ -89,22 +89,32 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
         return
       }
 
-      if (data.access_token) {
-        localStorage.setItem('roomies.access_token', data.access_token)
-      }
+      const accessToken = (data.access_token || '').trim()
+      const refreshToken = (data.refresh_token || '').trim()
+      const hasSession = accessToken.length > 0
 
-      if (data.refresh_token) {
-        localStorage.setItem('roomies.refresh_token', data.refresh_token)
-      }
+      if (hasSession) {
+        localStorage.setItem('roomies.access_token', accessToken)
+        if (refreshToken) {
+          localStorage.setItem('roomies.refresh_token', refreshToken)
+        }
 
-      onRegisterSuccess({
-        role: data.role,
-        needsOnboarding: data.needs_onboarding,
-      })
+        onRegisterSuccess({
+          role: data.role,
+          needsOnboarding: data.needs_onboarding,
+        })
+
+        setNotice({
+          kind: 'success',
+          message: data.message || 'Cuenta creada correctamente. Ya puedes iniciar sesion.',
+        })
+        return
+      }
 
       setNotice({
         kind: 'success',
-        message: data.message || 'Cuenta creada correctamente. Ya puedes iniciar sesion.',
+        message:
+          'Cuenta creada. Revisa tu correo y confirma tu cuenta antes de iniciar sesion y completar tu perfil.',
       })
     } catch {
       setNotice({

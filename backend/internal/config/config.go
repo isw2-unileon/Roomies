@@ -11,6 +11,7 @@ type Config struct {
 	DatabaseURL     string
 	SupabaseURL     string
 	SupabaseAPIKey  string
+	FrontendURL     string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -22,6 +23,7 @@ func Load() *Config {
 		DatabaseURL:     getEnv("DATABASE_URL", ""),
 		SupabaseURL:     getEnv("SUPABASE_URL", ""),
 		SupabaseAPIKey:  getEnv("SUPABASE_PUBLISHABLE_KEY", ""),
+		FrontendURL:     getEnv("FRONTEND_URL", "http://localhost:5173"),
 	}
 }
 

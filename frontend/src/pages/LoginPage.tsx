@@ -16,6 +16,11 @@ interface LoginApiResponse {
   error?: string
 }
 
+interface ForgotPasswordApiResponse {
+  message?: string
+  error?: string
+}
+
 interface LoginPageProps {
   onNavigateToRegister: () => void
   onLoginSuccess: (payload: { role?: 'tenant' | 'owner'; needsOnboarding?: boolean }) => void
@@ -25,6 +30,7 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isRecovering, setIsRecovering] = useState(false)
   const [notice, setNotice] = useState<{ kind: NoticeKind; message: string }>({
     kind: 'idle',
     message: '',
@@ -86,6 +92,52 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleForgotPassword() {
+    setNotice({ kind: 'idle', message: '' })
+
+    if (!email.trim()) {
+      setNotice({
+        kind: 'error',
+        message: 'Introduce tu correo para recuperar la contrasena.',
+      })
+      return
+    }
+
+    setIsRecovering(true)
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = (await response.json()) as ForgotPasswordApiResponse
+
+      if (!response.ok) {
+        setNotice({
+          kind: 'error',
+          message: data.error || 'No se pudo enviar el correo de recuperacion.',
+        })
+        return
+      }
+
+      setNotice({
+        kind: 'success',
+        message: data.message || 'Te hemos enviado un correo para restablecer la contrasena.',
+      })
+    } catch {
+      setNotice({
+        kind: 'error',
+        message: 'No se pudo enviar el correo de recuperacion.',
+      })
+    } finally {
+      setIsRecovering(false)
     }
   }
 
@@ -168,6 +220,15 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
                   className="w-full rounded-xl bg-[var(--rm-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--rm-primary-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {buttonLabel}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={isRecovering || isLoading}
+                  className="w-full rounded-xl border border-emerald-900/20 bg-emerald-50/70 px-5 py-3 text-sm font-semibold text-[var(--rm-text-strong)] transition hover:border-emerald-900/30 hover:bg-emerald-100/70 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isRecovering ? 'Enviando correo...' : 'He olvidado mi contrasena'}
                 </button>
 
                 <button
