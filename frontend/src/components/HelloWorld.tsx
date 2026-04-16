@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/api";
 
 interface HelloResponse {
   // Shape returned by backend GET /api/hello.
@@ -15,7 +16,7 @@ export default function HelloWorld() {
     const fetchHello = async () => {
       try {
         // Vite proxy forwards /api requests to backend (localhost:8080).
-        const response = await fetch("/api/hello");
+        const response = await apiFetch("/api/hello");
 
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);

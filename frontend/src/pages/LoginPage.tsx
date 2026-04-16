@@ -5,6 +5,7 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
+import { apiFetch } from '@/api'
 import styles from '@/styles/auth.module.css'
 
 const DEFAULT_ERROR_MESSAGE = 'No se pudo iniciar sesión ahora mismo. Inténtalo de nuevo.'
@@ -42,7 +43,7 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -78,7 +79,7 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
     setIsRecovering(true)
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
