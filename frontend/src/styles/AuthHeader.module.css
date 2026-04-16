@@ -1,0 +1,51 @@
+/* AuthHeader.module.css */
+
+.header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .header {
+    text-align: left;
+  }
+}
+
+.logo {
+  margin-left: auto;
+  margin-right: auto;
+  height: 4rem;
+  width: auto;
+}
+
+@media (min-width: 768px) {
+  .logo {
+    display: none;
+  }
+}
+
+.title {
+  margin-top: 1rem;
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--rm-text-strong);
+}
+
+@media (min-width: 640px) {
+  .title {
+    font-size: 2.25rem;
+  }
+}
+
+.subtitle {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--rm-text-soft);
+}
+
+@media (min-width: 640px) {
+  .subtitle {
+    font-size: 1rem;
+  }
+}

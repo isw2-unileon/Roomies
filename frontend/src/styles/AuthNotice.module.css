@@ -1,0 +1,20 @@
+/* AuthNotice.module.css */
+
+.notice {
+  border-radius: 0.75rem;
+  border: 1px solid;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.error {
+  border-color: #fecdd3;
+  background-color: #fff1f2;
+  color: #be123c;
+}
+
+.success {
+  border-color: #a7f3d0;
+  background-color: #ecfdf5;
+  color: #065f46;
+}
