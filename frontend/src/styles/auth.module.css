@@ -1,0 +1,127 @@
+/* auth.module.css — estilos compartidos entre LoginPage y RegisterPage */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.btnPrimary {
+  width: 100%;
+  border-radius: 0.75rem;
+  background-color: var(--rm-primary);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btnPrimary:hover {
+  background-color: var(--rm-primary-strong);
+}
+
+.btnPrimary:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btnSecondary {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(6, 78, 59, 0.2);
+  background-color: rgba(236, 253, 245, 0.7);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--rm-text-strong);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.btnSecondary:hover {
+  border-color: rgba(6, 78, 59, 0.3);
+  background-color: rgba(209, 250, 229, 0.7);
+}
+
+.btnSecondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btnGhost {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--rm-border);
+  background-color: #fff;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--rm-text-strong);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.btnGhost:hover {
+  border-color: rgba(6, 78, 59, 0.3);
+  background-color: rgba(236, 253, 245, 0.6);
+}
+
+
+.roleLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--rm-text-strong);
+}
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .roleGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.roleOption {
+  display: flex;
+  cursor: pointer;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(6, 78, 59, 0.15);
+  background-color: #fff;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.15s ease;
+}
+
+.roleOption:hover {
+  border-color: var(--rm-primary);
+}
+
+.roleRadio {
+  margin-top: 0.25rem;
+  height: 1rem;
+  width: 1rem;
+  accent-color: var(--rm-primary);
+}
+
+.roleTitle {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--rm-text-strong);
+}
+
+.roleDescription {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--rm-text-soft);
+}

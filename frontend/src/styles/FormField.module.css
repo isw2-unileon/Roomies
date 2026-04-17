@@ -1,0 +1,35 @@
+/* FormField.module.css */
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--rm-text-strong);
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(6, 78, 59, 0.15);
+  background-color: #fff;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--rm-text-strong);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+  color: #94a3b8;
+}
+
+.input:focus {
+  border-color: var(--rm-primary);
+  box-shadow: 0 0 0 4px rgba(31, 122, 79, 0.15);
+}
