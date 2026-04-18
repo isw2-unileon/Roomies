@@ -14,6 +14,9 @@ func NewRouter(cfg *config.Config, authService authport.Service, profileService 
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), corsMiddleware(cfg.CORSAllowOrigin))
+	r.GET("", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/health")
+	})
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
