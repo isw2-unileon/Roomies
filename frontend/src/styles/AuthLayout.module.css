@@ -1,0 +1,96 @@
+/* AuthLayout.module.css */
+
+.page {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page {
+    padding: 2rem;
+  }
+}
+
+.card {
+  width: 100%;
+  max-width: 64rem;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid var(--rm-border);
+  background-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 25px 50px -12px rgba(6, 78, 59, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.grid {
+  display: grid;
+  min-height: 620px;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: 1.05fr 0.95fr;
+  }
+}
+
+.sidebar {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid var(--rm-border);
+  background: linear-gradient(135deg, rgba(209, 250, 229, 0.9), #fff, rgba(236, 253, 245, 1));
+  padding: 2.5rem;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex;
+  }
+}
+
+.sidebarLogo {
+  height: 3.5rem;
+  width: auto;
+}
+
+.sidebarDescription {
+  margin-top: 2rem;
+  max-width: 28rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--rm-text-soft);
+}
+
+.sidebarTagline {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--rm-text-soft);
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .content {
+    padding: 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .content {
+    padding: 2.5rem;
+  }
+}
+
+.contentInner {
+  width: 100%;
+  max-width: 28rem;
+}
