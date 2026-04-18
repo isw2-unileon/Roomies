@@ -13,7 +13,7 @@ name: CI/CD → Render
 
 on:
   push:
-    branches: [main]
+    branches: [main, build/render_tryal]
   workflow_dispatch:
 
 jobs:
