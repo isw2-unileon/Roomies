@@ -1,4 +1,5 @@
 .PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e
+GOLANGCI_LINT_VERSION ?= v2.9.0
 
 ## Install all dependencies
 install:
@@ -30,8 +31,11 @@ test:
 	cd frontend && npm run test
 
 ## Run linters
-lint:
-	$(shell go env GOPATH)/bin/golangci-lint run
+.PHONY: lint lint-go lint-frontend
+lint: lint-go lint-frontend
+lint-go:
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run ./...
+lint-frontend:
 	cd frontend && npm run lint
 
 ## Run E2E tests (requires backend + frontend running)
