@@ -82,7 +82,7 @@ export default function OwnerDashboardPage() {
             const token = localStorage.getItem('roomies.access_token')
             if (!token) {
                 if (!cancelled) {
-                    setNotice('Tu sesion ha caducado. Inicia sesion de nuevo para ver tu dashboard.')
+                    setNotice('Tu sesión ha caducado. Inicia sesión de nuevo para ver tu dashboard.')
                     setIsLoading(false)
                 }
                 return
@@ -139,7 +139,7 @@ export default function OwnerDashboardPage() {
     function handleCreateProperty(input: Omit<OwnerProperty, 'id' | 'createdAt'>) {
         const token = localStorage.getItem('roomies.access_token')
         if (!token) {
-            setNotice('Tu sesion ha caducado. Inicia sesion de nuevo para crear inmuebles.')
+            setNotice('Tu sesión ha caducado. Inicia sesión de nuevo para crear inmuebles.')
             return
         }
 
@@ -178,7 +178,7 @@ export default function OwnerDashboardPage() {
     function handleStatusChange(id: string, status: MatchStatus) {
         const token = localStorage.getItem('roomies.access_token')
         if (!token) {
-            setNotice('Tu sesion ha caducado. Inicia sesion de nuevo para actualizar likes.')
+            setNotice('Tu sesión ha caducado. Inicia sesión de nuevo para actualizar likes.')
             return
         }
 
