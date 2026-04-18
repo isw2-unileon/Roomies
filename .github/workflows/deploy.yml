@@ -1,0 +1,111 @@
+# ==============================================================================
+# Workflow — CI/CD for Render
+#
+# Stack: Go (backend) + React/Vite (frontend)
+# Deploy: Render via Deploy Hooks
+#
+# Required secrets in GitHub (Settings → Secrets and variables → Actions):
+#   - RENDER_HOOK_BACKEND  → Deploy Hook URL for the backend service in Render
+#   - RENDER_HOOK_FRONTEND → Deploy Hook URL for the frontend service in Render
+# ==============================================================================
+
+name: CI/CD → Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ── Job 1: Backend tests (Go) ───────────────────────────────────────────────
+  test-backend:
+    name: Test · Backend (Go)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run tests
+        run: go test -race -count=1 ./...
+
+  # ── Job 2: Frontend tests (React/Vite) ─────────────────────────────────────
+  test-frontend:
+    name: Test · Frontend (React/Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test -- --run # --run so it doesn't stay in watch mode
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  # ── Job 3: Deploy backend to Render ────────────────────────────────────────
+  deploy-backend:
+    name: Deploy · Backend
+    needs: [test-backend, test-frontend] # Only runs if both test jobs pass
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production-backend
+      url: https://roomies-4m5n.onrender.com
+
+    steps:
+      - name: Trigger Render deploy (backend)
+        run: |
+          curl -fsSL -X POST "${{ secrets.RENDER_HOOK_BACKEND }}"
+          echo "✅ Backend deploy triggered"
+
+  # ── Job 4: Deploy frontend to Render ───────────────────────────────────────
+  deploy-frontend:
+    name: Deploy · Frontend
+    needs: [test-backend, test-frontend] # Only runs if both test jobs pass
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production-frontend
+      url: https://roomies-1-fegt.onrender.com
+
+    steps:
+      - name: Trigger Render deploy (frontend)
+        run: |
+          curl -fsSL -X POST "${{ secrets.RENDER_HOOK_FRONTEND }}"
+          echo "✅ Frontend deploy triggered"
+
+      - name: Write deployment summary
+        run: |
+          echo "## Deployment complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "| Service  | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend  | ✅ Deployed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ✅ Deployed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit   | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Actor    | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
