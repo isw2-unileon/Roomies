@@ -92,7 +92,7 @@ jobs:
 
     environment:
       name: production-frontend
-      url: hhttps://roomies-1-fegt.onrender.com
+      url: https://roomies-1-fegt.onrender.com
 
     steps:
       - name: Trigger Render deploy (frontend)
