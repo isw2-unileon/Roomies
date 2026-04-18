@@ -97,34 +97,48 @@ func bindAndValidateTenantProfile(c *gin.Context) (profileport.TenantProfileInpu
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return profileport.TenantProfileInput{}, false
 	}
+	if ok := validateTenantProfileBasic(c, input); !ok {
+		return profileport.TenantProfileInput{}, false
+	}
+	if ok := validateTenantProfileEnums(c, input); !ok {
+		return profileport.TenantProfileInput{}, false
+	}
+	return input, true
+}
+
+func validateTenantProfileBasic(c *gin.Context, input profileport.TenantProfileInput) bool {
 	if input.BudgetMin <= 0 || input.BudgetMax <= 0 || input.BudgetMin > input.BudgetMax {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid budget range"})
-		return profileport.TenantProfileInput{}, false
+		return false
 	}
 	if strings.TrimSpace(input.PreferredArea) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "preferred_area is required"})
-		return profileport.TenantProfileInput{}, false
+		return false
 	}
 	if _, err := time.Parse("2006-01-02", input.MoveInDate); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "move_in_date must have YYYY-MM-DD format"})
-		return profileport.TenantProfileInput{}, false
+		return false
 	}
+	return true
+}
+
+func validateTenantProfileEnums(c *gin.Context, input profileport.TenantProfileInput) bool {
 	schedule := strings.ToLower(strings.TrimSpace(input.Schedule))
 	if schedule != "morning" && schedule != "night" && schedule != "flexible" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "schedule must be morning, night or flexible"})
-		return profileport.TenantProfileInput{}, false
+		return false
 	}
 	noiseLevel := strings.ToLower(strings.TrimSpace(input.NoiseLevel))
 	if noiseLevel != "quiet" && noiseLevel != "moderate" && noiseLevel != "loud" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "noise_level must be quiet, moderate or loud"})
-		return profileport.TenantProfileInput{}, false
+		return false
 	}
 	cleanliness := strings.ToLower(strings.TrimSpace(input.Cleanliness))
 	if cleanliness != "very_clean" && cleanliness != "normal" && cleanliness != "relaxed" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "cleanliness must be very_clean, normal or relaxed"})
-		return profileport.TenantProfileInput{}, false
+		return false
 	}
-	return input, true
+	return true
 }
 
 func normalizeTenantProfileInput(input *profileport.TenantProfileInput) {
