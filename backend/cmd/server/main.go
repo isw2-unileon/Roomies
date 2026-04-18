@@ -11,6 +11,7 @@ import (
 
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/adapter/supabase"
 	authapp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/app"
+	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpapi"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/database"
@@ -34,7 +35,7 @@ func main() {
 	defer database.Close()
 	profileRepo := profilepg.NewRepository(database.DB)
 	profileService := profileapp.NewService(profileRepo)
-	var authService *authapp.Service
+	var authService authport.Service
 	authProvider, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
 	if err != nil {
 		logger.Warn("auth service disabled", "error", err)

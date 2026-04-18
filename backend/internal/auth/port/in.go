@@ -53,10 +53,6 @@ type VerifyResult struct {
 
 // Service defines auth use cases consumed by HTTP handlers.
 type Service interface {
-	Login(ctx context.Context, input LoginInput) (*LoginResult, error)
-	Register(ctx context.Context, input RegisterInput, emailRedirectTo string) (*RegisterResult, error)
-	ForgotPassword(ctx context.Context, input ForgotPasswordInput, redirectTo string) error
-	UpdatePassword(ctx context.Context, accessToken, newPassword string) error
-	VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*VerifyResult, error)
+	AuthUseCases
 	ResolveUserIDFromAccessToken(ctx context.Context, accessToken string) (string, error)
 }
