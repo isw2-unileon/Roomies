@@ -1,6 +1,9 @@
 const es = {
   common: {
     appName: 'Roomies',
+    language: {
+      selectorAriaLabel: 'Selector de idioma',
+    },
   },
   auth: {
     login: {

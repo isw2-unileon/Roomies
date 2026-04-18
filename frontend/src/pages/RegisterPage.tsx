@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthLayout from '@/components/auth/AuthLayout'
@@ -26,6 +27,7 @@ interface RegisterPageProps {
 }
 
 export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: RegisterPageProps) {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
@@ -34,22 +36,35 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
   const [isLoading, setIsLoading] = useState(false)
   const { notice, showError, showSuccess, clearNotice } = useNotice()
 
+  const roleOptions: { value: UserRole; label: string; description: string }[] = [
+    {
+      value: 'tenant',
+      label: t('auth.register.role.tenant.label'),
+      description: t('auth.register.role.tenant.description'),
+    },
+    {
+      value: 'owner',
+      label: t('auth.register.role.owner.label'),
+      description: t('auth.register.role.owner.description'),
+    },
+  ]
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     clearNotice()
 
     if (fullName.trim().length < 2) {
-      showError('El nombre completo debe tener al menos 2 caracteres.')
+      showError(t('auth.register.errors.fullNameMin'))
       return
     }
 
     if (password.length < 6) {
-      showError('La contraseña debe tener al menos 6 caracteres.')
+      showError(t('auth.register.errors.passwordMin'))
       return
     }
 
     if (password !== confirmPassword) {
-      showError('Las contraseñas no coinciden.')
+      showError(t('auth.register.errors.passwordMismatch'))
       return
     }
 
@@ -65,7 +80,7 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
       const data = (await response.json()) as RegisterApiResponse
 
       if (!response.ok) {
-        showError(data.error ?? 'No se pudo crear tu cuenta. Inténtalo de nuevo.')
+        showError(data.error ?? t('auth.register.errors.default'))
         return
       }
 
@@ -77,15 +92,13 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
         if (refreshToken) localStorage.setItem('roomies.refresh_token', refreshToken)
 
         onRegisterSuccess({ role: data.role, needsOnboarding: data.needs_onboarding })
-        showSuccess(data.message ?? 'Cuenta creada correctamente. Ya puedes iniciar sesión.')
+        showSuccess(data.message ?? t('auth.register.successDefault'))
         return
       }
 
-      showSuccess(
-        'Cuenta creada. Revisa tu correo y confirma tu cuenta antes de iniciar sesión y completar tu perfil.',
-      )
+      showSuccess(t('auth.register.successNeedsConfirmation'))
     } catch {
-      showError('No se pudo crear tu cuenta. Inténtalo de nuevo.')
+      showError(t('auth.register.errors.default'))
     } finally {
       setIsLoading(false)
     }
@@ -93,20 +106,20 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
 
   return (
     <AuthLayout
-      sidebarDescription="Crea tu perfil en Roomies y conecta con personas que encajen con tu estilo de vida y presupuesto."
-      sidebarTagline="Crea tu cuenta. Encuentra tu próxima habitación."
+      sidebarDescription={t('auth.register.sidebarDescription')}
+      sidebarTagline={t('auth.register.sidebarTagline')}
     >
       <AuthHeader
-        title="Crear cuenta"
-        subtitle="Completa tus datos para empezar a usar Roomies."
+        title={t('auth.register.title')}
+        subtitle={t('auth.register.subtitle')}
       />
 
       <form className={styles.form} noValidate onSubmit={handleSubmit}>
         {/* Selector de rol */}
         <div>
-          <p className={styles.roleLabel}>Tipo de usuario</p>
+          <p className={styles.roleLabel}>{t('auth.register.userType')}</p>
           <div className={styles.roleGrid}>
-            {ROLE_OPTIONS.map(({ value, label, description }) => (
+            {roleOptions.map(({ value, label, description }) => (
               <label key={value} className={styles.roleOption}>
                 <input
                   type="radio"
@@ -127,47 +140,47 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
 
         <FormField
           id="full-name"
-          label="Nombre completo"
+          label={t('auth.register.fullNameLabel')}
           type="text"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           autoComplete="name"
-          placeholder="Tu nombre completo"
+          placeholder={t('auth.register.fullNamePlaceholder')}
           required
           minLength={2}
         />
 
         <FormField
           id="email"
-          label="Correo electrónico"
+          label={t('auth.register.emailLabel')}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
-          placeholder="tu@ejemplo.com"
+          placeholder={t('auth.register.emailPlaceholder')}
           required
         />
 
         <FormField
           id="password"
-          label="Contraseña"
+          label={t('auth.register.passwordLabel')}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
-          placeholder="Mínimo 6 caracteres"
+          placeholder={t('auth.register.passwordPlaceholder')}
           required
           minLength={6}
         />
 
         <FormField
           id="confirm-password"
-          label="Confirmar contraseña"
+          label={t('auth.register.confirmPasswordLabel')}
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           autoComplete="new-password"
-          placeholder="Repite tu contraseña"
+          placeholder={t('auth.register.confirmPasswordPlaceholder')}
           required
           minLength={6}
         />
@@ -175,20 +188,13 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
         <AuthNotice kind={notice.kind} message={notice.message} />
 
         <button type="submit" disabled={isLoading} className={styles.btnPrimary}>
-          {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
+          {isLoading ? t('auth.register.submitting') : t('auth.register.submit')}
         </button>
 
         <button type="button" onClick={onNavigateToLogin} className={styles.btnGhost}>
-          Volver al inicio de sesión
+          {t('auth.register.backToLogin')}
         </button>
       </form>
     </AuthLayout>
   )
 }
-
-//Constants
-
-const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
-  { value: 'tenant', label: 'Tenant', description: 'Inquilino que busca vivienda' },
-  { value: 'owner', label: 'Owner', description: 'Propietario de vivienda' },
-]
