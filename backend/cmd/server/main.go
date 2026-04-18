@@ -49,7 +49,7 @@ func main() {
 			}
 			c.Header("Vary", "Origin")
 			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
 		}
 
 		if c.Request.Method == http.MethodOptions {
@@ -359,6 +359,359 @@ func main() {
 			}
 
 			c.JSON(http.StatusOK, gin.H{"message": "tenant profile saved", "onboarding_complete": true})
+		})
+
+		api.GET("/owner/properties", func(c *gin.Context) {
+			accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			userID, err := auth.ResolveUserIDFromAccessToken(c.Request.Context(), authService, accessToken)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			role, err := auth.LookupRoleByUserID(c.Request.Context(), userID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
+			if role != "owner" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "owner dashboard is only available for owner users"})
+				return
+			}
+
+			type ownerPropertyItem struct {
+				ID             string `json:"id"`
+				Title          string `json:"title"`
+				Address        string `json:"address"`
+				Area           string `json:"area"`
+				AvailableRooms int    `json:"available_rooms"`
+				Rent           int    `json:"rent"`
+				Status         string `json:"status"`
+				CreatedAt      string `json:"created_at"`
+			}
+
+			rows, err := database.DB.Query(
+				c.Request.Context(),
+				`SELECT
+					id::text,
+					title,
+					address,
+					COALESCE(area, ''),
+					available_rooms,
+					current_rent,
+					status,
+					created_at
+				FROM public.properties
+				WHERE owner_id = $1
+				ORDER BY created_at DESC`,
+				userID,
+			)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch owner properties"})
+				return
+			}
+			defer rows.Close()
+
+			items := make([]ownerPropertyItem, 0)
+			for rows.Next() {
+				var item ownerPropertyItem
+				var createdAt time.Time
+				if err := rows.Scan(
+					&item.ID,
+					&item.Title,
+					&item.Address,
+					&item.Area,
+					&item.AvailableRooms,
+					&item.Rent,
+					&item.Status,
+					&createdAt,
+				); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read owner properties"})
+					return
+				}
+
+				item.CreatedAt = createdAt.Format("2006-01-02")
+				items = append(items, item)
+			}
+
+			if rows.Err() != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch owner properties"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"items": items})
+		})
+
+		api.POST("/owner/properties", func(c *gin.Context) {
+			accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			userID, err := auth.ResolveUserIDFromAccessToken(c.Request.Context(), authService, accessToken)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			role, err := auth.LookupRoleByUserID(c.Request.Context(), userID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
+			if role != "owner" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "owner dashboard is only available for owner users"})
+				return
+			}
+
+			type createOwnerPropertyInput struct {
+				Title          string `json:"title"`
+				Address        string `json:"address"`
+				Area           string `json:"area"`
+				AvailableRooms int    `json:"available_rooms"`
+				Rent           int    `json:"rent"`
+				Status         string `json:"status"`
+			}
+
+			var input createOwnerPropertyInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			title := strings.TrimSpace(input.Title)
+			address := strings.TrimSpace(input.Address)
+			area := strings.TrimSpace(input.Area)
+			status := strings.ToLower(strings.TrimSpace(input.Status))
+
+			if title == "" || address == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "title and address are required"})
+				return
+			}
+			if input.AvailableRooms <= 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "available_rooms must be greater than 0"})
+				return
+			}
+			if input.Rent < 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "rent must be greater than or equal to 0"})
+				return
+			}
+			if status != "open" && status != "closed" && status != "full" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "status must be open, closed or full"})
+				return
+			}
+
+			type ownerPropertyItem struct {
+				ID             string `json:"id"`
+				Title          string `json:"title"`
+				Address        string `json:"address"`
+				Area           string `json:"area"`
+				AvailableRooms int    `json:"available_rooms"`
+				Rent           int    `json:"rent"`
+				Status         string `json:"status"`
+				CreatedAt      string `json:"created_at"`
+			}
+
+			var item ownerPropertyItem
+			var createdAt time.Time
+			if err := database.DB.QueryRow(
+				c.Request.Context(),
+				`INSERT INTO public.properties
+					(owner_id, title, address, area, total_rooms, available_rooms, base_rent, current_rent, status)
+				VALUES
+					($1, $2, $3, $4, $5, $5, $6, $6, $7)
+				RETURNING id::text, title, address, COALESCE(area, ''), available_rooms, current_rent, status, created_at`,
+				userID,
+				title,
+				address,
+				area,
+				input.AvailableRooms,
+				input.Rent,
+				status,
+			).Scan(
+				&item.ID,
+				&item.Title,
+				&item.Address,
+				&item.Area,
+				&item.AvailableRooms,
+				&item.Rent,
+				&item.Status,
+				&createdAt,
+			); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create owner property"})
+				return
+			}
+
+			item.CreatedAt = createdAt.Format("2006-01-02")
+			c.JSON(http.StatusCreated, gin.H{"item": item})
+		})
+
+		api.GET("/owner/likes", func(c *gin.Context) {
+			accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			userID, err := auth.ResolveUserIDFromAccessToken(c.Request.Context(), authService, accessToken)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			role, err := auth.LookupRoleByUserID(c.Request.Context(), userID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
+			if role != "owner" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "owner dashboard is only available for owner users"})
+				return
+			}
+
+			type ownerLikeItem struct {
+				ID            string `json:"id"`
+				PropertyID    string `json:"property_id"`
+				PropertyTitle string `json:"property_title"`
+				TenantName    string `json:"tenant_name"`
+				TenantEmail   string `json:"tenant_email"`
+				Status        string `json:"status"`
+				CreatedAt     string `json:"created_at"`
+			}
+
+			rows, err := database.DB.Query(
+				c.Request.Context(),
+				`SELECT
+					m.id::text,
+					m.property_id::text,
+					p.title,
+					COALESCE(u.full_name, ''),
+					COALESCE(u.email, ''),
+					m.status,
+					m.created_at
+				FROM public.matches m
+				INNER JOIN public.properties p ON p.id = m.property_id
+				LEFT JOIN public.users u ON u.id = m.tenant_id
+				WHERE p.owner_id = $1
+				ORDER BY m.created_at DESC`,
+				userID,
+			)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch owner likes"})
+				return
+			}
+			defer rows.Close()
+
+			items := make([]ownerLikeItem, 0)
+			for rows.Next() {
+				var item ownerLikeItem
+				var createdAt time.Time
+				if err := rows.Scan(
+					&item.ID,
+					&item.PropertyID,
+					&item.PropertyTitle,
+					&item.TenantName,
+					&item.TenantEmail,
+					&item.Status,
+					&createdAt,
+				); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read owner likes"})
+					return
+				}
+
+				item.CreatedAt = createdAt.Format("2006-01-02")
+				items = append(items, item)
+			}
+
+			if rows.Err() != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch owner likes"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"items": items})
+		})
+
+		api.PATCH("/owner/likes/:id/status", func(c *gin.Context) {
+			accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			userID, err := auth.ResolveUserIDFromAccessToken(c.Request.Context(), authService, accessToken)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+
+			role, err := auth.LookupRoleByUserID(c.Request.Context(), userID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
+			if role != "owner" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "owner dashboard is only available for owner users"})
+				return
+			}
+
+			matchID := strings.TrimSpace(c.Param("id"))
+			if matchID == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "match id is required"})
+				return
+			}
+
+			type updateMatchStatusInput struct {
+				Status string `json:"status"`
+			}
+
+			var input updateMatchStatusInput
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+
+			status := strings.ToLower(strings.TrimSpace(input.Status))
+			if status != "pending" && status != "approved" && status != "rejected" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "status must be pending, approved or rejected"})
+				return
+			}
+
+			result, err := database.DB.Exec(
+				c.Request.Context(),
+				`UPDATE public.matches m
+				SET status = $1
+				WHERE m.id::text = $2
+				AND EXISTS (
+					SELECT 1
+					FROM public.properties p
+					WHERE p.id = m.property_id
+					AND p.owner_id = $3
+				)`,
+				status,
+				matchID,
+				userID,
+			)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update like status"})
+				return
+			}
+
+			if result.RowsAffected() == 0 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "like not found"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "like status updated", "status": status})
 		})
 	}
 

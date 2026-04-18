@@ -34,7 +34,7 @@ Beyond standard listing platforms, the focus is on *living compatibility* (habit
 
 ### Role routing
 - Tenant with pending onboarding -> `/onboarding/tenant`
-- Owner -> `/owner/coming-soon`
+- Owner -> `/owner/dashboard`
 - Authenticated user with completed flow -> `/app`
 
 ---
@@ -207,6 +207,10 @@ Do not hardcode links like `/auth/callback` or `/reset-password` without the Sup
 | `POST` | `/api/auth/reset-password` | Update password (requires bearer token from recovery link) |
 | `GET` | `/api/profile/status` | Resolve user role and onboarding state |
 | `POST` | `/api/tenant-profile` | Save tenant onboarding profile |
+| `GET` | `/api/owner/properties` | List owner properties for dashboard |
+| `POST` | `/api/owner/properties` | Create a property from owner dashboard |
+| `GET` | `/api/owner/likes` | List owner likes/matches for dashboard |
+| `PATCH` | `/api/owner/likes/:id/status` | Update owner like status |
 
 ---
 
