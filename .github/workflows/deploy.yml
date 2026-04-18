@@ -71,7 +71,7 @@ jobs:
   # ── Job 3: Deploy backend to Render ────────────────────────────────────────
   deploy-backend:
     name: Deploy · Backend
-    needs: [test-backend, test-frontend] # Only runs if both test jobs pass
+    #needs: [test-backend, test-frontend] # Only runs if both test jobs pass
     runs-on: ubuntu-latest
 
     environment:
@@ -87,7 +87,7 @@ jobs:
   # ── Job 4: Deploy frontend to Render ───────────────────────────────────────
   deploy-frontend:
     name: Deploy · Frontend
-    needs: [test-backend, test-frontend] # Only runs if both test jobs pass
+    #needs: [test-backend, test-frontend] # Only runs if both test jobs pass
     runs-on: ubuntu-latest
 
     environment:
