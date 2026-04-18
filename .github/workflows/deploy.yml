@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-      name: production
+      name: production-backend
       url: https://roomies-4m5n.onrender.com
 
     steps:
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-      name: production
+      name: production-frontend
       url: hhttps://roomies-1-fegt.onrender.com
 
     steps:
