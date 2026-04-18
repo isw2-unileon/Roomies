@@ -8,6 +8,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import RegisterPage from './pages/RegisterPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TenantOnboardingPage from './pages/TenantOnboardingPage'
+import OwnerDashboardPage from './pages/OwnerDashboardPage'
 
 function normalizePath(pathname: string) {
   if (!pathname) {
@@ -90,7 +91,7 @@ export default function App() {
     }
 
     if (payload.role === 'owner') {
-      navigateTo('/owner/coming-soon')
+      navigateTo('/owner/dashboard')
       return
     }
 
@@ -115,6 +116,10 @@ export default function App() {
 
   if (path === '/owner/coming-soon') {
     return <OwnerComingSoonPage />
+  }
+
+  if (path === '/owner/dashboard') {
+    return <OwnerDashboardPage />
   }
 
   if (path === '/app') {
