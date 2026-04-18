@@ -5,6 +5,7 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
+import { apiFetch } from '@/api'
 import styles from '@/styles/auth.module.css'
 
 type UserRole = 'tenant' | 'owner'
@@ -55,7 +56,7 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, full_name: fullName.trim(), role }),

@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react'
 
 import logo from '@/assets/logo.png'
+import { apiFetch } from '@/api'
 
 type NoticeKind = 'idle' | 'error' | 'success'
 type Schedule = 'morning' | 'night' | 'flexible'
@@ -70,7 +71,7 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/tenant-profile', {
+      const response = await apiFetch('/api/tenant-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

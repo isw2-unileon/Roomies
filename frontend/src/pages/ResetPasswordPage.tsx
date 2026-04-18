@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react'
 
 import logo from '@/assets/logo.png'
+import { apiFetch } from '@/api'
 
 type NoticeKind = 'idle' | 'error' | 'success'
 
@@ -70,7 +71,7 @@ export default function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPa
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await apiFetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

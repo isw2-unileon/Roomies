@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import logo from '@/assets/logo.png'
+import { apiFetch } from '@/api'
 
 type NoticeKind = 'idle' | 'error' | 'success'
 
@@ -72,7 +73,7 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
 
       if (!accessToken && (authData.tokenHash || authData.token)) {
         try {
-          const confirmResponse = await fetch('/api/auth/confirm', {
+          const confirmResponse = await apiFetch('/api/auth/confirm', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
       window.history.replaceState({}, '', '/auth/callback')
 
       try {
-        const response = await fetch('/api/profile/status', {
+        const response = await apiFetch('/api/profile/status', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
