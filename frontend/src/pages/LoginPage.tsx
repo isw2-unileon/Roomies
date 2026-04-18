@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthLayout from '@/components/auth/AuthLayout'
@@ -7,8 +8,6 @@ import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
 import { apiFetch } from '@/api'
 import styles from '@/styles/auth.module.css'
-
-const DEFAULT_ERROR_MESSAGE = 'No se pudo iniciar sesión ahora mismo. Inténtalo de nuevo.'
 
 interface LoginApiResponse {
   message?: string
@@ -31,6 +30,7 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: LoginPageProps) {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -52,7 +52,7 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
       const data = (await response.json()) as LoginApiResponse
 
       if (!response.ok) {
-        showError(data.error ?? DEFAULT_ERROR_MESSAGE)
+        showError(data.error ?? t('auth.login.errors.default'))
         return
       }
 
@@ -60,9 +60,9 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
       if (data.refresh_token) localStorage.setItem('roomies.refresh_token', data.refresh_token)
 
       onLoginSuccess({ role: data.role, needsOnboarding: data.needs_onboarding })
-      showSuccess(data.message ?? 'Login correcto. Ya puedes continuar en la app.')
+      showSuccess(data.message ?? t('auth.login.successDefault'))
     } catch {
-      showError(DEFAULT_ERROR_MESSAGE)
+      showError(t('auth.login.errors.default'))
     } finally {
       setIsLoading(false)
     }
@@ -72,7 +72,7 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
     clearNotice()
 
     if (!email.trim()) {
-      showError('Introduce tu correo para recuperar la contraseña.')
+      showError(t('auth.login.errors.forgotWithoutEmail'))
       return
     }
 
@@ -88,13 +88,13 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
       const data = (await response.json()) as ForgotPasswordApiResponse
 
       if (!response.ok) {
-        showError(data.error ?? 'No se pudo enviar el correo de recuperación.')
+        showError(data.error ?? t('auth.login.errors.forgotDefault'))
         return
       }
 
-      showSuccess(data.message ?? 'Te hemos enviado un correo para restablecer la contraseña.')
+      showSuccess(data.message ?? t('auth.login.forgotSuccessDefault'))
     } catch {
-      showError('No se pudo enviar el correo de recuperación.')
+      showError(t('auth.login.errors.forgotDefault'))
     } finally {
       setIsRecovering(false)
     }
@@ -104,34 +104,34 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
 
   return (
     <AuthLayout
-      sidebarDescription="Encuentra tu próximo hogar con personas que encajen con tu estilo de vida, presupuesto y forma de vivir."
-      sidebarTagline="Matching simple. Mejor convivencia."
+      sidebarDescription={t('auth.login.sidebarDescription')}
+      sidebarTagline={t('auth.login.sidebarTagline')}
     >
       <AuthHeader
-        title="Bienvenido de nuevo"
-        subtitle="Inicia sesión con tu correo y contraseña para acceder a tu cuenta."
+        title={t('auth.login.title')}
+        subtitle={t('auth.login.subtitle')}
       />
 
       <form className={styles.form} noValidate onSubmit={handleSubmit}>
         <FormField
           id="email"
-          label="Correo electrónico"
+          label={t('auth.login.emailLabel')}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
-          placeholder="tu@ejemplo.com"
+          placeholder={t('auth.login.emailPlaceholder')}
           required
         />
 
         <FormField
           id="password"
-          label="Contraseña"
+          label={t('auth.login.passwordLabel')}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
-          placeholder="Introduce tu contraseña"
+          placeholder={t('auth.login.passwordPlaceholder')}
           required
           minLength={6}
         />
@@ -139,7 +139,7 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
         <AuthNotice kind={notice.kind} message={notice.message} />
 
         <button type="submit" disabled={isAnyLoading} className={styles.btnPrimary}>
-          {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+          {isLoading ? t('auth.login.submitting') : t('auth.login.submit')}
         </button>
 
         <button
@@ -148,11 +148,11 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
           disabled={isAnyLoading}
           className={styles.btnSecondary}
         >
-          {isRecovering ? 'Enviando correo...' : 'He olvidado mi contraseña'}
+          {isRecovering ? t('auth.login.forgotPasswordSending') : t('auth.login.forgotPassword')}
         </button>
 
         <button type="button" onClick={onNavigateToRegister} className={styles.btnGhost}>
-          Crear una cuenta
+          {t('auth.login.goToRegister')}
         </button>
       </form>
     </AuthLayout>

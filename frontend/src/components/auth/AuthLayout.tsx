@@ -1,4 +1,5 @@
 import logo from '@/assets/logo.png'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import styles from '@/styles/AuthLayout.module.css'
 
 interface AuthLayoutProps {
@@ -18,6 +19,10 @@ export default function AuthLayout({ sidebarDescription, sidebarTagline, childre
     <main className={styles.page}>
       <div className={styles.card}>
         <section className={styles.grid}>
+          <div className={styles.languageSwitcherWrap}>
+            <LanguageSwitcher />
+          </div>
+
           <aside className={styles.sidebar}>
             <div>
               <img src={logo} alt="Roomies logo" className={styles.sidebarLogo} />

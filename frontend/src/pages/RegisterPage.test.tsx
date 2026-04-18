@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import RegisterPage from './RegisterPage'
@@ -6,6 +6,8 @@ import RegisterPage from './RegisterPage'
 describe('RegisterPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    localStorage.removeItem('roomies.access_token')
+    localStorage.removeItem('roomies.refresh_token')
   })
 
   test('renders register form fields and actions', () => {
@@ -18,11 +20,11 @@ describe('RegisterPage', () => {
     expect(screen.getByRole('heading', { name: /crear cuenta/i })).toBeInTheDocument()
     expect(screen.getByText(/tipo de usuario/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/nombre completo/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/correo electronico/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/^contrasena$/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/confirmar contrasena/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/correo electr[oó]nico/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^contrase(?:n|ñ)a$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/confirmar contrase(?:n|ñ)a/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^crear cuenta$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /volver al inicio de sesion/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /volver al inicio de sesi[oó]n/i })).toBeInTheDocument()
   })
 
   test('calls onNavigateToLogin when clicking "Volver al inicio de sesion"', async () => {
@@ -34,7 +36,7 @@ describe('RegisterPage', () => {
         onRegisterSuccess={() => {}}
       />
     )
-    await user.click(screen.getByRole('button', { name: /volver al inicio de sesion/i }))
+    await user.click(screen.getByRole('button', { name: /volver al inicio de sesi[oó]n/i }))
     expect(onNavigateToLogin).toHaveBeenCalledTimes(1)
   })
 
@@ -47,11 +49,11 @@ describe('RegisterPage', () => {
       />
     )
     await user.type(screen.getByLabelText(/nombre completo/i), 'Jairo')
-    await user.type(screen.getByLabelText(/correo electronico/i), 'test@test.com')
-    await user.type(screen.getByLabelText(/^contrasena$/i), '123456')
-    await user.type(screen.getByLabelText(/confirmar contrasena/i), '654321')
+    await user.type(screen.getByLabelText(/correo electr[oó]nico/i), 'test@test.com')
+    await user.type(screen.getByLabelText(/^contrase(?:n|ñ)a$/i), '123456')
+    await user.type(screen.getByLabelText(/confirmar contrase(?:n|ñ)a/i), '654321')
     await user.click(screen.getByRole('button', { name: /^crear cuenta$/i }))
-    expect(screen.getByText(/las contrasenas no coinciden/i)).toBeInTheDocument()
+    expect(screen.getByText(/las contrase(?:n|ñ)as no coinciden/i)).toBeInTheDocument()
   })
 
   test('registers successfully and calls onRegisterSuccess when backend returns a session', async () => {
@@ -67,7 +69,6 @@ describe('RegisterPage', () => {
         needs_onboarding: true,
       }),
     } as Response)
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem')
     render(
       <RegisterPage
         onNavigateToLogin={() => {}}
@@ -75,14 +76,16 @@ describe('RegisterPage', () => {
       />
     )
     await user.type(screen.getByLabelText(/nombre completo/i), 'Jairo Ugidos')
-    await user.type(screen.getByLabelText(/correo electronico/i), 'test@test.com')
-    await user.type(screen.getByLabelText(/^contrasena$/i), '123456')
-    await user.type(screen.getByLabelText(/confirmar contrasena/i), '123456')
+    await user.type(screen.getByLabelText(/correo electr[oó]nico/i), 'test@test.com')
+    await user.type(screen.getByLabelText(/^contrase(?:n|ñ)a$/i), '123456')
+    await user.type(screen.getByLabelText(/confirmar contrase(?:n|ñ)a/i), '123456')
     await user.click(screen.getByRole('button', { name: /^crear cuenta$/i }))
-    expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({method: 'POST'}))
-    expect(setItemSpy).toHaveBeenCalledWith('roomies.access_token', 'access-token')
-    expect(setItemSpy).toHaveBeenCalledWith('roomies.refresh_token', 'refresh-token')
-    expect(onRegisterSuccess).toHaveBeenCalledWith({role: 'tenant', needsOnboarding: true})
+    expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
+    await waitFor(() => {
+      expect(localStorage.getItem('roomies.access_token')).toBe('access-token')
+      expect(localStorage.getItem('roomies.refresh_token')).toBe('refresh-token')
+      expect(onRegisterSuccess).toHaveBeenCalledWith({ role: 'tenant', needsOnboarding: true })
+    })
     expect(await screen.findByText(/cuenta creada correctamente/i)).toBeInTheDocument()
   })
 
@@ -101,9 +104,9 @@ describe('RegisterPage', () => {
       />
     )
     await user.type(screen.getByLabelText(/nombre completo/i), 'Jairo Ugidos')
-    await user.type(screen.getByLabelText(/correo electronico/i), 'test@test.com')
-    await user.type(screen.getByLabelText(/^contrasena$/i), '123456')
-    await user.type(screen.getByLabelText(/confirmar contrasena/i), '123456')
+    await user.type(screen.getByLabelText(/correo electr[oó]nico/i), 'test@test.com')
+    await user.type(screen.getByLabelText(/^contrase(?:n|ñ)a$/i), '123456')
+    await user.type(screen.getByLabelText(/confirmar contrase(?:n|ñ)a/i), '123456')
     await user.click(screen.getByRole('button', { name: /^crear cuenta$/i }))
     expect(await screen.findByText(/no se pudo crear tu cuenta/i)).toBeInTheDocument()
   })
