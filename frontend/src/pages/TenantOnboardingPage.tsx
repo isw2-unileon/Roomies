@@ -1,9 +1,14 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import logo from '@/assets/logo.png'
+import AuthHeader from '@/components/auth/AuthHeader'
+import AuthLayout from '@/components/auth/AuthLayout'
+import AuthNotice from '@/components/auth/AuthNotice'
+import FormField from '@/components/auth/FormField'
 import { apiFetch } from '@/api'
+import { useNotice } from '@/hooks/useNotice'
+import styles from '@/styles/auth.module.css'
 
-type NoticeKind = 'idle' | 'error' | 'success'
 type Schedule = 'morning' | 'night' | 'flexible'
 type NoiseLevel = 'quiet' | 'moderate' | 'loud'
 type Cleanliness = 'very_clean' | 'normal' | 'relaxed'
@@ -18,9 +23,9 @@ interface TenantProfileResponse {
   error?: string
 }
 
-const DEFAULT_ERROR_MESSAGE = 'No se pudo guardar tu perfil de inquilino. Intentalo de nuevo.'
-
 export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPageProps) {
+  const { t } = useTranslation()
+
   const [budgetMin, setBudgetMin] = useState('400')
   const [budgetMax, setBudgetMax] = useState('900')
   const [preferredArea, setPreferredArea] = useState('')
@@ -31,40 +36,39 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
   const [noiseLevel, setNoiseLevel] = useState<NoiseLevel>('moderate')
   const [cleanliness, setCleanliness] = useState<Cleanliness>('normal')
   const [isLoading, setIsLoading] = useState(false)
-  const [notice, setNotice] = useState<{ kind: NoticeKind; message: string }>({ kind: 'idle', message: '' })
 
-  const buttonLabel = useMemo(() => (isLoading ? 'Guardando perfil...' : 'Guardar y continuar'), [isLoading])
+  const { notice, showError, showSuccess, clearNotice } = useNotice()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setNotice({ kind: 'idle', message: '' })
+    clearNotice()
 
     const parsedBudgetMin = Number.parseInt(budgetMin, 10)
     const parsedBudgetMax = Number.parseInt(budgetMax, 10)
 
     if (!Number.isFinite(parsedBudgetMin) || !Number.isFinite(parsedBudgetMax)) {
-      setNotice({ kind: 'error', message: 'Los presupuestos deben ser numeros validos.' })
+      showError(t('auth.tenantOnboarding.errors.invalidBudgetNumbers'))
       return
     }
 
     if (parsedBudgetMin <= 0 || parsedBudgetMax <= 0 || parsedBudgetMin > parsedBudgetMax) {
-      setNotice({ kind: 'error', message: 'El rango de presupuesto no es valido.' })
+      showError(t('auth.tenantOnboarding.errors.invalidBudgetRange'))
       return
     }
 
     if (preferredArea.trim().length < 2) {
-      setNotice({ kind: 'error', message: 'La zona preferida debe tener al menos 2 caracteres.' })
+      showError(t('auth.tenantOnboarding.errors.preferredAreaMin'))
       return
     }
 
     if (!moveInDate) {
-      setNotice({ kind: 'error', message: 'La fecha de entrada es obligatoria.' })
+      showError(t('auth.tenantOnboarding.errors.moveInDateRequired'))
       return
     }
 
     const token = localStorage.getItem('roomies.access_token')
     if (!token) {
-      setNotice({ kind: 'error', message: 'Tu sesion ha caducado. Inicia sesion otra vez.' })
+      showError(t('auth.tenantOnboarding.errors.sessionExpired'))
       return
     }
 
@@ -91,204 +95,153 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
       })
 
       const data = (await response.json()) as TenantProfileResponse
+
       if (!response.ok) {
-        setNotice({ kind: 'error', message: data.error || DEFAULT_ERROR_MESSAGE })
+        showError(data.error ?? t('auth.tenantOnboarding.errors.default'))
         return
       }
 
-      setNotice({ kind: 'success', message: data.message || 'Perfil guardado correctamente.' })
+      showSuccess(data.message ?? t('auth.tenantOnboarding.successDefault'))
       onCompleted()
     } catch {
-      setNotice({ kind: 'error', message: DEFAULT_ERROR_MESSAGE })
+      showError(t('auth.tenantOnboarding.errors.default'))
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--rm-border)] bg-white/85 shadow-2xl shadow-emerald-950/10 backdrop-blur-sm">
-        <section className="grid min-h-[620px] md:grid-cols-[1.05fr_0.95fr]">
-          <aside className="hidden flex-col justify-between border-r border-[var(--rm-border)] bg-gradient-to-br from-emerald-100/90 via-white to-emerald-50 p-10 md:flex">
-            <div>
-              <img src={logo} alt="Roomies logo" className="h-14 w-auto" />
-              <p className="mt-8 max-w-sm text-base leading-relaxed text-[var(--rm-text-soft)]">
-                Buen comienzo. Completa tu perfil de inquilino para que Roomies recomiende mejores viviendas y mejores
-                coincidencias.
-              </p>
-            </div>
-            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Onboarding de inquilino: ultimo paso.</p>
-          </aside>
+    <AuthLayout
+      sidebarDescription={t('auth.tenantOnboarding.sidebarDescription')}
+      sidebarTagline={t('auth.tenantOnboarding.sidebarTagline')}
+    >
+      <AuthHeader
+        title={t('auth.tenantOnboarding.title')}
+        subtitle={t('auth.tenantOnboarding.subtitle')}
+      />
 
-          <div className="flex items-center justify-center p-6 sm:p-8 md:p-10">
-            <div className="w-full max-w-md">
-              <div className="mb-8 text-center md:text-left">
-                <img src={logo} alt="Roomies" className="mx-auto h-16 w-auto md:mx-0 md:hidden" />
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">
-                  Tenant profile
-                </h1>
-                <p className="mt-3 text-sm text-[var(--rm-text-soft)] sm:text-base">
-                  Cuentanos tu presupuesto y tus preferencias de convivencia.
-                </p>
-              </div>
+      <form className={styles.form} noValidate onSubmit={handleSubmit}>
+        <div className={styles.twoColumns}>
+          <FormField
+            id="budget-min"
+            label={t('auth.tenantOnboarding.budgetMinLabel')}
+            type="number"
+            min={1}
+            value={budgetMin}
+            onChange={(event) => setBudgetMin(event.target.value)}
+            required
+          />
 
-              <form className="space-y-4" noValidate onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="budget-min" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                      Presupuesto minimo
-                    </label>
-                    <input
-                      id="budget-min"
-                      type="number"
-                      min={1}
-                      value={budgetMin}
-                      onChange={(event) => setBudgetMin(event.target.value)}
-                      required
-                      className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="budget-max" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                      Presupuesto maximo
-                    </label>
-                    <input
-                      id="budget-max"
-                      type="number"
-                      min={1}
-                      value={budgetMax}
-                      onChange={(event) => setBudgetMax(event.target.value)}
-                      required
-                      className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                    />
-                  </div>
-                </div>
+          <FormField
+            id="budget-max"
+            label={t('auth.tenantOnboarding.budgetMaxLabel')}
+            type="number"
+            min={1}
+            value={budgetMax}
+            onChange={(event) => setBudgetMax(event.target.value)}
+            required
+          />
+        </div>
 
-                <div>
-                  <label htmlFor="preferred-area" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Zona preferida
-                  </label>
-                  <input
-                    id="preferred-area"
-                    type="text"
-                    value={preferredArea}
-                    onChange={(event) => setPreferredArea(event.target.value)}
-                    placeholder="Centro, zona universitaria..."
-                    required
-                    className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                  />
-                </div>
+        <FormField
+          id="preferred-area"
+          label={t('auth.tenantOnboarding.preferredAreaLabel')}
+          type="text"
+          value={preferredArea}
+          onChange={(event) => setPreferredArea(event.target.value)}
+          placeholder={t('auth.tenantOnboarding.preferredAreaPlaceholder')}
+          required
+        />
 
-                <div>
-                  <label htmlFor="move-in-date" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Fecha de entrada
-                  </label>
-                  <input
-                    id="move-in-date"
-                    type="date"
-                    value={moveInDate}
-                    onChange={(event) => setMoveInDate(event.target.value)}
-                    required
-                    className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                  />
-                </div>
+        <FormField
+          id="move-in-date"
+          label={t('auth.tenantOnboarding.moveInDateLabel')}
+          type="date"
+          value={moveInDate}
+          onChange={(event) => setMoveInDate(event.target.value)}
+          required
+        />
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="schedule" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                      Horario
-                    </label>
-                    <select
-                      id="schedule"
-                      value={schedule}
-                      onChange={(event) => setSchedule(event.target.value as Schedule)}
-                      className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                    >
-                      <option value="morning">Manana</option>
-                      <option value="night">Noche</option>
-                      <option value="flexible">Flexible</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="noise-level" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                      Nivel de ruido
-                    </label>
-                    <select
-                      id="noise-level"
-                      value={noiseLevel}
-                      onChange={(event) => setNoiseLevel(event.target.value as NoiseLevel)}
-                      className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                    >
-                      <option value="quiet">Bajo</option>
-                      <option value="moderate">Moderado</option>
-                      <option value="loud">Alto</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="cleanliness" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Limpieza
-                  </label>
-                  <select
-                    id="cleanliness"
-                    value={cleanliness}
-                    onChange={(event) => setCleanliness(event.target.value as Cleanliness)}
-                    className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none transition focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                  >
-                    <option value="very_clean">Muy limpia</option>
-                    <option value="normal">Normal</option>
-                    <option value="relaxed">Relajada</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className="flex items-center gap-3 rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-sm text-[var(--rm-text-strong)]">
-                    <input
-                      type="checkbox"
-                      checked={pets}
-                      onChange={(event) => setPets(event.target.checked)}
-                      className="h-4 w-4 accent-[var(--rm-primary)]"
-                    />
-                    Acepta mascotas
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-sm text-[var(--rm-text-strong)]">
-                    <input
-                      type="checkbox"
-                      checked={smoker}
-                      onChange={(event) => setSmoker(event.target.checked)}
-                      className="h-4 w-4 accent-[var(--rm-primary)]"
-                    />
-                    Fumador
-                  </label>
-                </div>
-
-                {notice.kind !== 'idle' && (
-                  <p
-                    role="status"
-                    className={`rounded-xl border px-3 py-2 text-sm ${
-                      notice.kind === 'error'
-                        ? 'border-rose-200 bg-rose-50 text-rose-700'
-                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                    }`}
-                  >
-                    {notice.message}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full rounded-xl bg-[var(--rm-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--rm-primary-strong)] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {buttonLabel}
-                </button>
-              </form>
-            </div>
+        <div className={styles.twoColumns}>
+          <div className={styles.field}>
+            <label htmlFor="schedule" className={styles.roleLabel}>
+              {t('auth.tenantOnboarding.scheduleLabel')}
+            </label>
+            <select
+              id="schedule"
+              value={schedule}
+              onChange={(event) => setSchedule(event.target.value as Schedule)}
+              className={styles.select}
+            >
+              <option value="morning">{t('auth.tenantOnboarding.scheduleOptions.morning')}</option>
+              <option value="night">{t('auth.tenantOnboarding.scheduleOptions.night')}</option>
+              <option value="flexible">{t('auth.tenantOnboarding.scheduleOptions.flexible')}</option>
+            </select>
           </div>
-        </section>
-      </div>
-    </main>
+
+          <div className={styles.field}>
+            <label htmlFor="noise-level" className={styles.roleLabel}>
+              {t('auth.tenantOnboarding.noiseLevelLabel')}
+            </label>
+            <select
+              id="noise-level"
+              value={noiseLevel}
+              onChange={(event) => setNoiseLevel(event.target.value as NoiseLevel)}
+              className={styles.select}
+            >
+              <option value="quiet">{t('auth.tenantOnboarding.noiseLevelOptions.quiet')}</option>
+              <option value="moderate">{t('auth.tenantOnboarding.noiseLevelOptions.moderate')}</option>
+              <option value="loud">{t('auth.tenantOnboarding.noiseLevelOptions.loud')}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="cleanliness" className={styles.roleLabel}>
+            {t('auth.tenantOnboarding.cleanlinessLabel')}
+          </label>
+          <select
+            id="cleanliness"
+            value={cleanliness}
+            onChange={(event) => setCleanliness(event.target.value as Cleanliness)}
+            className={styles.select}
+          >
+            <option value="very_clean">{t('auth.tenantOnboarding.cleanlinessOptions.veryClean')}</option>
+            <option value="normal">{t('auth.tenantOnboarding.cleanlinessOptions.normal')}</option>
+            <option value="relaxed">{t('auth.tenantOnboarding.cleanlinessOptions.relaxed')}</option>
+          </select>
+        </div>
+
+        <div className={styles.checkboxGrid}>
+          <label className={styles.checkboxCard}>
+            <input
+              type="checkbox"
+              checked={pets}
+              onChange={(event) => setPets(event.target.checked)}
+              className={styles.roleRadio}
+            />
+            <span>{t('auth.tenantOnboarding.petsLabel')}</span>
+          </label>
+
+          <label className={styles.checkboxCard}>
+            <input
+              type="checkbox"
+              checked={smoker}
+              onChange={(event) => setSmoker(event.target.checked)}
+              className={styles.roleRadio}
+            />
+            <span>{t('auth.tenantOnboarding.smokerLabel')}</span>
+          </label>
+        </div>
+
+        <AuthNotice kind={notice.kind} message={notice.message} />
+
+        <button type="submit" disabled={isLoading} className={styles.btnPrimary}>
+          {isLoading
+            ? t('auth.tenantOnboarding.submitting')
+            : t('auth.tenantOnboarding.submit')}
+        </button>
+      </form>
+    </AuthLayout>
   )
 }
