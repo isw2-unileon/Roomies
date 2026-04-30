@@ -1,4 +1,4 @@
-/* auth.module.css — estilos compartidos entre LoginPage y RegisterPage */
+/* auth.module.css */
 
 .form {
   display: flex;
@@ -124,4 +124,63 @@
   display: block;
   font-size: 0.75rem;
   color: var(--rm-text-soft);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.twoColumns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .twoColumns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.select {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(6, 78, 59, 0.15);
+  background-color: #fff;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--rm-text-strong);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select:focus {
+  border-color: var(--rm-primary);
+  box-shadow: 0 0 0 4px rgba(31, 122, 79, 0.15);
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .checkboxGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.checkboxCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(6, 78, 59, 0.15);
+  background-color: #fff;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--rm-text-strong);
+  cursor: pointer;
 }
