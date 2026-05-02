@@ -13,7 +13,7 @@ export default function LikesSection({ items, onStatusChange }: LikesSectionProp
     const approved = items.filter((x) => x.status === 'approved')
     const rejected = items.filter((x) => x.status === 'rejected')
     return (
-        <section className="space-y-4 rounded-3xl border border-[var(--rm-border)] bg-white/90 p-5 shadow-xl shadow-emerald-950/10">
+        <section className="space-y-4 rounded-3xl border border-[var(--tenant-border-light)] bg-white/90 p-5 shadow-xl shadow-slate-950/5">
             {/* Cabecera de la seccion */}
             <div>
                 <h2 className="text-xl font-bold text-[var(--rm-text-strong)]">Likes recibidos</h2>

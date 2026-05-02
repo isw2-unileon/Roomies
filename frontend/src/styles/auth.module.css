@@ -31,8 +31,8 @@
 .btnSecondary {
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid rgba(6, 78, 59, 0.2);
-  background-color: rgba(236, 253, 245, 0.7);
+  border: 1px solid var(--tenant-border-light);
+  background-color: var(--tenant-primary-subtle);
   padding: 0.75rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -42,8 +42,8 @@
 }
 
 .btnSecondary:hover {
-  border-color: rgba(6, 78, 59, 0.3);
-  background-color: rgba(209, 250, 229, 0.7);
+  border-color: #e4dbff;
+  background-color: var(--tenant-primary-soft);
 }
 
 .btnSecondary:disabled {
@@ -65,8 +65,8 @@
 }
 
 .btnGhost:hover {
-  border-color: rgba(6, 78, 59, 0.3);
-  background-color: rgba(236, 253, 245, 0.6);
+  border-color: var(--tenant-border-strong);
+  background-color: var(--tenant-bg-soft);
 }
 
 
@@ -96,7 +96,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(6, 78, 59, 0.15);
+  border: 1px solid var(--tenant-border-light);
   background-color: #fff;
   padding: 0.75rem 1rem;
   transition: border-color 0.15s ease;
@@ -146,7 +146,7 @@
 .select {
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid rgba(6, 78, 59, 0.15);
+  border: 1px solid var(--tenant-border-light);
   background-color: #fff;
   padding: 0.75rem 1rem;
   font-size: 1rem;
@@ -157,7 +157,7 @@
 
 .select:focus {
   border-color: var(--rm-primary);
-  box-shadow: 0 0 0 4px rgba(31, 122, 79, 0.15);
+  box-shadow: 0 0 0 4px rgba(100, 54, 199, 0.14);
 }
 
 .checkboxGrid {
@@ -177,7 +177,7 @@
   align-items: center;
   gap: 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(6, 78, 59, 0.15);
+  border: 1px solid var(--tenant-border-light);
   background-color: #fff;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;

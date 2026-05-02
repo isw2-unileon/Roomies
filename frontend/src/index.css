@@ -2,14 +2,28 @@
 @import 'tailwindcss';
 
 :root {
-  --rm-bg-0: #f8faf7;
-  --rm-bg-1: #edf7f1;
-  --rm-bg-2: #d4eadc;
-  --rm-text-strong: #14251d;
-  --rm-text-soft: #3b5246;
-  --rm-primary: #1f7a4f;
-  --rm-primary-strong: #16613e;
-  --rm-border: rgba(31, 122, 79, 0.2);
+  --tenant-bg: #f8f7f5;
+  --tenant-bg-soft: #f7f4f0;
+  --tenant-surface: #ffffff;
+  --tenant-text: #171421;
+  --tenant-text-muted: #4f4a58;
+  --tenant-text-soft: #6f6b77;
+  --tenant-primary: #6436c7;
+  --tenant-primary-strong: #5429b0;
+  --tenant-primary-soft: #f0eafe;
+  --tenant-primary-subtle: #f7f2ff;
+  --tenant-border: #e5e1dc;
+  --tenant-border-light: #eee9e4;
+  --tenant-border-strong: #d2c8bf;
+  --tenant-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --rm-bg-0: var(--tenant-bg);
+  --rm-bg-1: var(--tenant-bg-soft);
+  --rm-bg-2: #eee9e4;
+  --rm-text-strong: var(--tenant-text);
+  --rm-text-soft: var(--tenant-text-muted);
+  --rm-primary: var(--tenant-primary);
+  --rm-primary-strong: var(--tenant-primary-strong);
+  --rm-border: var(--tenant-border);
 }
 
 * {
@@ -22,9 +36,9 @@ body {
   font-family: 'Manrope', 'Segoe UI', sans-serif;
   color: var(--rm-text-strong);
   background:
-    radial-gradient(circle at 10% 10%, rgba(212, 234, 220, 0.75), transparent 45%),
-    radial-gradient(circle at 80% 0%, rgba(180, 219, 196, 0.45), transparent 40%),
-    linear-gradient(150deg, var(--rm-bg-0), var(--rm-bg-1) 55%, var(--rm-bg-2));
+    radial-gradient(circle at 12% 8%, rgba(240, 234, 254, 0.85), transparent 38%),
+    radial-gradient(circle at 85% 0%, rgba(229, 225, 220, 0.62), transparent 36%),
+    linear-gradient(150deg, var(--rm-bg-0), var(--rm-bg-1) 58%, var(--rm-bg-2));
 }
 
 h1,

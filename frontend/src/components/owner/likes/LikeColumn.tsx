@@ -10,7 +10,7 @@ interface LikesColumnProps {
 }
 export default function LikesColumn({ title, items, onStatusChange }: LikesColumnProps) {
     return (
-        <div className="rounded-2xl border border-[var(--rm-border)] bg-white p-4">
+        <div className="rounded-2xl border border-[var(--tenant-border-light)] bg-white p-4">
             {/* Cabecera de columna con contador */}
             <h3 className="text-sm font-bold text-[var(--rm-text-strong)]">
                 {title} ({items.length})
