@@ -1,3 +1,4 @@
+import { ChevronDownIcon, FunnelIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from '@/styles/TenantFilters.module.css'
@@ -37,22 +38,6 @@ const sortOptions = [
     { value: 'newest', labelKey: 'tenantDashboard.filters.sort.newest' },
 ]
 
-function FunnelIcon() {
-    return (
-        <svg className={styles.icon} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.112 8.015.36C13.856 3.675 14 4.055 14 4.5v3.5a2.25 2.25 0 01-2.25 2.25h-11.5a2.25 2.25 0 01-2.25-2.25V4.5c0-.445.144-.825.985-1.14 2.56-.248 5.26-.36 8.015-.36zM12 10.5c-2.755 0-5.455.112-8.015.36-1.335.088-1.855.362-1.985.805-.15.508.086 1.07.615 1.335h19.37c.529-.265.765-.827.615-1.335-.13-.443-.65-.717-1.985-.805-2.56-.248-5.26-.36-8.015-.36zM12 18c-2.755 0-5.455.112-8.015.36-1.335.088-1.855.362-1.985.805-.15.508.086 1.07.615 1.335h19.37c.529-.265.765-.827.615-1.335-.13-.443-.65-.717-1.985-.805-2.56-.248-5.26-.36-8.015-.36zM12 13.5c-2.142 0-4.206.096-6.19.278-.975.089-1.555.328-1.713.707-.158.379.043.82.487 1.045.444.224.996.335 1.916.362h13.0c.92-.027 1.472-.138 1.916-.362.444-.224.646-.666.487-1.045-.158-.379-.738-.618-1.713-.707C16.206 13.596 14.142 13.5 12 13.5z" />
-        </svg>
-    )
-}
-
-function ChevronDownIcon() {
-    return (
-        <svg className={styles.icon} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-        </svg>
-    )
-}
-
 export default function TenantFilters({ onFilterChange = () => {} }: TenantFiltersProps) {
     const { t } = useTranslation()
     const [isOpen, setIsOpen] = useState(false)
@@ -80,10 +65,10 @@ export default function TenantFilters({ onFilterChange = () => {} }: TenantFilte
                 aria-expanded={isOpen}
             >
                 <div className={styles.toggleLabel}>
-                    <FunnelIcon />
+                    <FunnelIcon className={styles.icon} aria-hidden="true" />
                     <span>{t('tenantDashboard.filters.title')}</span>
                 </div>
-                <ChevronDownIcon />
+                <ChevronDownIcon className={styles.icon} aria-hidden="true" />
             </button>
 
             {isOpen && (
