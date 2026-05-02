@@ -38,4 +38,8 @@ coverage/
 playwright-report/
 test-results/
 
+# AI / agents
+.opencode/
+.agents/
 AGENTS.md
+skills-lock.json

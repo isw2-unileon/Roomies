@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import logo from '@/assets/logo.png'
 import { apiFetch } from '@/api'
+import AuthHeader from '@/components/auth/AuthHeader'
+import AuthLayout from '@/components/auth/AuthLayout'
+import AuthNotice from '@/components/auth/AuthNotice'
+import { paths } from '@/routes/paths'
+import styles from '@/styles/auth.module.css'
 
 type NoticeKind = 'idle' | 'error' | 'success'
 
@@ -119,7 +123,7 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
         localStorage.setItem('roomies.refresh_token', refreshToken)
       }
 
-      window.history.replaceState({}, '', '/auth/callback')
+      window.history.replaceState({}, '', paths.authCallback)
 
       try {
         const response = await apiFetch('/api/profile/status', {
@@ -156,38 +160,21 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
   }, [onResolved])
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--rm-border)] bg-white/85 shadow-2xl shadow-emerald-950/10 backdrop-blur-sm">
-        <section className="grid min-h-[560px] md:grid-cols-[1.05fr_0.95fr]">
-          <aside className="hidden flex-col justify-between border-r border-[var(--rm-border)] bg-gradient-to-br from-emerald-100/90 via-white to-emerald-50 p-10 md:flex">
-            <div>
-              <img src={logo} alt="Roomies logo" className="h-14 w-auto" />
-              <p className="mt-8 max-w-sm text-base leading-relaxed text-[var(--rm-text-soft)]">
-                Estamos validando tu enlace de confirmacion para activar tu cuenta en Roomies.
-              </p>
-            </div>
-            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Confirmacion de cuenta en curso.</p>
-          </aside>
+    <AuthLayout
+      sidebarDescription="Estamos validando tu enlace de confirmacion para activar tu cuenta en Roomies."
+      sidebarTagline="Confirmacion de cuenta en curso."
+    >
+      <AuthHeader title="Confirmar cuenta" subtitle={notice.message} />
 
-          <div className="flex items-center justify-center p-6 sm:p-8 md:p-10">
-            <div className="w-full max-w-md text-center md:text-left">
-              <img src={logo} alt="Roomies" className="mx-auto h-16 w-auto md:mx-0 md:hidden" />
-              <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">Confirmar cuenta</h1>
-              <p className="mt-3 text-sm text-[var(--rm-text-soft)] sm:text-base">{notice.message}</p>
+      <div className={styles.form}>
+        <AuthNotice kind={notice.kind} message={notice.message} />
 
-              {notice.kind === 'error' ? (
-                <button
-                  type="button"
-                  onClick={onNavigateToLogin}
-                  className="mt-8 inline-flex w-full items-center justify-center rounded-xl bg-[var(--rm-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50"
-                >
-                  {buttonLabel}
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </section>
+        {notice.kind === 'error' ? (
+          <button type="button" onClick={onNavigateToLogin} className={styles.btnPrimary}>
+            {buttonLabel}
+          </button>
+        ) : null}
       </div>
-    </main>
+    </AuthLayout>
   )
 }

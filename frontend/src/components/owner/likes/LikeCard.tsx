@@ -7,7 +7,7 @@ interface LikeCardProps {
 }
 export default function LikeCard({ item, onStatusChange }: LikeCardProps) {
     return (
-        <article className="rounded-xl border border-[var(--rm-border)] bg-white p-3">
+        <article className="rounded-xl border border-[var(--tenant-border-light)] bg-white p-3 shadow-sm shadow-slate-950/5">
             {/* Informacion del interesado */}
             <p className="text-sm font-semibold text-[var(--rm-text-strong)]">{item.tenantName}</p>
             <p className="text-xs text-[var(--rm-text-soft)]">{item.tenantEmail}</p>
@@ -20,7 +20,7 @@ export default function LikeCard({ item, onStatusChange }: LikeCardProps) {
                 <button
                     type="button"
                     onClick={() => onStatusChange(item.id, 'approved')}
-                    className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                    className="rounded-lg bg-[var(--tenant-primary)] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--tenant-primary-strong)]"
                 >
                     Aceptar
                 </button>

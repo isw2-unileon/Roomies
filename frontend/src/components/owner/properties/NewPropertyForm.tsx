@@ -40,14 +40,14 @@ export default function NewPropertyForm({ onCreate }: NewPropertyFormProps) {
     return (
         <form
             onSubmit={handleSubmit}
-            className="grid gap-3 rounded-2xl border border-[var(--rm-border)] bg-white p-4 sm:grid-cols-2"
+            className="grid gap-3 rounded-2xl border border-[var(--tenant-border-light)] bg-white p-4 sm:grid-cols-2"
         >
             {/* Titulo */}
             <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Titulo del inmueble"
-                className="rounded-xl border border-emerald-900/15 px-3 py-2"
+                className="rounded-xl border border-[var(--tenant-border-light)] px-3 py-2 outline-none focus:border-[var(--tenant-primary)] focus:shadow-[0_0_0_4px_rgba(100,54,199,0.14)]"
                 required
             />
             {/* Direccion */}
@@ -55,7 +55,7 @@ export default function NewPropertyForm({ onCreate }: NewPropertyFormProps) {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Direccion"
-                className="rounded-xl border border-emerald-900/15 px-3 py-2"
+                className="rounded-xl border border-[var(--tenant-border-light)] px-3 py-2 outline-none focus:border-[var(--tenant-primary)] focus:shadow-[0_0_0_4px_rgba(100,54,199,0.14)]"
                 required
             />
             {/* Zona */}
@@ -63,7 +63,7 @@ export default function NewPropertyForm({ onCreate }: NewPropertyFormProps) {
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
                 placeholder="Zona"
-                className="rounded-xl border border-emerald-900/15 px-3 py-2"
+                className="rounded-xl border border-[var(--tenant-border-light)] px-3 py-2 outline-none focus:border-[var(--tenant-primary)] focus:shadow-[0_0_0_4px_rgba(100,54,199,0.14)]"
                 required
             />
             {/* Habitaciones disponibles */}
@@ -73,7 +73,7 @@ export default function NewPropertyForm({ onCreate }: NewPropertyFormProps) {
                 value={availableRooms}
                 onChange={(e) => setAvailableRooms(e.target.value)}
                 placeholder="Habitaciones libres"
-                className="rounded-xl border border-emerald-900/15 px-3 py-2"
+                className="rounded-xl border border-[var(--tenant-border-light)] px-3 py-2 outline-none focus:border-[var(--tenant-primary)] focus:shadow-[0_0_0_4px_rgba(100,54,199,0.14)]"
             />
             {/* Precio mensual */}
             <input
@@ -82,13 +82,13 @@ export default function NewPropertyForm({ onCreate }: NewPropertyFormProps) {
                 value={rent}
                 onChange={(e) => setRent(e.target.value)}
                 placeholder="Precio mensual"
-                className="rounded-xl border border-emerald-900/15 px-3 py-2"
+                className="rounded-xl border border-[var(--tenant-border-light)] px-3 py-2 outline-none focus:border-[var(--tenant-primary)] focus:shadow-[0_0_0_4px_rgba(100,54,199,0.14)]"
             />
             {/* Estado del inmueble */}
             <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as PropertyStatus)}
-                className="rounded-xl border border-emerald-900/15 px-3 py-2"
+                className="rounded-xl border border-[var(--tenant-border-light)] px-3 py-2 outline-none focus:border-[var(--tenant-primary)] focus:shadow-[0_0_0_4px_rgba(100,54,199,0.14)]"
             >
                 <option value="open">Abierto</option>
                 <option value="closed">Cerrado</option>

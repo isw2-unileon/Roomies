@@ -16,7 +16,7 @@
 .input {
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid rgba(6, 78, 59, 0.15);
+  border: 1px solid var(--tenant-border-light);
   background-color: #fff;
   padding: 0.75rem 1rem;
   font-size: 1rem;
@@ -31,5 +31,5 @@
 
 .input:focus {
   border-color: var(--rm-primary);
-  box-shadow: 0 0 0 4px rgba(31, 122, 79, 0.15);
+  box-shadow: 0 0 0 4px rgba(100, 54, 199, 0.14);
 }

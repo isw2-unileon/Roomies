@@ -1,0 +1,154 @@
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4rem;
+  padding: 0 1rem;
+  background: #fdfcfb;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.areaInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.areaLabel {
+  color: var(--tenant-text);
+  font-weight: 700;
+}
+
+.areaValue {
+  padding: 0.25rem 0.75rem;
+  color: var(--tenant-text-muted);
+  font-weight: 600;
+  background: var(--tenant-bg-soft);
+  border-radius: 999px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.languageSwitcher {
+  display: block;
+  margin-right: 0.375rem;
+}
+
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  color: var(--tenant-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.iconButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.counter {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  color: #fff;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  background: var(--tenant-primary);
+  border-radius: 999px;
+}
+
+.profileButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.25rem;
+  padding: 0.375rem 0.375rem 0.375rem 0.5rem;
+  color: var(--tenant-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.profileButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--tenant-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #ded4c7;
+  border-radius: 999px;
+}
+
+.profileText {
+  display: none;
+  text-align: left;
+  font-size: 0.75rem;
+  line-height: 1.1;
+}
+
+.profileName {
+  display: block;
+  color: var(--tenant-text);
+  font-weight: 700;
+}
+
+.profileRole {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--tenant-text-soft);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .profileText {
+    display: block;
+  }
+}
+
+@media (max-width: 420px) {
+  .areaLabel {
+    display: none;
+  }
+
+  .languageSwitcher {
+    margin-right: 0.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .topBar {
+    padding: 0 1.75rem;
+  }
+}

@@ -9,7 +9,7 @@ interface PropertiesSectionProps {
 }
 export default function PropertiesSection({ items, onCreate }: PropertiesSectionProps) {
     return (
-        <section className="space-y-4 rounded-3xl border border-[var(--rm-border)] bg-white/90 p-5 shadow-xl shadow-emerald-950/10">
+        <section className="space-y-4 rounded-3xl border border-[var(--tenant-border-light)] bg-white/90 p-5 shadow-xl shadow-slate-950/5">
             {/* Titulo de bloque */}
             <div>
                 <h2 className="text-xl font-bold text-[var(--rm-text-strong)]">Mis inmuebles</h2>

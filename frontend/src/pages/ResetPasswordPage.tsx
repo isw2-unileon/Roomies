@@ -1,7 +1,12 @@
 import { FormEvent, useMemo, useState } from 'react'
 
-import logo from '@/assets/logo.png'
 import { apiFetch } from '@/api'
+import AuthHeader from '@/components/auth/AuthHeader'
+import AuthLayout from '@/components/auth/AuthLayout'
+import AuthNotice from '@/components/auth/AuthNotice'
+import FormField from '@/components/auth/FormField'
+import { paths } from '@/routes/paths'
+import styles from '@/styles/auth.module.css'
 
 type NoticeKind = 'idle' | 'error' | 'success'
 
@@ -94,7 +99,7 @@ export default function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPa
       localStorage.removeItem('roomies.refresh_token')
 
       if (recovery.refreshToken) {
-        window.history.replaceState({}, '', '/reset-password')
+        window.history.replaceState({}, '', paths.resetPassword)
       }
 
       setNotice({
@@ -114,104 +119,50 @@ export default function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPa
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-[var(--rm-border)] bg-white/85 shadow-2xl shadow-emerald-950/10 backdrop-blur-sm">
-        <section className="grid min-h-[560px] md:grid-cols-[1.05fr_0.95fr]">
-          <aside className="hidden flex-col justify-between border-r border-[var(--rm-border)] bg-gradient-to-br from-emerald-100/90 via-white to-emerald-50 p-10 md:flex">
-            <div>
-              <img src={logo} alt="Roomies logo" className="h-14 w-auto" />
-              <p className="mt-8 max-w-sm text-base leading-relaxed text-[var(--rm-text-soft)]">
-                Establece una nueva contrasena para volver a acceder a tu cuenta de Roomies.
-              </p>
-            </div>
-            <p className="text-sm font-medium text-[var(--rm-text-soft)]">Recuperacion de acceso segura.</p>
-          </aside>
+    <AuthLayout
+      sidebarDescription="Establece una nueva contrasena para volver a acceder a tu cuenta de Roomies."
+      sidebarTagline="Recuperacion de acceso segura."
+    >
+      <AuthHeader
+        title="Restablecer contrasena"
+        subtitle="Introduce tu nueva contrasena dos veces para confirmar el cambio."
+      />
 
-          <div className="flex items-center justify-center p-6 sm:p-8 md:p-10">
-            <div className="w-full max-w-md">
-              <div className="mb-8 text-center md:text-left">
-                <img src={logo} alt="Roomies" className="mx-auto h-16 w-auto md:mx-0 md:hidden" />
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--rm-text-strong)] sm:text-4xl">
-                  Restablecer contrasena
-                </h1>
-                <p className="mt-3 text-sm text-[var(--rm-text-soft)] sm:text-base">
-                  Introduce tu nueva contrasena dos veces para confirmar el cambio.
-                </p>
-              </div>
+      <form className={styles.form} noValidate onSubmit={handleSubmit}>
+        <FormField
+          id="new-password"
+          label="Nueva contrasena"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="new-password"
+          placeholder="Minimo 6 caracteres"
+          required
+          minLength={6}
+        />
 
-              <form className="space-y-5" noValidate onSubmit={handleSubmit}>
-                <div>
-                  <label htmlFor="new-password" className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]">
-                    Nueva contrasena
-                  </label>
-                  <input
-                    id="new-password"
-                    name="new-password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="new-password"
-                    placeholder="Minimo 6 caracteres"
-                    required
-                    minLength={6}
-                    className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                  />
-                </div>
+        <FormField
+          id="confirm-new-password"
+          label="Confirmar nueva contrasena"
+          type="password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          autoComplete="new-password"
+          placeholder="Repite la nueva contrasena"
+          required
+          minLength={6}
+        />
 
-                <div>
-                  <label
-                    htmlFor="confirm-new-password"
-                    className="mb-1.5 block text-sm font-semibold text-[var(--rm-text-strong)]"
-                  >
-                    Confirmar nueva contrasena
-                  </label>
-                  <input
-                    id="confirm-new-password"
-                    name="confirm-new-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    autoComplete="new-password"
-                    placeholder="Repite la nueva contrasena"
-                    required
-                    minLength={6}
-                    className="w-full rounded-xl border border-emerald-900/15 bg-white px-4 py-3 text-[var(--rm-text-strong)] outline-none ring-0 transition placeholder:text-slate-400 focus:border-[var(--rm-primary)] focus:shadow-[0_0_0_4px_rgba(31,122,79,0.15)]"
-                  />
-                </div>
+        <AuthNotice kind={notice.kind} message={notice.message} />
 
-                {notice.kind !== 'idle' && (
-                  <p
-                    role="status"
-                    className={`rounded-xl border px-3 py-2 text-sm ${
-                      notice.kind === 'error'
-                        ? 'border-rose-200 bg-rose-50 text-rose-700'
-                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                    }`}
-                  >
-                    {notice.message}
-                  </p>
-                )}
+        <button type="submit" disabled={isSubmitting} className={styles.btnPrimary}>
+          {buttonLabel}
+        </button>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl bg-[var(--rm-primary)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--rm-primary-strong)] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {buttonLabel}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onNavigateToLogin}
-                  className="w-full rounded-xl border border-[var(--rm-border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--rm-text-strong)] transition hover:border-emerald-900/30 hover:bg-emerald-50/60"
-                >
-                  Volver al inicio de sesion
-                </button>
-              </form>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+        <button type="button" onClick={onNavigateToLogin} className={styles.btnGhost}>
+          Volver al inicio de sesion
+        </button>
+      </form>
+    </AuthLayout>
   )
 }

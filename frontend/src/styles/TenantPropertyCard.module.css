@@ -1,0 +1,230 @@
+.card {
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--tenant-border-strong);
+  box-shadow: 0 20px 35px rgba(15, 23, 42, 0.1);
+}
+
+.imageWrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #eeeae5;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.card:hover .image {
+  transform: scale(1.03);
+}
+
+.imageFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #6f6b66;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.saveButton {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #2b2730;
+  background: rgba(255, 255, 255, 0.9);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.saveButton:hover {
+  background: #fff;
+}
+
+.body {
+  padding: 1rem;
+}
+
+.topLine {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.titleBlock {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.card:hover .title {
+  color: var(--tenant-primary);
+}
+
+.address {
+  overflow: hidden;
+  margin: 0.25rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priceBlock {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.price {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.perMonth {
+  color: var(--tenant-text-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.perRoom {
+  color: var(--tenant-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.metaList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+  color: var(--tenant-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.statusBadge,
+.compatibilityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.available {
+  color: #1b6b3f;
+  background: #e2f6de;
+  border-color: #b9dfb3;
+}
+
+.occupied {
+  color: #8a4d12;
+  background: #fff1d1;
+  border-color: #f2cf86;
+}
+
+.full {
+  color: #93452c;
+  background: #f3e1dc;
+  border-color: #e2b9ad;
+}
+
+.compatibilityBadge {
+  color: #087046;
+  background: #eaf8f2;
+  border-color: #bde4d5;
+}
+
+.detailsButton {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: var(--tenant-primary);
+  border: 0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.detailsButton:hover {
+  background: var(--tenant-primary-strong);
+}
+
+.iconSmall {
+  width: 1rem;
+  height: 1rem;
+}
+
+.iconMedium {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.iconTiny {
+  width: 0.875rem;
+  height: 0.875rem;
+}

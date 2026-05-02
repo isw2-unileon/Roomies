@@ -14,7 +14,7 @@
 }
 
 .success {
-  border-color: #a7f3d0;
-  background-color: #ecfdf5;
-  color: #065f46;
+  border-color: #e4dbff;
+  background-color: var(--tenant-primary-subtle);
+  color: #3d256c;
 }

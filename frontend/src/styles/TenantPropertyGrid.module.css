@@ -1,0 +1,58 @@
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed var(--tenant-border-strong);
+  border-radius: 1rem;
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.emptySubtitle {
+  margin: 0.25rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.gridItem {
+  animation: fadeInUp 350ms ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
