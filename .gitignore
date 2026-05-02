@@ -38,4 +38,6 @@ coverage/
 playwright-report/
 test-results/
 
+# AI / agents
+.opencode/
 AGENTS.md
