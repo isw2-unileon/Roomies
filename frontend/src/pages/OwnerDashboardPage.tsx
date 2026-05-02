@@ -1,5 +1,6 @@
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import OwnerActivityList from '@/components/owner/OwnerActivityList'
 import OwnerHelpCard from '@/components/owner/OwnerHelpCard'
 import OwnerIssuesList from '@/components/owner/OwnerIssuesList'
@@ -18,9 +19,11 @@ import {
   mockOwnerRequests,
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
+import { paths } from '@/routes/paths'
 import type { OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
 
 export default function OwnerDashboardPage() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<OwnerNavTab>('properties')
   const [issues, setIssues] = useState(mockOwnerIssues)
   const unreadMessages = 1
@@ -70,7 +73,11 @@ export default function OwnerDashboardPage() {
                 <section className={styles.ownerSectionCard}>
                   <header className={styles.ownerSectionHeader}>
                     <h1 className={styles.ownerSectionTitle}>Mis pisos</h1>
-                    <button type="button" className={styles.ownerPublishButton}>
+                    <button
+                      type="button"
+                      className={styles.ownerPublishButton}
+                      onClick={() => navigate(paths.ownerPublishProperty)}
+                    >
                       <PlusIcon className={styles.ownerIconSmall} aria-hidden="true" />
                       Publicar piso
                     </button>

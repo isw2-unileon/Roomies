@@ -7,6 +7,7 @@ export const paths = {
   tenantDashboard: '/tenant/dashboard',
   ownerComingSoon: '/owner/coming-soon',
   ownerDashboard: '/owner/dashboard',
+  ownerPublishProperty: '/owner/properties/new',
 } as const
 
 export const legacyPaths = {

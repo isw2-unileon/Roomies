@@ -4,6 +4,7 @@ import AuthCallbackPage from '@/pages/AuthCallbackPage'
 import LoginPage from '@/pages/LoginPage'
 import OwnerComingSoonPage from '@/pages/OwnerComingSoonPage'
 import OwnerDashboardPage from '@/pages/OwnerDashboardPage'
+import OwnerPublishPropertyPage from '@/pages/OwnerPublishPropertyPage'
 import RegisterPage from '@/pages/RegisterPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import TenantDashboardPage from '@/pages/TenantDashboardPage'
@@ -53,6 +54,7 @@ function AppRoutes() {
       <Route path={paths.tenantDashboard} element={<TenantDashboardPage />} />
       <Route path={paths.ownerComingSoon} element={<OwnerComingSoonPage />} />
       <Route path={paths.ownerDashboard} element={<OwnerDashboardPage />} />
+      <Route path={paths.ownerPublishProperty} element={<OwnerPublishPropertyPage />} />
       <Route path={legacyPaths.tenantDashboard} element={<Navigate to={paths.tenantDashboard} replace />} />
       <Route path="*" element={<Navigate to={paths.login} replace />} />
     </Routes>
