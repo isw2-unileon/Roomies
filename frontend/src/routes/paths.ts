@@ -4,14 +4,10 @@ export const paths = {
   authCallback: '/auth/callback',
   resetPassword: '/reset-password',
   tenantOnboarding: '/onboarding/tenant',
-  tenantDashboard: '/tenant/dashboard',
+  tenantExplore: '/tenant/explore',
   ownerComingSoon: '/owner/coming-soon',
   ownerDashboard: '/owner/dashboard',
   ownerPublishProperty: '/owner/properties/new',
-} as const
-
-export const legacyPaths = {
-  tenantDashboard: '/app',
 } as const
 
 export type AppPath = (typeof paths)[keyof typeof paths]
