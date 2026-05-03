@@ -7,6 +7,7 @@ export const paths = {
   tenantExplore: '/tenant/explore',
   ownerComingSoon: '/owner/coming-soon',
   ownerDashboard: '/owner/dashboard',
+  ownerPublishProperty: '/owner/properties/new',
 } as const
 
 export type AppPath = (typeof paths)[keyof typeof paths]

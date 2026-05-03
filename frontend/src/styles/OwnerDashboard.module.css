@@ -1,0 +1,798 @@
+.page {
+  min-height: 100vh;
+  background: var(--tenant-bg);
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+.desktopSidebar {
+  display: none;
+  flex-shrink: 0;
+  width: 16rem;
+}
+
+.mainColumn {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.content > * + * {
+  margin-top: 1.5rem;
+}
+
+.mobileSidebar {
+  display: block;
+}
+
+.ownerSidebar {
+  display: flex;
+  min-height: calc(100vh - 2rem);
+  height: 100%;
+  flex-direction: column;
+  padding: 1rem;
+  color: var(--tenant-text);
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1.5rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.ownerSidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.ownerBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.ownerLogoFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: var(--tenant-bg-soft);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.ownerLogo {
+  width: auto;
+  height: 2rem;
+}
+
+.ownerBrandName {
+  color: var(--tenant-text);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.ownerNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.ownerNavButton {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  color: var(--tenant-text-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ownerNavButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.ownerNavButtonActive {
+  color: var(--tenant-primary);
+  background: var(--tenant-primary-soft);
+}
+
+.ownerNavLabel {
+  flex: 1;
+}
+
+.ownerNavBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  background: var(--tenant-primary);
+  border-radius: 999px;
+}
+
+.ownerLogoutWrap {
+  margin-top: auto;
+}
+
+.ownerLogoutButton {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  color: var(--tenant-text-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid var(--tenant-border);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ownerLogoutButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.ownerTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 4rem;
+  padding: 0 1rem;
+  background: #fdfcfb;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.ownerSearchWrap {
+  position: relative;
+  flex: 1;
+  max-width: 37rem;
+}
+
+.ownerSearchIcon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0.9rem;
+  display: flex;
+  align-items: center;
+  color: var(--tenant-text-soft);
+  pointer-events: none;
+}
+
+.ownerSearchInput {
+  width: 100%;
+  height: 2.7rem;
+  padding: 0 0.9rem 0 2.7rem;
+  color: var(--tenant-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 0.65rem;
+  outline: none;
+}
+
+.ownerSearchInput:focus {
+  border-color: #d8cee9;
+  box-shadow: 0 0 0 3px rgba(100, 54, 199, 0.14);
+}
+
+.ownerTopBarActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ownerIconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  color: var(--tenant-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ownerIconButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.ownerCounter {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  color: #fff;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  background: var(--tenant-primary);
+  border-radius: 999px;
+}
+
+.ownerProfileButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.25rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.45rem;
+  color: var(--tenant-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.ownerProfileButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.ownerAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--tenant-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #ded4c7;
+  border-radius: 999px;
+}
+
+.ownerProfileText {
+  display: none;
+  text-align: left;
+  font-size: 0.75rem;
+  line-height: 1.1;
+}
+
+.ownerProfileName {
+  display: block;
+  color: var(--tenant-text);
+  font-weight: 700;
+}
+
+.ownerProfileRole {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--tenant-text-soft);
+}
+
+.ownerMainGrid {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.ownerPrimaryColumn {
+  display: grid;
+  gap: 1rem;
+}
+
+.ownerSideColumn {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.ownerSectionCard {
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.ownerSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.ownerSectionTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.ownerPublishButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.95rem;
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: var(--tenant-primary);
+  border: 0;
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.ownerPublishButton:hover {
+  background: var(--tenant-primary-strong);
+}
+
+.ownerPropertyGrid {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.ownerPropertyCard {
+  overflow: hidden;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.9rem;
+  background: var(--tenant-surface);
+}
+
+.ownerPropertyImage {
+  width: 100%;
+  aspect-ratio: 16 / 8;
+  object-fit: cover;
+}
+
+.ownerPropertyBody {
+  padding: 0.85rem;
+}
+
+.ownerPropertyTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ownerPropertyAddress {
+  margin: 0.2rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ownerPropertyMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  margin-top: 0.7rem;
+  color: var(--tenant-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ownerProgressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.ownerProgressTrack {
+  flex: 1;
+  height: 0.48rem;
+  background: #ece8e2;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ownerProgressBar {
+  height: 100%;
+  background: #14955f;
+  border-radius: 999px;
+}
+
+.ownerProgressLabel {
+  color: var(--tenant-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ownerTableWrap {
+  overflow-x: auto;
+}
+
+.ownerTable {
+  width: 100%;
+  min-width: 43rem;
+  border-collapse: collapse;
+}
+
+.ownerTable th,
+.ownerTable td {
+  padding: 0.8rem 1rem;
+  text-align: left;
+}
+
+.ownerTable th {
+  color: var(--tenant-text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.ownerTable td {
+  color: var(--tenant-text-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  border-bottom: 1px solid #f0ece8;
+}
+
+.ownerStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.ownerStatusPending {
+  color: #8a4d12;
+  background: #fff1d1;
+  border-color: #f2cf86;
+}
+
+.ownerActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ownerActionButton {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 0.55rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.ownerActionAccept {
+  color: #fff;
+  background: #14955f;
+}
+
+.ownerActionAccept:hover {
+  background: #0f7f50;
+}
+
+.ownerActionReject {
+  color: #b42318;
+  background: #fff5f4;
+  border-color: #f3c6c3;
+}
+
+.ownerActionReject:hover {
+  background: #ffeceb;
+}
+
+.ownerDonutWrap {
+  display: grid;
+  gap: 0.9rem;
+  place-items: center;
+  padding: 1rem;
+}
+
+.ownerDonut {
+  width: 10.5rem;
+  height: 10.5rem;
+  border-radius: 999px;
+  background: conic-gradient(#14955f calc(var(--owner-occupied, 67) * 1%), #e8e6ed 0);
+  display: grid;
+  place-items: center;
+}
+
+.ownerDonutInner {
+  width: 7.7rem;
+  height: 7.7rem;
+  border-radius: 999px;
+  background: var(--tenant-surface);
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.ownerDonutInner strong {
+  color: var(--tenant-text);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.ownerDonutInner span {
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ownerLegend {
+  display: flex;
+  gap: 1rem;
+  color: var(--tenant-text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.ownerLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ownerDotBusy,
+.ownerDotFree {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+}
+
+.ownerDotBusy {
+  background: #14955f;
+}
+
+.ownerDotFree {
+  background: #d7d3dd;
+}
+
+.ownerHintCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 1rem 1rem;
+  padding: 0.75rem;
+  color: #1d6f4a;
+  background: #e8f7ef;
+  border: 1px solid #c6e9d6;
+  border-radius: 0.75rem;
+}
+
+.ownerHintCard p {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.ownerActivityList {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.ownerActivityItem {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.ownerActivityTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.ownerActivityMeta {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ownerHelpCard {
+  padding: 1rem;
+  background: #f6f1ff;
+  border: 1px solid #e9ddff;
+  border-radius: 1rem;
+}
+
+.ownerHelpTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.ownerHelpText {
+  margin: 0.4rem 0 0;
+  color: var(--tenant-text-muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.ownerTextButton {
+  padding: 0;
+  color: var(--tenant-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.ownerStrongPositive {
+  color: #14804d;
+}
+
+.ownerCompactList {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.ownerCompactItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.7rem;
+}
+
+.ownerCompactTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.ownerCompactMeta {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ownerCompactAmount {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.ownerIssueList {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+}
+
+.ownerIssueCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.8rem;
+  background: #fff;
+}
+
+.ownerIssueTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.ownerIssueMeta {
+  margin: 0.2rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.ownerIssueSelect {
+  flex-shrink: 0;
+  padding: 0.4rem 0.65rem;
+  color: var(--tenant-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 0.65rem;
+}
+
+.ownerIconSmall {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.ownerIconMedium {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .ownerProfileText {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .ownerPropertyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktopSidebar {
+    display: block;
+  }
+
+  .mobileSidebar {
+    display: none;
+  }
+
+  .content {
+    padding: 1.75rem;
+  }
+
+  .ownerTopBar {
+    padding: 0 1.75rem;
+  }
+
+  .ownerSidebar {
+    min-height: 100vh;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .ownerMainGrid {
+    grid-template-columns: minmax(0, 1fr) 21rem;
+    align-items: start;
+  }
+
+  .ownerPropertyGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

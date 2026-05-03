@@ -1,0 +1,156 @@
+.pageSection {
+  display: grid;
+  gap: 1rem;
+}
+
+.pageHeader {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pageTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.pageSubtitle {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.formCard {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.label {
+  color: var(--tenant-text-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  color: var(--tenant-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 0.75rem;
+  outline: none;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: #d8cee9;
+  box-shadow: 0 0 0 3px rgba(100, 54, 199, 0.15);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 6.5rem;
+}
+
+.hint {
+  color: var(--tenant-text-soft);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.error {
+  color: #b42318;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.fileList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fileItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  color: var(--tenant-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.6rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 0.58rem 0.95rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  border-radius: 0.7rem;
+  cursor: pointer;
+}
+
+.primaryButton {
+  color: #fff;
+  background: var(--tenant-primary);
+  border: 1px solid var(--tenant-primary);
+}
+
+.primaryButton:hover {
+  background: var(--tenant-primary-strong);
+  border-color: var(--tenant-primary-strong);
+}
+
+.secondaryButton {
+  color: var(--tenant-text);
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+}
+
+.secondaryButton:hover {
+  background: var(--tenant-bg-soft);
+  border-color: var(--tenant-border-strong);
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
