@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 
-import LoginPage from '@/pages/LoginPage'
+import LoginPage from '@/pages/auth/LoginPage'
 
 import { resolveLoginRedirect } from './pathUtils'
 import type { AuthSuccessPayload } from './postAuthRedirect'

@@ -1,8 +1,8 @@
 import { Route } from 'react-router-dom'
 
-import OwnerComingSoonPage from '@/pages/OwnerComingSoonPage'
-import OwnerDashboardPage from '@/pages/OwnerDashboardPage'
-import OwnerPublishPropertyPage from '@/pages/OwnerPublishPropertyPage'
+import OwnerComingSoonPage from '@/pages/owner/OwnerComingSoonPage'
+import OwnerDashboardPage from '@/pages/owner/OwnerDashboardPage'
+import OwnerPublishPropertyPage from '@/pages/owner/OwnerPublishPropertyPage'
 
 import { paths } from './paths'
 

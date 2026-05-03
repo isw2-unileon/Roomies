@@ -1,8 +1,8 @@
 import { Route } from 'react-router-dom'
 
-import AuthCallbackPage from '@/pages/AuthCallbackPage'
-import RegisterPage from '@/pages/RegisterPage'
-import ResetPasswordPage from '@/pages/ResetPasswordPage'
+import AuthCallbackPage from '@/pages/auth/AuthCallbackPage'
+import RegisterPage from '@/pages/auth/RegisterPage'
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 
 import LoginRoute from './LoginRoute'
 import { paths } from './paths'
