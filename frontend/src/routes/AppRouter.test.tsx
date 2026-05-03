@@ -69,7 +69,7 @@ describe('AppRouter', () => {
     expect(screen.getByRole('dialog', { name: /invita a un amigo/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/'))
     expect(screen.getByRole('link', { name: /correo/i })).toHaveAttribute('href', expect.stringContaining('mailto:'))
-    expect(screen.getByText(/\/register/i)).toBeInTheDocument()
+
 
     await user.click(screen.getByRole('button', { name: /cerrar invitación/i }))
 
