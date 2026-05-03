@@ -3,6 +3,7 @@ const es = {
     appName: 'Roomies',
     language: {
       selectorAriaLabel: 'Selector de idioma',
+      selectLabel: 'Idioma de la interfaz',
     },
   },
   auth: {
@@ -112,12 +113,21 @@ const es = {
   },
   tenantDashboard: {
     resultsFound: '{{count}} pisos encontrados',
+    layout: {
+      skipToContent: 'Saltar al contenido',
+      closeMenu: 'Cerrar menú',
+    },
     header: {
       title: 'Explora pisos',
       subtitle: 'Encuentra el piso y las personas adecuadas para ti.',
+      preferredArea: 'Zona preferida',
     },
     sidebar: {
+      panel: 'Panel de inquilino',
       menu: 'Abrir menú',
+      hideMenu: 'Ocultar menú',
+      showMenu: 'Mostrar menú',
+      navigation: 'Navegación de inquilino',
       explore: 'Explorar',
       applications: 'Mis solicitudes',
       groups: 'Mis grupos',
@@ -127,6 +137,19 @@ const es = {
       publish: 'Publicar piso',
       referTitle: 'Invita a un amigo',
       referSubtitle: 'Consigue 50 € de crédito',
+    },
+    invite: {
+      kicker: 'Comparte Roomies',
+      description: 'Envía este enlace para que tu amigo cree su cuenta y empiece a buscar piso contigo.',
+      shareMessage: 'Únete a Roomies y encuentra piso conmigo: {{url}}',
+      emailSubject: 'Te invito a Roomies',
+      whatsapp: 'Enviar por WhatsApp',
+      email: 'Enviar por correo',
+      close: 'Cerrar invitación',
+    },
+    placeholder: {
+      kicker: 'Base preparada',
+      subtitle: 'Esta sección se completará más adelante. De momento ya usa el layout común de tenant.',
     },
     topBar: {
       area: 'Área:',
@@ -221,6 +244,28 @@ const es = {
     empty: {
       title: 'No se encontraron pisos',
       subtitle: 'Prueba a cambiar los filtros o busca en otra zona.',
+    },
+  },
+  tenantProfile: {
+    kicker: 'Ajustes personales',
+    title: 'Perfil',
+    subtitle: 'Gestiona tus datos y preferencias para que Roomies se adapte a tu forma de buscar piso.',
+    personal: {
+      kicker: 'Cuenta',
+      title: 'Datos personales',
+      placeholder: 'Esta sección se completará más adelante con tus datos básicos y contacto.',
+    },
+    preferences: {
+      kicker: 'Configuración',
+      title: 'Preferencias',
+      description: 'Elige cómo quieres usar la aplicación. Estos ajustes se aplican solo a tu cuenta.',
+      languageTitle: 'Idioma de la interfaz',
+      languageDescription: 'Elige el idioma de la interfaz.',
+    },
+    search: {
+      kicker: 'Búsqueda',
+      title: 'Preferencias de búsqueda',
+      placeholder: 'Próximamente podrás ajustar presupuesto, zonas favoritas y convivencia desde aquí.',
     },
   },
 } as const

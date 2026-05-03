@@ -1,0 +1,100 @@
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.hero {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kicker,
+.cardEyebrow {
+  color: var(--tenant-primary);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: clamp(2.25rem, 6vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.96;
+}
+
+.subtitle {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--tenant-text-muted);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 244, 240, 0.92));
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1.5rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.cardTitle {
+  margin: 0.25rem 0 0;
+  color: var(--tenant-text);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.cardText,
+.preferenceText {
+  margin: 0;
+  color: var(--tenant-text-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.preferenceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1rem;
+}
+
+.preferenceTitle {
+  margin: 0 0 0.25rem;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card:nth-child(2) {
+    grid-row: span 2;
+  }
+}

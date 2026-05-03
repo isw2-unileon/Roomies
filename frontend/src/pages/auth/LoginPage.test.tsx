@@ -24,6 +24,18 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: /crear una cuenta/i })).toBeInTheDocument()
   })
 
+  test('renders the language select without a visible helper label', () => {
+    render(
+      <LoginPage
+        onNavigateToRegister={() => {}}
+        onLoginSuccess={() => {}}
+      />
+    )
+
+    expect(screen.getByRole('combobox', { name: /idioma de la interfaz/i })).toBeInTheDocument()
+    expect(screen.queryByText(/idioma de la interfaz/i)).not.toBeInTheDocument()
+  })
+
   test('calls onNavigateToRegister when clicking "Crear una cuenta"', async () => {
     const user = userEvent.setup()
     const onNavigateToRegister = vi.fn()
