@@ -2,7 +2,6 @@ import { useEffect, useId, useRef } from 'react'
 import { EnvelopeIcon, GiftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useTranslation } from 'react-i18next'
 
-import { paths } from '@/routes/paths'
 import styles from '@/styles/TenantSidebar.module.css'
 
 interface TenantInviteDialogProps {
