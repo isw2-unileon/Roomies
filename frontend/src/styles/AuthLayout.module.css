@@ -33,17 +33,9 @@
 }
 
 .languageSwitcherWrap {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 2;
-}
-
-@media (min-width: 768px) {
-  .languageSwitcherWrap {
-    top: 1.25rem;
-    right: 1.25rem;
-  }
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
 }
 
 @media (min-width: 768px) {

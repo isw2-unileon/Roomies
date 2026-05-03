@@ -1,0 +1,41 @@
+.placeholder {
+  display: grid;
+  min-height: calc(100vh - 8rem);
+  align-content: center;
+  justify-items: start;
+  gap: 0.75rem;
+  padding: clamp(2rem, 8vw, 5rem);
+  background:
+    radial-gradient(circle at 12% 12%, rgba(100, 54, 199, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(247, 244, 240, 0.92));
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 2rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.kicker {
+  color: var(--tenant-primary);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.subtitle {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--tenant-text-muted);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
