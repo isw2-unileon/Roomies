@@ -3,6 +3,7 @@ const en = {
     appName: 'Roomies',
     language: {
       selectorAriaLabel: 'Language selector',
+      selectLabel: 'Interface language',
     },
   },
   auth: {
@@ -112,12 +113,21 @@ const en = {
   },
   tenantDashboard: {
     resultsFound: '{{count}} flats found',
+    layout: {
+      skipToContent: 'Skip to content',
+      closeMenu: 'Close menu',
+    },
     header: {
       title: 'Explore flats',
       subtitle: 'Find the right flat and the right people for you.',
+      preferredArea: 'Preferred area',
     },
     sidebar: {
+      panel: 'Tenant panel',
       menu: 'Open menu',
+      hideMenu: 'Hide menu',
+      showMenu: 'Show menu',
+      navigation: 'Tenant navigation',
       explore: 'Explore',
       applications: 'My applications',
       groups: 'My groups',
@@ -127,6 +137,19 @@ const en = {
       publish: 'List a flat',
       referTitle: 'Refer a friend',
       referSubtitle: 'Get €50 credit',
+    },
+    invite: {
+      kicker: 'Share Roomies',
+      description: 'Send this link so your friend can create an account and start looking for a flat with you.',
+      shareMessage: 'Join Roomies and find a flat with me: {{url}}',
+      emailSubject: 'I am inviting you to Roomies',
+      whatsapp: 'Send by WhatsApp',
+      email: 'Send by email',
+      close: 'Close invitation',
+    },
+    placeholder: {
+      kicker: 'Base ready',
+      subtitle: 'This section will be completed later. For now, it already uses the shared tenant layout.',
     },
     topBar: {
       area: 'Area:',
@@ -221,6 +244,28 @@ const en = {
     empty: {
       title: 'No flats found',
       subtitle: 'Try changing the filters or searching another area.',
+    },
+  },
+  tenantProfile: {
+    kicker: 'Personal settings',
+    title: 'Profile',
+    subtitle: 'Manage your details and preferences so Roomies adapts to the way you search for housing.',
+    personal: {
+      kicker: 'Account',
+      title: 'Personal details',
+      placeholder: 'This section will be completed later with your basic details and contact info.',
+    },
+    preferences: {
+      kicker: 'Settings',
+      title: 'Preferences',
+      description: 'Choose how you want to use the app. These settings apply only to your account.',
+      languageTitle: 'Interface language',
+      languageDescription: 'Choose the interface language.',
+    },
+    search: {
+      kicker: 'Search',
+      title: 'Search preferences',
+      placeholder: 'Soon you will be able to adjust budget, favorite areas, and co-living preferences here.',
     },
   },
 } as const
