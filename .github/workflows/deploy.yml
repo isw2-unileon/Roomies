@@ -17,61 +17,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── Job 1: Backend tests (Go) ───────────────────────────────────────────────
-  test-backend:
-    name: Test · Backend (Go)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Verify dependencies
-        run: go mod verify
-
-      - name: Build
-        run: go build ./...
-
-      - name: Run tests
-        run: go test -race -count=1 ./...
-
-  # ── Job 2: Frontend tests (React/Vite) ─────────────────────────────────────
-  test-frontend:
-    name: Test · Frontend (React/Vite)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Run tests
-        working-directory: frontend
-        run: npm test -- --run # --run so it doesn't stay in watch mode
-
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-
-  # ── Job 3: Deploy backend to Render ────────────────────────────────────────
+  # ── Job 1: Deploy backend to Render ────────────────────────────────────────
   deploy-backend:
     name: Deploy · Backend
-    needs: [test-backend, test-frontend] # Only runs if both test jobs pass
+    # Tests are run separately in the Tests workflow (tests.yml)
     runs-on: ubuntu-latest
 
     environment:
@@ -84,10 +33,10 @@ jobs:
           curl -fsSL -X POST "${{ secrets.RENDER_HOOK_BACKEND }}"
           echo "✅ Backend deploy triggered"
 
-  # ── Job 4: Deploy frontend to Render ───────────────────────────────────────
+  # ── Job 2: Deploy frontend to Render ───────────────────────────────────────
   deploy-frontend:
     name: Deploy · Frontend
-    needs: [test-backend, test-frontend] # Only runs if both test jobs pass
+    # Tests are run separately in the Tests workflow (tests.yml)
     runs-on: ubuntu-latest
 
     environment:

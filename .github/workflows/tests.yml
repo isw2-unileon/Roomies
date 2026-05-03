@@ -1,0 +1,63 @@
+# ==============================================================================
+# Workflow — Tests
+#
+# Stack: Go (backend) + React/Vite (frontend)
+# Trigger: All branches (push + pull_request)
+#
+# This workflow runs all tests on every push and pull request.
+# The CI/CD pipeline waits for this workflow to complete successfully before deploying.
+# ==============================================================================
+
+name: Tests
+
+on:
+  push:
+    branches: "**"
+  pull_request:
+
+jobs:
+  # ── Job 1: Backend tests (Go) ───────────────────────────────────────────────
+  test-backend:
+    name: Test · Backend (Go)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Run tests
+        run: go test -race -count=1 ./...
+
+  # ── Job 2: Frontend tests (React/Vite) ─────────────────────────────────────
+  test-frontend:
+    name: Test · Frontend (React/Vite)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --run
