@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	profileport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/port"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Repository implements profile persistence over PostgreSQL.
+// Repository stores profile data in PostgreSQL.
 type Repository struct {
 	db *pgxpool.Pool
 }
@@ -23,7 +23,7 @@ func nullIfEmpty(s string) interface{} {
 	return strings.TrimSpace(s)
 }
 
-// NewRepository creates a new postgres profile repository.
+// NewRepository creates a PostgreSQL profile repository.
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
@@ -62,7 +62,7 @@ func (r *Repository) NeedsTenantProfile(ctx context.Context, userID, role string
 }
 
 // UpsertTenantProfile updates or inserts tenant profile.
-func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, input profileport.TenantProfileInput) error {
+func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, input profile.TenantProfileInput) error {
 	result, err := r.db.Exec(
 		ctx,
 		`UPDATE public.tenant_profiles SET
@@ -153,6 +153,22 @@ func (r *Repository) UpsertUserProfile(ctx context.Context, userID, email, fullN
 	)
 	if err != nil {
 		return fmt.Errorf("store user profile: %w", err)
+	}
+	return nil
+}
+
+// UpsertOwnerProfile inserts/updates owner profile data created during registration.
+func (r *Repository) UpsertOwnerProfile(ctx context.Context, userID, displayName string) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO public.owner_profiles (user_id, display_name) VALUES ($1, $2)
+		ON CONFLICT (user_id) DO UPDATE SET
+			display_name = EXCLUDED.display_name,
+			updated_at = NOW()`,
+		userID,
+		nullIfEmpty(displayName),
+	)
+	if err != nil {
+		return fmt.Errorf("store owner profile: %w", err)
 	}
 	return nil
 }

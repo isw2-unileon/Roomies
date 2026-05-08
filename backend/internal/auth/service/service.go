@@ -1,40 +1,42 @@
-package app
+package service
 
 import (
 	"context"
 	"errors"
 	"strings"
 
-	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
+	profilepostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/postgres"
 )
 
-// Service implements auth use cases.
+// Service contains authentication use cases.
 type Service struct {
-	authProvider authport.AuthProvider
-	profileRepo  authport.UserProfileRepository
+	supabaseClient *supabase.Client
+	profileRepo    *profilepostgres.Repository
 }
 
-// NewService creates the auth application service.
-func NewService(authProvider authport.AuthProvider, profileRepo authport.UserProfileRepository) *Service {
+// NewService creates the authentication service.
+func NewService(supabaseClient *supabase.Client, profileRepo *profilepostgres.Repository) *Service {
 	return &Service{
-		authProvider: authProvider,
-		profileRepo:  profileRepo,
+		supabaseClient: supabaseClient,
+		profileRepo:    profileRepo,
 	}
 }
 
-// Login authenticates user and resolves role/onboarding status.
-func (s *Service) Login(ctx context.Context, input authport.LoginInput) (*authport.LoginResult, error) {
+// Login authenticates a user and resolves role/onboarding status.
+func (s *Service) Login(ctx context.Context, input auth.LoginInput) (*auth.LoginResult, error) {
 	if strings.TrimSpace(input.Email) == "" {
 		return nil, errors.New("email is required")
 	}
 	if strings.TrimSpace(input.Password) == "" {
 		return nil, errors.New("password is required")
 	}
-	result, err := s.authProvider.Login(ctx, input)
+	result, err := s.supabaseClient.Login(ctx, input)
 	if err != nil {
 		return nil, err
 	}
-	userID, err := s.authProvider.FetchUserID(ctx, result.AccessToken)
+	userID, err := s.supabaseClient.FetchUserID(ctx, result.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +48,7 @@ func (s *Service) Login(ctx context.Context, input authport.LoginInput) (*authpo
 	if err != nil {
 		return nil, err
 	}
-	return &authport.LoginResult{
+	return &auth.LoginResult{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 		TokenType:    result.TokenType,
@@ -57,8 +59,8 @@ func (s *Service) Login(ctx context.Context, input authport.LoginInput) (*authpo
 	}, nil
 }
 
-// Register creates auth account and upserts app user profile.
-func (s *Service) Register(ctx context.Context, input authport.RegisterInput, emailRedirectTo string) (*authport.RegisterResult, error) {
+// Register creates the auth account and app user profile.
+func (s *Service) Register(ctx context.Context, input auth.RegisterInput, emailRedirectTo string) (*auth.RegisterResult, error) {
 	if strings.TrimSpace(input.Email) == "" {
 		return nil, errors.New("email is required")
 	}
@@ -69,7 +71,7 @@ func (s *Service) Register(ctx context.Context, input authport.RegisterInput, em
 	if role != "tenant" && role != "owner" {
 		return nil, errors.New("role must be tenant or owner")
 	}
-	result, err := s.authProvider.Register(ctx, input, emailRedirectTo)
+	result, err := s.supabaseClient.Register(ctx, input, emailRedirectTo)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,12 @@ func (s *Service) Register(ctx context.Context, input authport.RegisterInput, em
 	if err := s.profileRepo.UpsertUserProfile(ctx, result.UserID, input.Email, fullName, role); err != nil {
 		return nil, err
 	}
-	return &authport.RegisterResult{
+	if role == "owner" {
+		if err := s.profileRepo.UpsertOwnerProfile(ctx, result.UserID, fullName); err != nil {
+			return nil, err
+		}
+	}
+	return &auth.RegisterResult{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 		TokenType:    result.TokenType,
@@ -91,27 +98,27 @@ func (s *Service) Register(ctx context.Context, input authport.RegisterInput, em
 	}, nil
 }
 
-// ForgotPassword starts password recovery flow.
-func (s *Service) ForgotPassword(ctx context.Context, input authport.ForgotPasswordInput, redirectTo string) error {
-	return s.authProvider.ForgotPassword(ctx, input, redirectTo)
+// ForgotPassword starts the password recovery flow.
+func (s *Service) ForgotPassword(ctx context.Context, input auth.ForgotPasswordInput, redirectTo string) error {
+	return s.supabaseClient.ForgotPassword(ctx, input, redirectTo)
 }
 
-// UpdatePassword updates user password with recovery token.
+// UpdatePassword updates a password using an authenticated/recovery session.
 func (s *Service) UpdatePassword(ctx context.Context, accessToken, newPassword string) error {
-	return s.authProvider.UpdatePassword(ctx, accessToken, newPassword)
+	return s.supabaseClient.UpdatePassword(ctx, accessToken, newPassword)
 }
 
-// VerifyEmail verifies signup/recovery token.
-func (s *Service) VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*authport.VerifyResult, error) {
-	return s.authProvider.VerifyEmail(ctx, tokenHash, token, verifyType, email)
+// VerifyEmail verifies a signup or recovery token.
+func (s *Service) VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*auth.VerifyResult, error) {
+	return s.supabaseClient.VerifyEmail(ctx, tokenHash, token, verifyType, email)
 }
 
-// ResolveUserIDFromAccessToken resolves user id from bearer token.
+// ResolveUserIDFromAccessToken resolves the authenticated user id from a bearer token.
 func (s *Service) ResolveUserIDFromAccessToken(ctx context.Context, accessToken string) (string, error) {
 	if strings.TrimSpace(accessToken) == "" {
 		return "", errors.New("access token is required")
 	}
-	return s.authProvider.FetchUserID(ctx, accessToken)
+	return s.supabaseClient.FetchUserID(ctx, accessToken)
 }
 
 func defaultFullNameFromEmail(email string) string {

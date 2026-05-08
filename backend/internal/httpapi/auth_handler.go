@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
+	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 )
 
 type authHandler struct {
-	authService authport.Service
+	authService *authservice.Service
 	frontendURL string
 }
 type confirmInput struct {
@@ -22,7 +23,7 @@ type resetPasswordInput struct {
 	Password string `json:"password"`
 }
 
-func newAuthHandler(authService authport.Service, frontendURL string) *authHandler {
+func newAuthHandler(authService *authservice.Service, frontendURL string) *authHandler {
 	return &authHandler{
 		authService: authService,
 		frontendURL: frontendURL,
@@ -30,7 +31,7 @@ func newAuthHandler(authService authport.Service, frontendURL string) *authHandl
 }
 
 func (h *authHandler) login(c *gin.Context) {
-	var input authport.LoginInput
+	var input auth.LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -53,7 +54,7 @@ func (h *authHandler) login(c *gin.Context) {
 }
 
 func (h *authHandler) register(c *gin.Context) {
-	var input authport.RegisterInput
+	var input auth.RegisterInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -77,7 +78,7 @@ func (h *authHandler) register(c *gin.Context) {
 }
 
 func (h *authHandler) forgotPassword(c *gin.Context) {
-	var input authport.ForgotPasswordInput
+	var input auth.ForgotPasswordInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return

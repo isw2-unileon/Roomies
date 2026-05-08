@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
+	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
-	profileport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/port"
+	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 // NewRouter builds the HTTP API router.
-func NewRouter(cfg *config.Config, authService authport.Service, profileService profileport.Service) *gin.Engine {
+func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), corsMiddleware(cfg.CORSAllowOrigin))

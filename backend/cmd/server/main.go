@@ -9,14 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/adapter/supabase"
-	authapp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/app"
-	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
+	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
+	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpapi"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/database"
-	profilepg "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/adapter/postgres"
-	profileapp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/app"
+	profilepostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/postgres"
+	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 	"github.com/joho/godotenv"
 )
 
@@ -33,14 +32,14 @@ func main() {
 		os.Exit(1)
 	}
 	defer database.Close()
-	profileRepo := profilepg.NewRepository(database.DB)
-	profileService := profileapp.NewService(profileRepo)
-	var authService authport.Service
-	authProvider, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
+	profileRepo := profilepostgres.NewRepository(database.DB)
+	profileService := profileservice.NewService(profileRepo)
+	var authService *authservice.Service
+	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
 	if err != nil {
 		logger.Warn("auth service disabled", "error", err)
 	} else {
-		authService = authapp.NewService(authProvider, profileRepo)
+		authService = authservice.NewService(supabaseClient, profileRepo)
 	}
 	r := httpapi.NewRouter(cfg, authService, profileService)
 	srv := &http.Server{
