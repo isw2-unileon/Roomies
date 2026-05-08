@@ -7,6 +7,19 @@ export interface TenantProfile {
     preferredAreaKey: string
     budgetMin: number
     budgetMax: number
+    moveInDate: string
+    pets: boolean
+    smoking: boolean
+    noiseLevel: string
+    cleanliness: string
+    workSchedule: string
+    sleepSchedule?: string
+    socialLifestyle?: string
+    studyHabits?: string
+    language?: string
+    university?: string
+    guestPreferences?: string
+    partyFrequency?: string
     profileCompletion: number
     compatibilityAverage: number
 }

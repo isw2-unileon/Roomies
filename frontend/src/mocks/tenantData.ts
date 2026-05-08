@@ -9,6 +9,12 @@ export const mockTenantProfile: TenantProfile = {
     preferredAreaKey: 'tenantDashboard.areas.eras',
     budgetMin: 350,
     budgetMax: 500,
+    moveInDate: '2026-06-01',
+    pets: false,
+    smoking: false,
+    noiseLevel: 'moderate',
+    cleanliness: 'normal',
+    workSchedule: 'flexible',
     profileCompletion: 82,
     compatibilityAverage: 78,
 }
