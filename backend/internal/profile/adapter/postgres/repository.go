@@ -16,6 +16,13 @@ type Repository struct {
 	db *pgxpool.Pool
 }
 
+func nullIfEmpty(s string) interface{} {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	return strings.TrimSpace(s)
+}
+
 // NewRepository creates a new postgres profile repository.
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
@@ -87,15 +94,15 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 		input.Smoking,
 		input.NoiseLevel,
 		input.Cleanliness,
-		input.WorkSchedule,
-		input.SleepSchedule,
-		input.SocialLifestyle,
-		input.StudyHabits,
-		input.Language,
-		input.University,
+		nullIfEmpty(input.WorkSchedule),
+		nullIfEmpty(input.SleepSchedule),
+		nullIfEmpty(input.SocialLifestyle),
+		nullIfEmpty(input.StudyHabits),
+		nullIfEmpty(input.Language),
+		nullIfEmpty(input.University),
 		input.Age,
-		input.GuestPreferences,
-		input.PartyFrequency,
+		nullIfEmpty(input.GuestPreferences),
+		nullIfEmpty(input.PartyFrequency),
 	)
 	if err != nil {
 		return err
@@ -116,17 +123,17 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 		input.MoveInDate,
 		input.Pets,
 		input.Smoking,
-		input.NoiseLevel,
-		input.Cleanliness,
-		input.WorkSchedule,
-		input.SleepSchedule,
-		input.SocialLifestyle,
-		input.StudyHabits,
-		input.Language,
-		input.University,
+		nullIfEmpty(input.NoiseLevel),
+		nullIfEmpty(input.Cleanliness),
+		nullIfEmpty(input.WorkSchedule),
+		nullIfEmpty(input.SleepSchedule),
+		nullIfEmpty(input.SocialLifestyle),
+		nullIfEmpty(input.StudyHabits),
+		nullIfEmpty(input.Language),
+		nullIfEmpty(input.University),
 		input.Age,
-		input.GuestPreferences,
-		input.PartyFrequency,
+		nullIfEmpty(input.GuestPreferences),
+		nullIfEmpty(input.PartyFrequency),
 	)
 	return err
 }
