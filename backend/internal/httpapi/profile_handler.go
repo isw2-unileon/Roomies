@@ -123,9 +123,9 @@ func validateTenantProfileBasic(c *gin.Context, input profileport.TenantProfileI
 }
 
 func validateTenantProfileEnums(c *gin.Context, input profileport.TenantProfileInput) bool {
-	schedule := strings.ToLower(strings.TrimSpace(input.Schedule))
-	if schedule != "morning" && schedule != "night" && schedule != "flexible" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "schedule must be morning, night or flexible"})
+	workSchedule := strings.ToLower(strings.TrimSpace(input.WorkSchedule))
+	if workSchedule != "morning" && workSchedule != "night" && workSchedule != "flexible" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "work_schedule must be morning, night or flexible"})
 		return false
 	}
 	noiseLevel := strings.ToLower(strings.TrimSpace(input.NoiseLevel))
@@ -142,7 +142,7 @@ func validateTenantProfileEnums(c *gin.Context, input profileport.TenantProfileI
 }
 
 func normalizeTenantProfileInput(input *profileport.TenantProfileInput) {
-	input.Schedule = strings.ToLower(strings.TrimSpace(input.Schedule))
+	input.WorkSchedule = strings.ToLower(strings.TrimSpace(input.WorkSchedule))
 	input.NoiseLevel = strings.ToLower(strings.TrimSpace(input.NoiseLevel))
 	input.Cleanliness = strings.ToLower(strings.TrimSpace(input.Cleanliness))
 	input.PreferredArea = strings.TrimSpace(input.PreferredArea)

@@ -9,7 +9,7 @@ import { apiFetch } from '@/api'
 import { useNotice } from '@/hooks/useNotice'
 import styles from '@/styles/auth.module.css'
 
-type Schedule = 'morning' | 'night' | 'flexible'
+type WorkSchedule = 'morning' | 'night' | 'flexible'
 type NoiseLevel = 'quiet' | 'moderate' | 'loud'
 type Cleanliness = 'very_clean' | 'normal' | 'relaxed'
 
@@ -30,9 +30,9 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
   const [budgetMax, setBudgetMax] = useState('900')
   const [preferredArea, setPreferredArea] = useState('')
   const [moveInDate, setMoveInDate] = useState('')
-  const [schedule, setSchedule] = useState<Schedule>('flexible')
+  const [workSchedule, setWorkSchedule] = useState<WorkSchedule>('flexible')
   const [pets, setPets] = useState(false)
-  const [smoker, setSmoker] = useState(false)
+  const [smoking, setSmoking] = useState(false)
   const [noiseLevel, setNoiseLevel] = useState<NoiseLevel>('moderate')
   const [cleanliness, setCleanliness] = useState<Cleanliness>('normal')
   const [isLoading, setIsLoading] = useState(false)
@@ -86,9 +86,9 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
           budget_max: parsedBudgetMax,
           preferred_area: preferredArea.trim(),
           move_in_date: moveInDate,
-          schedule,
+          work_schedule: workSchedule,
           pets,
-          smoker,
+          smoking,
           noise_level: noiseLevel,
           cleanliness,
         }),
@@ -164,13 +164,13 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
 
         <div className={styles.twoColumns}>
           <div className={styles.field}>
-            <label htmlFor="schedule" className={styles.roleLabel}>
+            <label htmlFor="work-schedule" className={styles.roleLabel}>
               {t('auth.tenantOnboarding.scheduleLabel')}
             </label>
             <select
-              id="schedule"
-              value={schedule}
-              onChange={(event) => setSchedule(event.target.value as Schedule)}
+              id="work-schedule"
+              value={workSchedule}
+              onChange={(event) => setWorkSchedule(event.target.value as WorkSchedule)}
               className={styles.select}
             >
               <option value="morning">{t('auth.tenantOnboarding.scheduleOptions.morning')}</option>
@@ -226,8 +226,8 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
           <label className={styles.checkboxCard}>
             <input
               type="checkbox"
-              checked={smoker}
-              onChange={(event) => setSmoker(event.target.checked)}
+              checked={smoking}
+              onChange={(event) => setSmoking(event.target.checked)}
               className={styles.roleRadio}
             />
             <span>{t('auth.tenantOnboarding.smokerLabel')}</span>
