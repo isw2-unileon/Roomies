@@ -8,18 +8,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
-	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 )
 
-// Client implements AuthProvider against Supabase Auth HTTP API.
+// Client talks to Supabase Auth over HTTP.
 type Client struct {
 	baseURL string
 	apiKey  string
 	client  *http.Client
 }
+
 type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -30,6 +32,7 @@ type tokenResponse struct {
 	Message      string `json:"message"`
 	Msg          string `json:"msg"`
 }
+
 type signUpResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -50,6 +53,7 @@ type signUpResponse struct {
 		ID string `json:"id"`
 	} `json:"user"`
 }
+
 type authUserResponse struct {
 	ID string `json:"id"`
 }
@@ -70,7 +74,7 @@ func NewClient(baseURL, apiKey string) (*Client, error) {
 }
 
 // Login authenticates via Supabase token endpoint.
-func (c *Client) Login(ctx context.Context, input authport.LoginInput) (*authport.LoginResult, error) {
+func (c *Client) Login(ctx context.Context, input auth.LoginInput) (*auth.LoginResult, error) {
 	body, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("marshal login payload: %w", err)
@@ -95,7 +99,7 @@ func (c *Client) Login(ctx context.Context, input authport.LoginInput) (*authpor
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(supabaseErrorMessage(parsed.Description, parsed.Msg, parsed.Message, parsed.Error, "invalid credentials"))
 	}
-	return &authport.LoginResult{
+	return &auth.LoginResult{
 		AccessToken:  parsed.AccessToken,
 		RefreshToken: parsed.RefreshToken,
 		TokenType:    parsed.TokenType,
@@ -104,23 +108,27 @@ func (c *Client) Login(ctx context.Context, input authport.LoginInput) (*authpor
 }
 
 // Register creates account via Supabase signup endpoint.
-func (c *Client) Register(ctx context.Context, input authport.RegisterInput, emailRedirectTo string) (*authport.RegisterResult, error) {
+func (c *Client) Register(ctx context.Context, input auth.RegisterInput, emailRedirectTo string) (*auth.RegisterResult, error) {
 	payload := struct {
-		Email           string                 `json:"email"`
-		Password        string                 `json:"password"`
-		EmailRedirectTo string                 `json:"email_redirect_to,omitempty"`
-		Data            map[string]interface{} `json:"data"`
+		Email    string                 `json:"email"`
+		Password string                 `json:"password"`
+		Data     map[string]interface{} `json:"data"`
 	}{
-		Email:           input.Email,
-		Password:        input.Password,
-		EmailRedirectTo: strings.TrimSpace(emailRedirectTo),
-		Data:            map[string]interface{}{"role": strings.ToLower(strings.TrimSpace(input.Role))},
+		Email:    input.Email,
+		Password: input.Password,
+		Data:     map[string]interface{}{"role": strings.ToLower(strings.TrimSpace(input.Role))},
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal register payload: %w", err)
 	}
-	req, err := c.newJSONRequest(ctx, http.MethodPost, c.baseURL+"/auth/v1/signup", body, "")
+
+	signupURL := c.baseURL + "/auth/v1/signup"
+	if redirectTo := strings.TrimSpace(emailRedirectTo); redirectTo != "" {
+		signupURL += "?redirect_to=" + url.QueryEscape(redirectTo)
+	}
+
+	req, err := c.newJSONRequest(ctx, http.MethodPost, signupURL, body, "")
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -163,7 +171,7 @@ func (c *Client) Register(ctx context.Context, input authport.RegisterInput, ema
 	if expiresIn == 0 {
 		expiresIn = parsed.Session.ExpiresIn
 	}
-	return &authport.RegisterResult{
+	return &auth.RegisterResult{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    tokenType,
@@ -173,7 +181,7 @@ func (c *Client) Register(ctx context.Context, input authport.RegisterInput, ema
 }
 
 // ForgotPassword triggers recovery email.
-func (c *Client) ForgotPassword(ctx context.Context, input authport.ForgotPasswordInput, redirectTo string) error {
+func (c *Client) ForgotPassword(ctx context.Context, input auth.ForgotPasswordInput, redirectTo string) error {
 	if strings.TrimSpace(input.Email) == "" {
 		return errors.New("email is required")
 	}
@@ -251,7 +259,7 @@ func (c *Client) UpdatePassword(ctx context.Context, accessToken, newPassword st
 }
 
 // VerifyEmail verifies signup/recovery token.
-func (c *Client) VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*authport.VerifyResult, error) {
+func (c *Client) VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*auth.VerifyResult, error) {
 	tokenHash = strings.TrimSpace(tokenHash)
 	token = strings.TrimSpace(token)
 	if tokenHash == "" && token == "" {
@@ -315,7 +323,7 @@ func (c *Client) FetchUserID(ctx context.Context, accessToken string) (string, e
 	return parsed.ID, nil
 }
 
-func (c *Client) verifyEmailWithPayload(ctx context.Context, payload interface{}) (*authport.VerifyResult, error) {
+func (c *Client) verifyEmailWithPayload(ctx context.Context, payload interface{}) (*auth.VerifyResult, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal verify payload: %w", err)
@@ -343,7 +351,7 @@ func (c *Client) verifyEmailWithPayload(ctx context.Context, payload interface{}
 	if strings.TrimSpace(parsed.AccessToken) == "" {
 		return nil, errors.New("verification succeeded but access token is missing")
 	}
-	return &authport.VerifyResult{
+	return &auth.VerifyResult{
 		AccessToken:  parsed.AccessToken,
 		RefreshToken: parsed.RefreshToken,
 		TokenType:    parsed.TokenType,

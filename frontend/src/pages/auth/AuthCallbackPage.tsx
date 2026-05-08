@@ -75,6 +75,13 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
       let accessToken = authData.accessToken
       let refreshToken = authData.refreshToken
 
+      if (!accessToken && !authData.tokenHash && !authData.token) {
+        if (!cancelled) {
+          setNotice({ kind: 'success', message: 'Cuenta confirmada correctamente. Ya puedes iniciar sesion.' })
+        }
+        return
+      }
+
       if (!accessToken && (authData.tokenHash || authData.token)) {
         try {
           const confirmResponse = await apiFetch('/api/auth/confirm', {
@@ -169,7 +176,7 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
       <div className={styles.form}>
         <AuthNotice kind={notice.kind} message={notice.message} />
 
-        {notice.kind === 'error' ? (
+        {notice.kind !== 'idle' ? (
           <button type="button" onClick={onNavigateToLogin} className={styles.btnPrimary}>
             {buttonLabel}
           </button>

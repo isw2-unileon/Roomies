@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	authport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/port"
-	profileport "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/port"
+	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
+	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 type profileHandler struct {
-	authService    authport.Service
-	profileService profileport.Service
+	authService    *authservice.Service
+	profileService *profileservice.Service
 }
 
-func newProfileHandler(authService authport.Service, profileService profileport.Service) *profileHandler {
+func newProfileHandler(authService *authservice.Service, profileService *profileservice.Service) *profileHandler {
 	return &profileHandler{
 		authService:    authService,
 		profileService: profileService,
@@ -91,22 +92,22 @@ func (h *profileHandler) resolveUserAndRole(c *gin.Context) (string, string, boo
 	return userID, role, true
 }
 
-func bindAndValidateTenantProfile(c *gin.Context) (profileport.TenantProfileInput, bool) {
-	var input profileport.TenantProfileInput
+func bindAndValidateTenantProfile(c *gin.Context) (profile.TenantProfileInput, bool) {
+	var input profile.TenantProfileInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-		return profileport.TenantProfileInput{}, false
+		return profile.TenantProfileInput{}, false
 	}
 	if ok := validateTenantProfileBasic(c, input); !ok {
-		return profileport.TenantProfileInput{}, false
+		return profile.TenantProfileInput{}, false
 	}
 	if ok := validateTenantProfileEnums(c, input); !ok {
-		return profileport.TenantProfileInput{}, false
+		return profile.TenantProfileInput{}, false
 	}
 	return input, true
 }
 
-func validateTenantProfileBasic(c *gin.Context, input profileport.TenantProfileInput) bool {
+func validateTenantProfileBasic(c *gin.Context, input profile.TenantProfileInput) bool {
 	if input.BudgetMin <= 0 || input.BudgetMax <= 0 || input.BudgetMin > input.BudgetMax {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid budget range"})
 		return false
@@ -122,7 +123,7 @@ func validateTenantProfileBasic(c *gin.Context, input profileport.TenantProfileI
 	return true
 }
 
-func validateTenantProfileEnums(c *gin.Context, input profileport.TenantProfileInput) bool {
+func validateTenantProfileEnums(c *gin.Context, input profile.TenantProfileInput) bool {
 	workSchedule := strings.ToLower(strings.TrimSpace(input.WorkSchedule))
 	if workSchedule != "morning" && workSchedule != "night" && workSchedule != "flexible" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "work_schedule must be morning, night or flexible"})
@@ -141,7 +142,7 @@ func validateTenantProfileEnums(c *gin.Context, input profileport.TenantProfileI
 	return true
 }
 
-func normalizeTenantProfileInput(input *profileport.TenantProfileInput) {
+func normalizeTenantProfileInput(input *profile.TenantProfileInput) {
 	input.WorkSchedule = strings.ToLower(strings.TrimSpace(input.WorkSchedule))
 	input.NoiseLevel = strings.ToLower(strings.TrimSpace(input.NoiseLevel))
 	input.Cleanliness = strings.ToLower(strings.TrimSpace(input.Cleanliness))

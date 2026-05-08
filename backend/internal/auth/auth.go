@@ -1,6 +1,5 @@
-package port
-
-import "context"
+// Package auth defines authentication inputs and results used by the application.
+package auth
 
 // LoginInput contains login credentials.
 type LoginInput struct {
@@ -49,10 +48,4 @@ type VerifyResult struct {
 	RefreshToken string `json:"refresh_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
-}
-
-// Service defines auth use cases consumed by HTTP handlers.
-type Service interface {
-	AuthUseCases
-	ResolveUserIDFromAccessToken(ctx context.Context, accessToken string) (string, error)
 }

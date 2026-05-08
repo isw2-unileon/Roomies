@@ -1,6 +1,5 @@
-package port
-
-import "context"
+// Package profile defines profile inputs used by the application.
+package profile
 
 // TenantProfileInput contains onboarding/profile fields.
 type TenantProfileInput struct {
@@ -22,11 +21,4 @@ type TenantProfileInput struct {
 	Age              int    `json:"age,omitempty"`
 	GuestPreferences string `json:"guest_preferences,omitempty"`
 	PartyFrequency   string `json:"party_frequency,omitempty"`
-}
-
-// Service defines profile use cases consumed by HTTP handlers.
-type Service interface {
-	LookupRoleByUserID(ctx context.Context, userID string) (string, error)
-	NeedsTenantProfile(ctx context.Context, userID, role string) (bool, error)
-	SaveTenantProfile(ctx context.Context, userID string, input TenantProfileInput) error
 }
