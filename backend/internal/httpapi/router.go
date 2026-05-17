@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 // NewRouter builds the HTTP API router.
-func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service) *gin.Engine {
+func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), corsMiddleware(cfg.CORSAllowOrigin))
@@ -29,6 +30,10 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	}
 	authH := newAuthHandler(authService, cfg.FrontendURL)
 	profileH := newProfileHandler(authService, profileService)
+	var apartmentH *apartmentHandler
+	if apartmentService != nil {
+		apartmentH = newApartmentHandler(authService, profileService, apartmentService)
+	}
 	api.POST("/auth/login", authH.login)
 	api.POST("/auth/register", authH.register)
 	api.POST("/auth/forgot-password", authH.forgotPassword)
@@ -36,5 +41,8 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	api.POST("/auth/reset-password", authH.resetPassword)
 	api.GET("/profile/status", profileH.status)
 	api.POST("/tenant-profile", profileH.saveTenantProfile)
+	if apartmentH != nil {
+		api.POST("/apartments", apartmentH.createApartment)
+	}
 	return r
 }

@@ -1,16 +1,18 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { apiFetch } from '@/api'
+import { useNotice } from '@/hooks/useNotice'
 import styles from '@/styles/OwnerPublishProperty.module.css'
-
-const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
 
 interface PublishValues {
   title: string
   address: string
   area: string
   totalSpots: string
+  bathrooms: string
   baseRent: string
   description: string
   availableFrom: string
+  imageUrls: string
 }
 
 const initialValues: PublishValues = {
@@ -18,47 +20,107 @@ const initialValues: PublishValues = {
   address: '',
   area: '',
   totalSpots: '3',
+  bathrooms: '1',
   baseRent: '350',
   description: '',
   availableFrom: '',
+  imageUrls: '',
+}
+
+interface CreateApartmentResponse {
+  message?: string
+  apartment_id?: string
+  error?: string
 }
 
 export default function OwnerPropertyPublishForm() {
   const [values, setValues] = useState<PublishValues>(initialValues)
-  const [images, setImages] = useState<File[]>([])
-  const [imageError, setImageError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const { notice, showError, showSuccess, clearNotice } = useNotice()
 
   function updateField<K extends keyof PublishValues>(key: K, value: PublishValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
   }
 
-  function formatFileSize(bytes: number) {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  function extractImageURLs(raw: string) {
+    return raw
+      .split(/\r?\n|,/)
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
   }
 
-  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files ?? [])
-    const invalid = selected.find((file) => file.size > MAX_IMAGE_SIZE_BYTES)
-
-    if (invalid) {
-      setImageError(`La imagen "${invalid.name}" supera el limite de 2 MB.`)
-      setImages([])
-      event.target.value = ''
-      return
-    }
-
-    setImageError('')
-    setImages(selected)
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (images.some((file) => file.size > MAX_IMAGE_SIZE_BYTES)) {
-      setImageError('Todas las imagenes deben pesar como maximo 2 MB.')
+    clearNotice()
+
+    const parsedTotalSpots = Number.parseInt(values.totalSpots, 10)
+    const parsedBathrooms = Number.parseInt(values.bathrooms, 10)
+    const parsedBaseRent = Number.parseInt(values.baseRent, 10)
+    const parsedImageURLs = extractImageURLs(values.imageUrls)
+
+    if (values.title.trim().length < 3) {
+      showError('El titulo debe tener al menos 3 caracteres.')
+      return
+    }
+    if (values.address.trim().length < 5) {
+      showError('La direccion debe tener al menos 5 caracteres.')
+      return
+    }
+    if (!Number.isFinite(parsedTotalSpots) || parsedTotalSpots <= 0) {
+      showError('El numero de plazas debe ser mayor que 0.')
+      return
+    }
+    if (!Number.isFinite(parsedBathrooms) || parsedBathrooms <= 0) {
+      showError('El numero de banos debe ser mayor que 0.')
+      return
+    }
+    if (!Number.isFinite(parsedBaseRent) || parsedBaseRent <= 0) {
+      showError('El precio mensual debe ser mayor que 0.')
       return
     }
 
-    console.log('publish property', values, images)
+    const token = localStorage.getItem('roomies.access_token')
+    if (!token) {
+      showError('Tu sesion ha caducado. Inicia sesion de nuevo.')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await apiFetch('/api/apartments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: values.title.trim(),
+          description: values.description.trim(),
+          address: values.address.trim(),
+          area: values.area.trim(),
+          total_spots: parsedTotalSpots,
+          bathrooms: parsedBathrooms,
+          base_rent: parsedBaseRent,
+          available_from: values.availableFrom || '',
+          image_urls: parsedImageURLs,
+        }),
+      })
+
+      const data = (await response.json()) as CreateApartmentResponse
+
+      if (!response.ok) {
+        showError(data.error ?? 'No se pudo publicar el piso. Intentalo de nuevo.')
+        return
+      }
+
+      showSuccess(data.message ?? 'Piso publicado correctamente.')
+      setValues(initialValues)
+    } catch {
+      showError('No se pudo publicar el piso. Intentalo de nuevo.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -116,6 +178,18 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={styles.field}>
+            <span className={styles.label}>Banos (se guarda en descripcion)</span>
+            <input
+              type="number"
+              min={1}
+              className={styles.input}
+              value={values.bathrooms}
+              onChange={(event) => updateField('bathrooms', event.target.value)}
+              required
+            />
+          </label>
+
+          <label className={styles.field}>
             <span className={styles.label}>Precio mensual (EUR)</span>
             <input
               type="number"
@@ -128,7 +202,7 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Disponible desde</span>
+            <span className={styles.label}>Disponible desde (se guarda en descripcion)</span>
             <input
               type="date"
               className={styles.input}
@@ -138,26 +212,15 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={`${styles.field} ${styles.full}`}>
-            <span className={styles.label}>Fotos del piso</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className={styles.input}
-              onChange={handleImageChange}
+            <span className={styles.label}>URLs de imagenes</span>
+            <textarea
+              className={styles.textarea}
+              rows={3}
+              value={values.imageUrls}
+              onChange={(event) => updateField('imageUrls', event.target.value)}
+              placeholder="https://.../foto1.jpg, https://.../foto2.jpg"
             />
-            <span className={styles.hint}>Puedes subir una o varias imagenes. Maximo 2 MB por archivo.</span>
-            {imageError && <span className={styles.error}>{imageError}</span>}
-            {images.length > 0 && (
-              <ul className={styles.fileList}>
-                {images.map((image) => (
-                  <li key={image.name} className={styles.fileItem}>
-                    <span>{image.name}</span>
-                    <span>{formatFileSize(image.size)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <span className={styles.hint}>Separa varias URL por comas o por lineas.</span>
           </label>
 
           <label className={`${styles.field} ${styles.full}`}>
@@ -172,9 +235,16 @@ export default function OwnerPropertyPublishForm() {
           </label>
         </div>
 
+        {notice.kind !== 'idle' && (
+          <p className={notice.kind === 'error' ? styles.errorNotice : styles.successNotice} role="status">
+            {notice.message}
+          </p>
+        )}
+
         <div className={styles.actions}>
-          <button type="button" className={styles.secondaryButton}>Guardar borrador</button>
-          <button type="submit" className={styles.primaryButton}>Publicar piso</button>
+          <button type="submit" className={styles.primaryButton} disabled={isLoading}>
+            {isLoading ? 'Publicando...' : 'Publicar piso'}
+          </button>
         </div>
       </form>
     </section>
