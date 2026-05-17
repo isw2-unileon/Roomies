@@ -60,7 +60,7 @@ const de = {
       },
       successDefault: 'Konto erfolgreich erstellt. Du kannst dich jetzt anmelden.',
       successNeedsConfirmation:
-        'Konto erstellt. Prüfe deine E-Mail und bestätige dein Konto, bevor du dich anmeldest und dein Profil vervollständigst.',
+        'Konto erstellt. Wir haben dir eine Bestatigungs-E-Mail gesendet, aber du kannst dich bereits anmelden und in der App fortfahren.',
       errors: {
         fullNameMin: 'Der vollständige Name muss mindestens 2 Zeichen enthalten.',
         passwordMin: 'Das Passwort muss mindestens 6 Zeichen enthalten.',

@@ -60,7 +60,7 @@ const es = {
       },
       successDefault: 'Cuenta creada correctamente. Ya puedes iniciar sesión.',
       successNeedsConfirmation:
-        'Cuenta creada. Revisa tu correo y confirma tu cuenta antes de iniciar sesión y completar tu perfil.',
+        'Cuenta creada. Te hemos enviado un correo de confirmacion, pero ya puedes iniciar sesion y continuar en la app.',
       errors: {
         fullNameMin: 'El nombre completo debe tener al menos 2 caracteres.',
         passwordMin: 'La contraseña debe tener al menos 6 caracteres.',

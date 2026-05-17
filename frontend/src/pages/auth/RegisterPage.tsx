@@ -92,11 +92,11 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
         if (refreshToken) localStorage.setItem('roomies.refresh_token', refreshToken)
 
         onRegisterSuccess({ role: data.role, needsOnboarding: data.needs_onboarding })
-        showSuccess(data.message ?? t('auth.register.successDefault'))
+        showSuccess(t('auth.register.successDefault'))
         return
       }
 
-      showSuccess(t('auth.register.successNeedsConfirmation'))
+      showSuccess(t('auth.register.successDefault'))
     } catch {
       showError(t('auth.register.errors.default'))
     } finally {

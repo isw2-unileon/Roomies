@@ -60,7 +60,7 @@ const fr = {
       },
       successDefault: 'Compte créé correctement. Vous pouvez maintenant vous connecter.',
       successNeedsConfirmation:
-        'Compte créé. Vérifiez votre e-mail et confirmez votre compte avant de vous connecter et de compléter votre profil.',
+        'Compte créé. Nous vous avons envoyé un e-mail de confirmation, mais vous pouvez déjà vous connecter et continuer dans l\'application.',
       errors: {
         fullNameMin: 'Le nom complet doit contenir au moins 2 caractères.',
         passwordMin: 'Le mot de passe doit contenir au moins 6 caractères.',

@@ -66,7 +66,7 @@ func (h *authHandler) register(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{
-		"message":          "registration successful, please confirm your email",
+		"message":          "registration successful",
 		"access_token":     result.AccessToken,
 		"refresh_token":    result.RefreshToken,
 		"token_type":       result.TokenType,

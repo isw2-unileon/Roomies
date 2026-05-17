@@ -60,7 +60,7 @@ const en = {
       },
       successDefault: 'Account created successfully. You can now sign in.',
       successNeedsConfirmation:
-        'Account created. Check your email and confirm your account before signing in and completing your profile.',
+        'Account created. We sent you a confirmation email, but you can already sign in and continue in the app.',
       errors: {
         fullNameMin: 'Full name must be at least 2 characters.',
         passwordMin: 'Password must be at least 6 characters.',
