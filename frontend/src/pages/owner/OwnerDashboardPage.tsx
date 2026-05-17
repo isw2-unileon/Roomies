@@ -1,6 +1,9 @@
 import { PlusIcon } from '@heroicons/react/24/outline'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { apiFetch } from '@/api'
+import { useNotice } from '@/hooks/useNotice'
+import AuthNotice from '@/components/auth/AuthNotice'
 import OwnerActivityList from '@/components/owner/OwnerActivityList'
 import OwnerHelpCard from '@/components/owner/OwnerHelpCard'
 import OwnerIssuesList from '@/components/owner/OwnerIssuesList'
@@ -26,16 +29,83 @@ export default function OwnerDashboardPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<OwnerNavTab>('properties')
   const [issues, setIssues] = useState(mockOwnerIssues)
+  const [ownerProperties, setOwnerProperties] = useState(mockOwnerProperties)
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false)
+  const { notice, showError, clearNotice } = useNotice()
   const unreadMessages = 1
   const unreadNotifications = 3
 
   const occupancy = useMemo(() => {
-    const total = mockOwnerProperties.reduce((acc, property) => acc + property.totalSpots, 0)
-    const occupied = mockOwnerProperties.reduce((acc, property) => acc + property.occupiedSpots, 0)
+    const total = ownerProperties.reduce((acc, property) => acc + property.totalSpots, 0)
+    const occupied = ownerProperties.reduce((acc, property) => acc + property.occupiedSpots, 0)
     const free = total - occupied
     const percent = total > 0 ? Math.round((occupied / total) * 100) : 0
     return { total, occupied, free, percent }
-  }, [])
+  }, [ownerProperties])
+
+  useEffect(() => {
+    async function loadOwnerProperties() {
+      const token = localStorage.getItem('roomies.access_token')
+      if (!token) {
+        return
+      }
+
+      setIsLoadingProperties(true)
+      clearNotice()
+
+      try {
+        const response = await apiFetch('/api/owner/apartments', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        const data = (await response.json()) as {
+          apartments?: Array<{
+            id: string
+            title: string
+            address: string
+            area: string
+            total_spots: number
+            occupied_spots: number
+            base_rent: number
+            status: string
+            created_at: string
+            image_url: string
+          }>
+          error?: string
+        }
+
+        if (!response.ok) {
+          showError(data.error ?? 'No se pudieron cargar tus pisos publicados.')
+          return
+        }
+
+        const mapped = (data.apartments ?? []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          address: item.address,
+          area: item.area,
+          totalSpots: item.total_spots,
+          occupiedSpots: item.occupied_spots,
+          rent: item.base_rent,
+          status: item.status,
+          createdAt: item.created_at,
+          image: item.image_url,
+        }))
+
+        setOwnerProperties(mapped)
+      } catch {
+        showError('No se pudieron cargar tus pisos publicados.')
+      } finally {
+        setIsLoadingProperties(false)
+      }
+    }
+
+    if (activeTab === 'properties') {
+      void loadOwnerProperties()
+    }
+  }, [activeTab])
 
   function handleStatusChange(id: string, status: OwnerIssueStatus) {
     setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, status } : issue)))
@@ -82,7 +152,12 @@ export default function OwnerDashboardPage() {
                       Publicar piso
                     </button>
                   </header>
-                  <OwnerPropertyGrid properties={mockOwnerProperties} />
+                  <AuthNotice kind={notice.kind} message={notice.message} />
+                  {isLoadingProperties ? (
+                    <p className={styles.ownerPropertyEmpty}>Cargando pisos publicados...</p>
+                  ) : (
+                    <OwnerPropertyGrid properties={ownerProperties} />
+                  )}
                 </section>
 
                 <section className={styles.ownerSectionCard}>

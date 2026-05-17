@@ -62,3 +62,11 @@ func (s *Service) CreateApartment(ctx context.Context, ownerID string, input apa
 		ImagesStored: imagesStored,
 	}, nil
 }
+
+// ListOwnerApartments returns published apartments for an owner.
+func (s *Service) ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.OwnerApartment, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	return s.repo.ListOwnerApartments(ctx, ownerID)
+}

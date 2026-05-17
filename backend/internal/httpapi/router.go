@@ -42,6 +42,7 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	api.GET("/profile/status", profileH.status)
 	api.POST("/tenant-profile", profileH.saveTenantProfile)
 	if apartmentH != nil {
+		api.GET("/owner/apartments", apartmentH.listOwnerApartments)
 		api.POST("/apartments", apartmentH.createApartment)
 	}
 	return r

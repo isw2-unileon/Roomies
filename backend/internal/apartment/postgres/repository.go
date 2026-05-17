@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -88,4 +89,59 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID, title, descri
 	}
 
 	return apartmentID, stored, nil
+}
+
+// ListOwnerApartments returns apartments published by an owner.
+func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.OwnerApartment, error) {
+	const query = `SELECT
+		a.id,
+		a.title,
+		a.address,
+		COALESCE(a.area, ''),
+		a.total_spots,
+		a.occupied_spots,
+		a.base_rent,
+		a.status,
+		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE((
+			SELECT ap.url
+			FROM public.apartment_photos ap
+			WHERE ap.apartment_id = a.id
+			ORDER BY ap.position ASC, ap.created_at ASC
+			LIMIT 1
+		), '') AS image_url
+	FROM public.apartments a
+	WHERE a.owner_id = $1
+	ORDER BY a.created_at DESC`
+
+	rows, err := r.db.Query(ctx, query, ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("list owner apartments: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]apartment.OwnerApartment, 0)
+	for rows.Next() {
+		var item apartment.OwnerApartment
+		if err := rows.Scan(
+			&item.ID,
+			&item.Title,
+			&item.Address,
+			&item.Area,
+			&item.TotalSpots,
+			&item.OccupiedSpots,
+			&item.BaseRent,
+			&item.Status,
+			&item.CreatedAt,
+			&item.ImageURL,
+		); err != nil {
+			return nil, fmt.Errorf("scan owner apartments: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate owner apartments: %w", err)
+	}
+
+	return result, nil
 }

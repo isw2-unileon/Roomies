@@ -54,6 +54,25 @@ func (h *apartmentHandler) createApartment(c *gin.Context) {
 	})
 }
 
+func (h *apartmentHandler) listOwnerApartments(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	if role != "owner" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+		return
+	}
+
+	apartments, err := h.apartmentService.ListOwnerApartments(c.Request.Context(), ownerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load owner apartments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartments": apartments})
+}
+
 func (h *apartmentHandler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
 	accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
