@@ -16,6 +16,8 @@ vendor/
 node_modules/
 dist/
 *.local
+package-lock.json
+frontend/tsconfig.app.tsbuildinfo
 
 # Environment
 .env
