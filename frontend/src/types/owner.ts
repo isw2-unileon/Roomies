@@ -33,12 +33,16 @@ export interface OwnerDashboardProperty {
     id: string
     title: string
     address: string
+    area?: string
     totalSpots: number
     occupiedSpots: number
-    tenant: string
-    paymentStatus: 'received' | 'pending'
-    nextDueDate: string
-    requests: number
+    rent?: number
+    status?: string
+    createdAt?: string
+    tenant?: string
+    paymentStatus?: 'received' | 'pending'
+    nextDueDate?: string
+    requests?: number
     image: string
 }
 

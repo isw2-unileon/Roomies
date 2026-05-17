@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	apartmentpostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/postgres"
+	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpapi"
@@ -33,7 +35,9 @@ func main() {
 	}
 	defer database.Close()
 	profileRepo := profilepostgres.NewRepository(database.DB)
+	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
 	profileService := profileservice.NewService(profileRepo)
+	apartmentService := apartmentservice.NewService(apartmentRepo)
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
 	if err != nil {
@@ -41,7 +45,7 @@ func main() {
 	} else {
 		authService = authservice.NewService(supabaseClient, profileRepo)
 	}
-	r := httpapi.NewRouter(cfg, authService, profileService)
+	r := httpapi.NewRouter(cfg, authService, profileService, apartmentService)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 export type NoticeKind = 'idle' | 'error' | 'success'
 
@@ -15,17 +15,17 @@ const IDLE_NOTICE: Notice = { kind: 'idle', message: '' }
 export function useNotice() {
   const [notice, setNotice] = useState<Notice>(IDLE_NOTICE)
 
-  function showError(message: string) {
+  const showError = useCallback((message: string) => {
     setNotice({ kind: 'error', message })
-  }
+  }, [])
 
-  function showSuccess(message: string) {
+  const showSuccess = useCallback((message: string) => {
     setNotice({ kind: 'success', message })
-  }
+  }, [])
 
-  function clearNotice() {
+  const clearNotice = useCallback(() => {
     setNotice(IDLE_NOTICE)
-  }
+  }, [])
 
   return { notice, showError, showSuccess, clearNotice }
 }
