@@ -1,7 +1,6 @@
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch } from '@/api'
 import { useNotice } from '@/hooks/useNotice'
 import AuthNotice from '@/components/auth/AuthNotice'
 import OwnerActivityList from '@/components/owner/OwnerActivityList'
@@ -23,6 +22,8 @@ import {
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
+import { getAccessToken } from '@/session/authSession'
+import { listOwnerApartments } from '@/services/ownerService'
 import type { OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
 
 export default function OwnerDashboardPage() {
@@ -45,8 +46,7 @@ export default function OwnerDashboardPage() {
 
   useEffect(() => {
     async function loadOwnerProperties() {
-      const token = localStorage.getItem('roomies.access_token')
-      if (!token) {
+      if (!getAccessToken()) {
         return
       }
 
@@ -54,49 +54,9 @@ export default function OwnerDashboardPage() {
       clearNotice()
 
       try {
-        const response = await apiFetch('/api/owner/apartments', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        const data = (await response.json()) as {
-          apartments?: Array<{
-            id: string
-            title: string
-            address: string
-            area: string
-            total_spots: number
-            occupied_spots: number
-            base_rent: number
-            status: string
-            created_at: string
-            image_url: string
-          }>
-          error?: string
-        }
-
-        if (!response.ok) {
-          showError(data.error ?? 'No se pudieron cargar tus pisos publicados.')
-          return
-        }
-
-        const mapped = (data.apartments ?? []).map((item) => ({
-          id: item.id,
-          title: item.title,
-          address: item.address,
-          area: item.area,
-          totalSpots: item.total_spots,
-          occupiedSpots: item.occupied_spots,
-          rent: item.base_rent,
-          status: item.status,
-          createdAt: item.created_at,
-          image: item.image_url,
-        }))
-
-        setOwnerProperties(mapped)
-      } catch {
-        showError('No se pudieron cargar tus pisos publicados.')
+        setOwnerProperties(await listOwnerApartments())
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'No se pudieron cargar tus pisos publicados.')
       } finally {
         setIsLoadingProperties(false)
       }

@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { apiFetch } from '@/api'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import { paths } from '@/routes/paths'
+import { confirmEmail, getProfileStatus } from '@/services/authService'
+import { saveAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
 
 type NoticeKind = 'idle' | 'error' | 'success'
-
-interface ProfileStatusResponse {
-  role?: 'tenant' | 'owner'
-  needs_onboarding?: boolean
-  error?: string
-}
 
 interface AuthCallbackPageProps {
   onResolved: (payload: { role?: 'tenant' | 'owner'; needsOnboarding?: boolean }) => void
@@ -84,31 +79,15 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
 
       if (!accessToken && (authData.tokenHash || authData.token)) {
         try {
-          const confirmResponse = await apiFetch('/api/auth/confirm', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              token_hash: authData.tokenHash,
-              token: authData.token,
-              type: authData.verifyType || 'signup',
-              email: authData.email,
-            }),
+          const confirmResult = await confirmEmail({
+            tokenHash: authData.tokenHash,
+            token: authData.token,
+            type: authData.verifyType || 'signup',
+            email: authData.email,
           })
 
-          const confirmData = (await confirmResponse.json()) as {
-            access_token?: string
-            refresh_token?: string
-            error?: string
-          }
-
-          if (!confirmResponse.ok) {
-            throw new Error(confirmData.error || DEFAULT_ERROR_MESSAGE)
-          }
-
-          accessToken = (confirmData.access_token || '').trim()
-          refreshToken = (confirmData.refresh_token || '').trim()
+          accessToken = (confirmResult.accessToken || '').trim()
+          refreshToken = (confirmResult.refreshToken || '').trim()
         } catch (error) {
           if (!cancelled) {
             const message = error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE
@@ -125,30 +104,18 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
         return
       }
 
-      localStorage.setItem('roomies.access_token', accessToken)
-      if (refreshToken) {
-        localStorage.setItem('roomies.refresh_token', refreshToken)
-      }
+      saveAuthSession({ accessToken, refreshToken })
 
       window.history.replaceState({}, '', paths.authCallback)
 
       try {
-        const response = await apiFetch('/api/profile/status', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-
-        const data = (await response.json()) as ProfileStatusResponse
-        if (!response.ok) {
-          throw new Error(data.error || DEFAULT_ERROR_MESSAGE)
-        }
+        const profileStatus = await getProfileStatus(accessToken)
 
         if (!cancelled) {
           setNotice({ kind: 'success', message: 'Cuenta confirmada correctamente. Redirigiendo...' })
           onResolved({
-            role: data.role,
-            needsOnboarding: data.needs_onboarding,
+            role: profileStatus.role,
+            needsOnboarding: profileStatus.needsOnboarding,
           })
         }
       } catch (error) {

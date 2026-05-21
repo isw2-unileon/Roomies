@@ -5,8 +5,9 @@ import AuthHeader from '@/components/auth/AuthHeader'
 import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
-import { apiFetch } from '@/api'
 import { useNotice } from '@/hooks/useNotice'
+import { getAccessToken } from '@/session/authSession'
+import { saveTenantProfile } from '@/services/tenantService'
 import styles from '@/styles/auth.module.css'
 
 type WorkSchedule = 'morning' | 'night' | 'flexible'
@@ -15,12 +16,6 @@ type Cleanliness = 'very_clean' | 'normal' | 'relaxed'
 
 interface TenantOnboardingPageProps {
   onCompleted: () => void
-}
-
-interface TenantProfileResponse {
-  message?: string
-  onboarding_complete?: boolean
-  error?: string
 }
 
 export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPageProps) {
@@ -66,7 +61,7 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
       return
     }
 
-    const token = localStorage.getItem('roomies.access_token')
+    const token = getAccessToken()
     if (!token) {
       showError(t('auth.tenantOnboarding.errors.sessionExpired'))
       return
@@ -75,36 +70,21 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
     setIsLoading(true)
 
     try {
-      const response = await apiFetch('/api/tenant-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          budget_min: parsedBudgetMin,
-          budget_max: parsedBudgetMax,
-          preferred_area: preferredArea.trim(),
-          move_in_date: moveInDate,
-          work_schedule: workSchedule,
-          pets,
-          smoking,
-          noise_level: noiseLevel,
-          cleanliness,
-        }),
+      const message = await saveTenantProfile({
+        budgetMin: parsedBudgetMin,
+        budgetMax: parsedBudgetMax,
+        preferredArea: preferredArea.trim(),
+        moveInDate,
+        workSchedule,
+        pets,
+        smoking,
+        noiseLevel,
+        cleanliness,
       })
-
-      const data = (await response.json()) as TenantProfileResponse
-
-      if (!response.ok) {
-        showError(data.error ?? t('auth.tenantOnboarding.errors.default'))
-        return
-      }
-
-      showSuccess(data.message ?? t('auth.tenantOnboarding.successDefault'))
+      showSuccess(message ?? t('auth.tenantOnboarding.successDefault'))
       onCompleted()
-    } catch {
-      showError(t('auth.tenantOnboarding.errors.default'))
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t('auth.tenantOnboarding.errors.default'))
     } finally {
       setIsLoading(false)
     }
