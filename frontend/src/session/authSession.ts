@@ -27,7 +27,7 @@ export function clearAuthSession() {
   localStorage.removeItem(REFRESH_TOKEN_KEY)
 }
 
-export function getAuthorizationHeader() {
-  const accessToken = getAccessToken()
-  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+export function getAuthorizationHeader(): Record<string, string> {
+	const accessToken = getAccessToken()
+	return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
 }
