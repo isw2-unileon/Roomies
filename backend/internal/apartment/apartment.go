@@ -1,34 +1,38 @@
 package apartment
 
+// StatusAvailable marks an apartment as open for tenant applications.
+const StatusAvailable = "AVAILABLE"
+
 // CreateApartmentInput contains data needed to publish an apartment.
 type CreateApartmentInput struct {
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Address       string   `json:"address"`
-	Area          string   `json:"area"`
-	TotalSpots    int      `json:"total_spots"`
-	Bathrooms     int      `json:"bathrooms"`
-	BaseRent      int      `json:"base_rent"`
-	AvailableFrom string   `json:"available_from"`
-	ImageURLs     []string `json:"image_urls"`
+	Title         string
+	Description   string
+	Address       string
+	Area          string
+	TotalSpots    int
+	Bathrooms     int
+	BaseRent      int
+	AvailableFrom string
+	ImageURLs     []string
+	Status        string
 }
 
 // CreateApartmentResult returns basic publication metadata.
 type CreateApartmentResult struct {
-	ApartmentID  string `json:"apartment_id"`
-	ImagesStored int    `json:"images_stored"`
+	ApartmentID  string
+	ImagesStored int
 }
 
 // OwnerApartment contains apartment data shown in owner dashboard listings.
 type OwnerApartment struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	Address       string `json:"address"`
-	Area          string `json:"area"`
-	TotalSpots    int    `json:"total_spots"`
-	OccupiedSpots int    `json:"occupied_spots"`
-	BaseRent      int    `json:"base_rent"`
-	Status        string `json:"status"`
-	CreatedAt     string `json:"created_at"`
-	ImageURL      string `json:"image_url"`
+	ID            string
+	Title         string
+	Address       string
+	Area          string
+	TotalSpots    int
+	OccupiedSpots int
+	BaseRent      int
+	Status        string
+	CreatedAt     string
+	ImageURL      string
 }

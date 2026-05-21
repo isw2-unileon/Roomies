@@ -75,7 +75,14 @@ func NewClient(baseURL, apiKey string) (*Client, error) {
 
 // Login authenticates via Supabase token endpoint.
 func (c *Client) Login(ctx context.Context, input auth.LoginInput) (*auth.LoginResult, error) {
-	body, err := json.Marshal(input)
+	payload := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{
+		Email:    input.Email,
+		Password: input.Password,
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal login payload: %w", err)
 	}

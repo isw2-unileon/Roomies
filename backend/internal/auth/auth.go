@@ -3,49 +3,49 @@ package auth
 
 // LoginInput contains login credentials.
 type LoginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string
+	Password string
 }
 
 // ForgotPasswordInput contains the email for recovery.
 type ForgotPasswordInput struct {
-	Email string `json:"email"`
+	Email string
 }
 
 // RegisterInput contains registration payload.
 type RegisterInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	FullName string `json:"full_name"`
-	Role     string `json:"role"`
+	Email    string
+	Password string
+	FullName string
+	Role     string
 }
 
 // LoginResult is returned after a successful login.
 type LoginResult struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
-	UserID       string `json:"user_id"`
-	Role         string `json:"role"`
-	NeedsTenant  bool   `json:"needs_tenant_profile"`
+	AccessToken  string
+	RefreshToken string
+	TokenType    string
+	ExpiresIn    int64
+	UserID       string
+	Role         string
+	NeedsTenant  bool
 }
 
 // RegisterResult is returned after a successful registration.
 type RegisterResult struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
-	UserID       string `json:"user_id"`
-	Role         string `json:"role"`
-	NeedsTenant  bool   `json:"needs_tenant_profile"`
+	AccessToken  string
+	RefreshToken string
+	TokenType    string
+	ExpiresIn    int64
+	UserID       string
+	Role         string
+	NeedsTenant  bool
 }
 
 // VerifyResult is returned after account verification.
 type VerifyResult struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
+	AccessToken  string
+	RefreshToken string
+	TokenType    string
+	ExpiresIn    int64
 }
