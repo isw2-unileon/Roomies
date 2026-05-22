@@ -1,10 +1,14 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import App from '@/App'
 
 import { paths } from './paths'
+
+vi.mock('@/services/tenantService', () => ({
+  listTenantApartments: vi.fn(async () => []),
+}))
 
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)

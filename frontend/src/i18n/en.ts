@@ -113,6 +113,8 @@ const en = {
   },
   tenantDashboard: {
     resultsFound: '{{count}} flats found',
+    loading: 'Loading available flats...',
+    loadError: 'Could not load available flats.',
     layout: {
       skipToContent: 'Skip to content',
       closeMenu: 'Close menu',

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,7 +38,6 @@ func main() {
 	profileRepo := profilepostgres.NewRepository(database.DB)
 	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
 	profileService := profileservice.NewService(profileRepo)
-	apartmentService := apartmentservice.NewService(apartmentRepo)
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
 	if err != nil {
@@ -45,6 +45,18 @@ func main() {
 	} else {
 		authService = authservice.NewService(supabaseClient, profileRepo)
 	}
+	var apartmentImageSigner *authsupabase.Client
+	if strings.TrimSpace(cfg.SupabaseSecretKey) == "" {
+		logger.Warn("apartment image signing disabled", "reason", "SUPABASE_SECRET_KEY is missing")
+	} else {
+		storageClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseSecretKey)
+		if err != nil {
+			logger.Warn("apartment image signing disabled", "error", err)
+		} else {
+			apartmentImageSigner = storageClient
+		}
+	}
+	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner)
 	r := httpapi.NewRouter(cfg, authService, profileService, apartmentService)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

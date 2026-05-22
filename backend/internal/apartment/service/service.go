@@ -11,20 +11,31 @@ import (
 
 type repository interface {
 	CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error)
-	ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.OwnerApartment, error)
+	ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error)
+	ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error)
 }
+
+type imageURLSigner interface {
+	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
+}
+
+const (
+	apartmentPhotosBucket    = "Apartment_photos"
+	signedImageURLTTLSeconds = 3600
+)
 
 // ErrOwnerRequired is returned when a non-owner tries to publish an apartment.
 var ErrOwnerRequired = errors.New("owner role is required")
 
 // Service contains apartment use cases.
 type Service struct {
-	repo repository
+	repo        repository
+	imageSigner imageURLSigner
 }
 
 // NewService creates the apartment service.
-func NewService(repo repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo repository, imageSigner imageURLSigner) *Service {
+	return &Service{repo: repo, imageSigner: imageSigner}
 }
 
 // CreateApartment validates and stores a new owner apartment listing.
@@ -82,12 +93,52 @@ func buildDescription(description string, bathrooms int, availableFrom string) s
 }
 
 // ListOwnerApartments returns published apartments for an owner.
-func (s *Service) ListOwnerApartments(ctx context.Context, ownerID, role string) ([]apartment.OwnerApartment, error) {
+func (s *Service) ListOwnerApartments(ctx context.Context, ownerID, role string) ([]apartment.Apartment, error) {
 	if strings.TrimSpace(ownerID) == "" {
 		return nil, errors.New("owner id is required")
 	}
 	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
 		return nil, ErrOwnerRequired
 	}
-	return s.repo.ListOwnerApartments(ctx, ownerID)
+	apartments, err := s.repo.ListOwnerApartments(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	return s.signApartmentImages(ctx, apartments)
+}
+
+// ListAvailableApartments returns tenant-visible apartment listings.
+func (s *Service) ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error) {
+	apartments, err := s.repo.ListAvailableApartments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.signApartmentImages(ctx, apartments)
+}
+
+func (s *Service) signApartmentImages(ctx context.Context, apartments []apartment.Apartment) ([]apartment.Apartment, error) {
+	if s.imageSigner == nil {
+		return apartments, nil
+	}
+	for idx := range apartments {
+		signedURL, err := s.signedImageURL(ctx, apartments[idx].ImageURL)
+		if err != nil {
+			apartments[idx].ImageURL = ""
+			continue
+		}
+		apartments[idx].ImageURL = signedURL
+	}
+	return apartments, nil
+}
+
+func (s *Service) signedImageURL(ctx context.Context, imagePath string) (string, error) {
+	imagePath = strings.TrimSpace(imagePath)
+	if imagePath == "" {
+		return "", nil
+	}
+	signedURL, err := s.imageSigner.CreateSignedURL(ctx, apartmentPhotosBucket, imagePath, signedImageURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign apartment image: %w", err)
+	}
+	return signedURL, nil
 }
