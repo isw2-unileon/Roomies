@@ -113,6 +113,8 @@ const de = {
   },
   tenantDashboard: {
     resultsFound: '{{count}} Wohnungen gefunden',
+    loading: 'Verfügbare Wohnungen werden geladen...',
+    loadError: 'Verfügbare Wohnungen konnten nicht geladen werden.',
     layout: {
       skipToContent: 'Zum Inhalt springen',
       closeMenu: 'Menü schließen',

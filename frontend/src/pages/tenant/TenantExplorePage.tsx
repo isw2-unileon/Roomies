@@ -1,16 +1,50 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantFilters from '@/components/tenant/tenants_explore/TenantFilters'
 import TenantPropertyGrid from '@/components/tenant/tenants_explore/TenantPropertyGrid'
 import TenantSearchBar from '@/components/tenant/tenants_explore/TenantSearchBar'
-import { mockTenantProfile, mockTenantProperties } from '@/mocks/tenantData'
+import { mockTenantProfile } from '@/mocks/tenantData'
+import { listTenantApartments } from '@/services/tenantService'
 import type { TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantDashboard.module.css'
 
 export default function TenantExplorePage() {
     const { t } = useTranslation()
     const profile = mockTenantProfile
-    const properties = mockTenantProperties
+    const [properties, setProperties] = useState<TenantProperty[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        let ignoreResult = false
+
+        async function loadApartments() {
+            setIsLoading(true)
+            setError('')
+
+            try {
+                const apartments = await listTenantApartments()
+                if (!ignoreResult) {
+                    setProperties(apartments)
+                }
+            } catch (loadError) {
+                if (!ignoreResult) {
+                    setError(loadError instanceof Error ? loadError.message : t('tenantDashboard.loadError'))
+                }
+            } finally {
+                if (!ignoreResult) {
+                    setIsLoading(false)
+                }
+            }
+        }
+
+        void loadApartments()
+
+        return () => {
+            ignoreResult = true
+        }
+    }, [t])
 
     function handlePropertyClick(property: TenantProperty) {
         console.log('property details:', property.id)
@@ -49,10 +83,16 @@ export default function TenantExplorePage() {
                 </p>
             </div>
 
-            <TenantPropertyGrid
-                properties={properties}
-                onPropertyClick={handlePropertyClick}
-            />
+            {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
+
+            {isLoading ? (
+                <p role="status" className={styles.loadingText}>{t('tenantDashboard.loading')}</p>
+            ) : (
+                <TenantPropertyGrid
+                    properties={properties}
+                    onPropertyClick={handlePropertyClick}
+                />
+            )}
             </div>
         </TenantLayout>
     )

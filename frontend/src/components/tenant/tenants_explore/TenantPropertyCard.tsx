@@ -90,10 +90,12 @@ export default function TenantPropertyCard({ property, onDetails = () => {} }: T
                         <span className={`${styles.statusBadge} ${availability.statusClass}`}>
                             {t(availability.labelKey)}
                         </span>
-                        <span className={styles.compatibilityBadge}>
-                            <CheckIcon className={styles.iconTiny} aria-hidden="true" />
-                            {t('tenantDashboard.property.compatible', { count: property.compatibilityScore })}
-                        </span>
+                        {property.compatibilityScore > 0 ? (
+                            <span className={styles.compatibilityBadge}>
+                                <CheckIcon className={styles.iconTiny} aria-hidden="true" />
+                                {t('tenantDashboard.property.compatible', { count: property.compatibilityScore })}
+                            </span>
+                        ) : null}
                     </div>
                     <button
                         type="button"

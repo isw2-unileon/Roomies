@@ -69,6 +69,27 @@
   font-weight: 600;
 }
 
+.loadingText,
+.errorText {
+  margin: 0;
+  padding: 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: 1rem;
+}
+
+.loadingText {
+  color: var(--tenant-text-muted);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--tenant-border-light);
+}
+
+.errorText {
+  color: #93452c;
+  background: #f3e1dc;
+  border: 1px solid #e2b9ad;
+}
+
 @media (max-width: 520px) {
   .areaInfo {
     width: 100%;
