@@ -390,13 +390,20 @@ func (c *Client) CreateSignedURL(ctx context.Context, bucket, objectPath string,
 	if signedURL == "" {
 		return "", errors.New("signed URL response is missing signedURL")
 	}
+	return completeStorageSignedURL(c.baseURL, signedURL), nil
+}
+
+func completeStorageSignedURL(baseURL, signedURL string) string {
 	if strings.HasPrefix(signedURL, "http://") || strings.HasPrefix(signedURL, "https://") {
-		return signedURL, nil
+		return signedURL
+	}
+	if strings.HasPrefix(signedURL, "/storage/v1/") {
+		return baseURL + signedURL
 	}
 	if strings.HasPrefix(signedURL, "/") {
-		return c.baseURL + "/storage/v1" + signedURL, nil
+		return baseURL + "/storage/v1" + signedURL
 	}
-	return c.baseURL + "/storage/v1/" + signedURL, nil
+	return baseURL + "/storage/v1/" + signedURL
 }
 
 // help func to ensure each segment of the object path

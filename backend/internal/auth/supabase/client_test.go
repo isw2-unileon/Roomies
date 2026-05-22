@@ -59,3 +59,26 @@ func TestCreateSignedURLRequestsStorageSignEndpoint(t *testing.T) {
 		t.Fatalf("signedURL = %q, want %q", signedURL, wantSignedURL)
 	}
 }
+
+func TestCreateSignedURLDoesNotDuplicateStoragePrefix(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"signedURL":"/storage/v1/object/sign/apartment-photos/photo.jpg?token=abc"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := NewClient(server.URL, "secret-key")
+	if err != nil {
+		t.Fatalf("NewClient returned error: %v", err)
+	}
+
+	signedURL, err := client.CreateSignedURL(context.Background(), "apartment-photos", "photo.jpg", 3600)
+	if err != nil {
+		t.Fatalf("CreateSignedURL returned error: %v", err)
+	}
+
+	wantSignedURL := server.URL + "/storage/v1/object/sign/apartment-photos/photo.jpg?token=abc"
+	if signedURL != wantSignedURL {
+		t.Fatalf("signedURL = %q, want %q", signedURL, wantSignedURL)
+	}
+}
