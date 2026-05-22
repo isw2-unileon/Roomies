@@ -23,8 +23,8 @@ type CreateApartmentResult struct {
 	ImagesStored int
 }
 
-// OwnerApartment contains apartment data shown in owner dashboard listings.
-type OwnerApartment struct {
+// Apartment contains apartment data shown in listing views.
+type Apartment struct {
 	ID            string
 	Title         string
 	Address       string

@@ -45,11 +45,35 @@ type ownerApartmentResponse struct {
 	ImageURL      string `json:"image_url"`
 }
 
+type tenantApartmentResponse struct {
+	ID             string `json:"id"`
+	Title          string `json:"title"`
+	Address        string `json:"address"`
+	Area           string `json:"area"`
+	TotalSpots     int    `json:"total_spots"`
+	AvailableSpots int    `json:"available_spots"`
+	BaseRent       int    `json:"base_rent"`
+	Status         string `json:"status"`
+	CreatedAt      string `json:"created_at"`
+	ImageURL       string `json:"image_url"`
+}
+
 // RegisterRoutes wires apartment endpoints into the API router.
 func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service) {
 	h := &handler{authService: authService, profileService: profileService, apartmentService: apartmentService}
+	api.GET("/apartments", h.listAvailableApartments)
 	api.GET("/owner/apartments", h.listOwnerApartments)
 	api.POST("/apartments", h.createApartment)
+}
+
+func (h *handler) listAvailableApartments(c *gin.Context) {
+	apartments, err := h.apartmentService.ListAvailableApartments(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
 }
 
 func (h *handler) createApartment(c *gin.Context) {
@@ -186,7 +210,7 @@ func normalizeApartmentInput(input *apartment.CreateApartmentInput) {
 	input.ImageURLs = cleanURLs
 }
 
-func ownerApartmentResponses(apartments []apartment.OwnerApartment) []ownerApartmentResponse {
+func ownerApartmentResponses(apartments []apartment.Apartment) []ownerApartmentResponse {
 	responses := make([]ownerApartmentResponse, 0, len(apartments))
 	for _, item := range apartments {
 		responses = append(responses, ownerApartmentResponse{
@@ -200,6 +224,25 @@ func ownerApartmentResponses(apartments []apartment.OwnerApartment) []ownerApart
 			Status:        item.Status,
 			CreatedAt:     item.CreatedAt,
 			ImageURL:      item.ImageURL,
+		})
+	}
+	return responses
+}
+
+func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmentResponse {
+	responses := make([]tenantApartmentResponse, 0, len(apartments))
+	for _, item := range apartments {
+		responses = append(responses, tenantApartmentResponse{
+			ID:             item.ID,
+			Title:          item.Title,
+			Address:        item.Address,
+			Area:           item.Area,
+			TotalSpots:     item.TotalSpots,
+			AvailableSpots: item.TotalSpots - item.OccupiedSpots,
+			BaseRent:       item.BaseRent,
+			Status:         item.Status,
+			CreatedAt:      item.CreatedAt,
+			ImageURL:       item.ImageURL,
 		})
 	}
 	return responses
