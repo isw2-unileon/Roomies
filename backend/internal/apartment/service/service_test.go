@@ -121,8 +121,8 @@ func TestListOwnerApartmentsSignsImagePaths(t *testing.T) {
 	if apartments[0].ImageURL != "https://signed.example.test/apartments/apartment-1/photo.jpg" {
 		t.Fatalf("ImageURL = %q, want signed URL", apartments[0].ImageURL)
 	}
-	if signer.bucket != "apartment-photos" {
-		t.Fatalf("bucket = %q, want apartment-photos", signer.bucket)
+	if signer.bucket != "Apartment_photos" {
+		t.Fatalf("bucket = %q, want Apartment_photos", signer.bucket)
 	}
 	if signer.path != "apartments/apartment-1/photo.jpg" {
 		t.Fatalf("path = %q, want apartments/apartment-1/photo.jpg", signer.path)

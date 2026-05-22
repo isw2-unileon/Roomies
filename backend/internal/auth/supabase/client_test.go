@@ -28,7 +28,7 @@ func TestCreateSignedURLRequestsStorageSignEndpoint(t *testing.T) {
 		gotExpiresIn = payload.ExpiresIn
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"signedURL":"/storage/v1/object/sign/apartment-photos/apartments/flat%20one.jpg?token=abc"}`))
+		_, _ = w.Write([]byte(`{"signedURL":"/object/sign/apartment-photos/apartments/flat%20one.jpg?token=abc"}`))
 	}))
 	t.Cleanup(server.Close)
 
