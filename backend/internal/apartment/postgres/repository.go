@@ -83,7 +83,7 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID string, input 
 }
 
 // ListOwnerApartments returns apartments published by an owner.
-func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.OwnerApartment, error) {
+func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error) {
 	const query = `SELECT
 		a.id,
 		a.title,
@@ -111,9 +111,9 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 	}
 	defer rows.Close()
 
-	result := make([]apartment.OwnerApartment, 0)
+	result := make([]apartment.Apartment, 0)
 	for rows.Next() {
-		var item apartment.OwnerApartment
+		var item apartment.Apartment
 		if err := rows.Scan(
 			&item.ID,
 			&item.Title,
@@ -132,6 +132,62 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate owner apartments: %w", err)
+	}
+
+	return result, nil
+}
+
+// ListAvailableApartments returns tenant-visible apartments with free spots.
+func (r *Repository) ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error) {
+	const query = `SELECT
+		a.id,
+		a.title,
+		a.address,
+		COALESCE(a.area, ''),
+		a.total_spots,
+		a.occupied_spots,
+		a.base_rent,
+		a.status,
+		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE((
+			SELECT ap.url
+			FROM public.apartment_photos ap
+			WHERE ap.apartment_id = a.id
+			ORDER BY ap.position ASC, ap.created_at ASC
+			LIMIT 1
+		), '') AS image_url
+	FROM public.apartments a
+	WHERE (a.total_spots - a.occupied_spots) > 0
+		AND a.status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED')
+	ORDER BY a.created_at DESC`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("list available apartments: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]apartment.Apartment, 0)
+	for rows.Next() {
+		var item apartment.Apartment
+		if err := rows.Scan(
+			&item.ID,
+			&item.Title,
+			&item.Address,
+			&item.Area,
+			&item.TotalSpots,
+			&item.OccupiedSpots,
+			&item.BaseRent,
+			&item.Status,
+			&item.CreatedAt,
+			&item.ImageURL,
+		); err != nil {
+			return nil, fmt.Errorf("scan available apartments: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate available apartments: %w", err)
 	}
 
 	return result, nil
