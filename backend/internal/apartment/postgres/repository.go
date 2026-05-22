@@ -29,7 +29,7 @@ func nullIfEmpty(s string) interface{} {
 }
 
 // CreateApartment inserts apartment and optional photos in one transaction.
-func (r *Repository) CreateApartment(ctx context.Context, ownerID, title, description, address, area, availableFrom string, totalSpots, bathrooms, baseRent int, imageURLs []string) (string, int, error) {
+func (r *Repository) CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error) {
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return "", 0, fmt.Errorf("begin create apartment tx: %w", err)
@@ -38,20 +38,10 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID, title, descri
 		_ = tx.Rollback(ctx)
 	}()
 
-	descriptionParts := make([]string, 0, 3)
-	if strings.TrimSpace(description) != "" {
-		descriptionParts = append(descriptionParts, strings.TrimSpace(description))
-	}
-	descriptionParts = append(descriptionParts, fmt.Sprintf("Banos: %d", bathrooms))
-	if strings.TrimSpace(availableFrom) != "" {
-		descriptionParts = append(descriptionParts, fmt.Sprintf("Disponible desde: %s", strings.TrimSpace(availableFrom)))
-	}
-	finalDescription := strings.Join(descriptionParts, "\n\n")
-
 	const insertApartmentSQL = `INSERT INTO public.apartments
 		(owner_id, title, description, address, area, total_spots, occupied_spots, available_spots, base_rent, current_rent, status)
 	VALUES
-		($1, $2, $3, $4, $5, $6, 0, $6, $7, $7, 'AVAILABLE')
+		($1, $2, $3, $4, $5, $6, 0, $6, $7, $7, $8)
 	RETURNING id`
 
 	var apartmentID string
@@ -59,20 +49,21 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID, title, descri
 		ctx,
 		insertApartmentSQL,
 		ownerID,
-		strings.TrimSpace(title),
-		nullIfEmpty(finalDescription),
-		strings.TrimSpace(address),
-		nullIfEmpty(area),
-		totalSpots,
-		baseRent,
+		input.Title,
+		nullIfEmpty(input.Description),
+		input.Address,
+		nullIfEmpty(input.Area),
+		input.TotalSpots,
+		input.BaseRent,
+		input.Status,
 	).Scan(&apartmentID); err != nil {
 		return "", 0, fmt.Errorf("insert apartment: %w", err)
 	}
 
 	stored := 0
-	if len(imageURLs) > 0 {
+	if len(input.ImageURLs) > 0 {
 		const insertPhotoSQL = `INSERT INTO public.apartment_photos (apartment_id, url, position) VALUES ($1, $2, $3)`
-		for idx, imageURL := range imageURLs {
+		for idx, imageURL := range input.ImageURLs {
 			trimmedURL := strings.TrimSpace(imageURL)
 			if trimmedURL == "" {
 				continue

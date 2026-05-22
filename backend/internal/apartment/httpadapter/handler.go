@@ -1,6 +1,7 @@
-package httpapi
+package httpadapter
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -9,40 +10,64 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment"
 	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpauth"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
-type apartmentHandler struct {
+type handler struct {
 	authService      *authservice.Service
 	profileService   *profileservice.Service
 	apartmentService *apartmentservice.Service
 }
 
-func newApartmentHandler(authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service) *apartmentHandler {
-	return &apartmentHandler{
-		authService:      authService,
-		profileService:   profileService,
-		apartmentService: apartmentService,
-	}
+type createApartmentRequest struct {
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Address       string   `json:"address"`
+	Area          string   `json:"area"`
+	TotalSpots    int      `json:"total_spots"`
+	Bathrooms     int      `json:"bathrooms"`
+	BaseRent      int      `json:"base_rent"`
+	AvailableFrom string   `json:"available_from"`
+	ImageURLs     []string `json:"image_urls"`
 }
 
-func (h *apartmentHandler) createApartment(c *gin.Context) {
+type ownerApartmentResponse struct {
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	Address       string `json:"address"`
+	Area          string `json:"area"`
+	TotalSpots    int    `json:"total_spots"`
+	OccupiedSpots int    `json:"occupied_spots"`
+	BaseRent      int    `json:"base_rent"`
+	Status        string `json:"status"`
+	CreatedAt     string `json:"created_at"`
+	ImageURL      string `json:"image_url"`
+}
+
+// RegisterRoutes wires apartment endpoints into the API router.
+func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service) {
+	h := &handler{authService: authService, profileService: profileService, apartmentService: apartmentService}
+	api.GET("/owner/apartments", h.listOwnerApartments)
+	api.POST("/apartments", h.createApartment)
+}
+
+func (h *handler) createApartment(c *gin.Context) {
 	ownerID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
 		return
 	}
-	if role != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "apartment publication is only available for owner users"})
-		return
-	}
-
 	input, ok := bindAndValidateApartmentInput(c)
 	if !ok {
 		return
 	}
 
-	result, err := h.apartmentService.CreateApartment(c.Request.Context(), ownerID, input)
+	result, err := h.apartmentService.CreateApartment(c.Request.Context(), ownerID, role, input)
 	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartment publication is only available for owner users"})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -54,27 +79,26 @@ func (h *apartmentHandler) createApartment(c *gin.Context) {
 	})
 }
 
-func (h *apartmentHandler) listOwnerApartments(c *gin.Context) {
+func (h *handler) listOwnerApartments(c *gin.Context) {
 	ownerID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
 		return
 	}
-	if role != "owner" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
-		return
-	}
-
-	apartments, err := h.apartmentService.ListOwnerApartments(c.Request.Context(), ownerID)
+	apartments, err := h.apartmentService.ListOwnerApartments(c.Request.Context(), ownerID, role)
 	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load owner apartments"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"apartments": apartments})
+	c.JSON(http.StatusOK, gin.H{"apartments": ownerApartmentResponses(apartments)})
 }
 
-func (h *apartmentHandler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
-	accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
+	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return "", "", false
@@ -93,11 +117,12 @@ func (h *apartmentHandler) resolveUserAndRole(c *gin.Context) (string, string, b
 }
 
 func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInput, bool) {
-	var input apartment.CreateApartmentInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var request createApartmentRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return apartment.CreateApartmentInput{}, false
 	}
+	input := apartmentInputFromRequest(request)
 
 	if strings.TrimSpace(input.Title) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
@@ -130,6 +155,20 @@ func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInp
 	return input, true
 }
 
+func apartmentInputFromRequest(request createApartmentRequest) apartment.CreateApartmentInput {
+	return apartment.CreateApartmentInput{
+		Title:         request.Title,
+		Description:   request.Description,
+		Address:       request.Address,
+		Area:          request.Area,
+		TotalSpots:    request.TotalSpots,
+		Bathrooms:     request.Bathrooms,
+		BaseRent:      request.BaseRent,
+		AvailableFrom: request.AvailableFrom,
+		ImageURLs:     request.ImageURLs,
+	}
+}
+
 func normalizeApartmentInput(input *apartment.CreateApartmentInput) {
 	input.Title = strings.TrimSpace(input.Title)
 	input.Description = strings.TrimSpace(input.Description)
@@ -145,4 +184,23 @@ func normalizeApartmentInput(input *apartment.CreateApartmentInput) {
 		cleanURLs = append(cleanURLs, trimmed)
 	}
 	input.ImageURLs = cleanURLs
+}
+
+func ownerApartmentResponses(apartments []apartment.OwnerApartment) []ownerApartmentResponse {
+	responses := make([]ownerApartmentResponse, 0, len(apartments))
+	for _, item := range apartments {
+		responses = append(responses, ownerApartmentResponse{
+			ID:            item.ID,
+			Title:         item.Title,
+			Address:       item.Address,
+			Area:          item.Area,
+			TotalSpots:    item.TotalSpots,
+			OccupiedSpots: item.OccupiedSpots,
+			BaseRent:      item.BaseRent,
+			Status:        item.Status,
+			CreatedAt:     item.CreatedAt,
+			ImageURL:      item.ImageURL,
+		})
+	}
+	return responses
 }

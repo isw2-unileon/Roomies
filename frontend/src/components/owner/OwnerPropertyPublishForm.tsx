@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { apiFetch } from '@/api'
 import { useNotice } from '@/hooks/useNotice'
+import { getAccessToken } from '@/session/authSession'
+import { createApartment } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
 
 interface PublishValues {
@@ -25,12 +26,6 @@ const initialValues: PublishValues = {
   description: '',
   availableFrom: '',
   imageUrls: '',
-}
-
-interface CreateApartmentResponse {
-  message?: string
-  apartment_id?: string
-  error?: string
 }
 
 export default function OwnerPropertyPublishForm() {
@@ -79,7 +74,7 @@ export default function OwnerPropertyPublishForm() {
       return
     }
 
-    const token = localStorage.getItem('roomies.access_token')
+    const token = getAccessToken()
     if (!token) {
       showError('Tu sesion ha caducado. Inicia sesion de nuevo.')
       return
@@ -88,36 +83,21 @@ export default function OwnerPropertyPublishForm() {
     setIsLoading(true)
 
     try {
-      const response = await apiFetch('/api/apartments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: values.title.trim(),
-          description: values.description.trim(),
-          address: values.address.trim(),
-          area: values.area.trim(),
-          total_spots: parsedTotalSpots,
-          bathrooms: parsedBathrooms,
-          base_rent: parsedBaseRent,
-          available_from: values.availableFrom || '',
-          image_urls: parsedImageURLs,
-        }),
+      const result = await createApartment({
+        title: values.title.trim(),
+        description: values.description.trim(),
+        address: values.address.trim(),
+        area: values.area.trim(),
+        totalSpots: parsedTotalSpots,
+        bathrooms: parsedBathrooms,
+        baseRent: parsedBaseRent,
+        availableFrom: values.availableFrom || '',
+        imageUrls: parsedImageURLs,
       })
-
-      const data = (await response.json()) as CreateApartmentResponse
-
-      if (!response.ok) {
-        showError(data.error ?? 'No se pudo publicar el piso. Intentalo de nuevo.')
-        return
-      }
-
-      showSuccess(data.message ?? 'Piso publicado correctamente.')
+      showSuccess(result.message ?? 'Piso publicado correctamente.')
       setValues(initialValues)
-    } catch {
-      showError('No se pudo publicar el piso. Intentalo de nuevo.')
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'No se pudo publicar el piso. Intentalo de nuevo.')
     } finally {
       setIsLoading(false)
     }

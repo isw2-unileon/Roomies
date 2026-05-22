@@ -1,11 +1,12 @@
 import { FormEvent, useMemo, useState } from 'react'
 
-import { apiFetch } from '@/api'
 import AuthHeader from '@/components/auth/AuthHeader'
 import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { paths } from '@/routes/paths'
+import { resetPassword } from '@/services/authService'
+import { clearAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
 
 type NoticeKind = 'idle' | 'error' | 'success'
@@ -76,27 +77,9 @@ export default function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPa
     setIsSubmitting(true)
 
     try {
-      const response = await apiFetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${recovery.accessToken}`,
-        },
-        body: JSON.stringify({ password }),
-      })
+      const message = await resetPassword(recovery.accessToken, password)
 
-      const data = (await response.json()) as { message?: string; error?: string }
-
-      if (!response.ok) {
-        setNotice({
-          kind: 'error',
-          message: data.error || 'No se pudo actualizar la contrasena. Solicita un nuevo enlace.',
-        })
-        return
-      }
-
-      localStorage.removeItem('roomies.access_token')
-      localStorage.removeItem('roomies.refresh_token')
+      clearAuthSession()
 
       if (recovery.refreshToken) {
         window.history.replaceState({}, '', paths.resetPassword)
@@ -104,14 +87,14 @@ export default function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPa
 
       setNotice({
         kind: 'success',
-        message: data.message || 'Contrasena actualizada correctamente. Ya puedes iniciar sesion.',
+        message: message || 'Contrasena actualizada correctamente. Ya puedes iniciar sesion.',
       })
       setPassword('')
       setConfirmPassword('')
-    } catch {
+    } catch (error) {
       setNotice({
         kind: 'error',
-        message: 'No se pudo actualizar la contrasena. Solicita un nuevo enlace.',
+        message: error instanceof Error ? error.message : 'No se pudo actualizar la contrasena. Solicita un nuevo enlace.',
       })
     } finally {
       setIsSubmitting(false)
