@@ -1,6 +1,7 @@
 import { Navigate, Route } from 'react-router-dom'
 
 import TenantApplicationsPage from '@/pages/tenant/TenantApplicationsPage'
+import TenantExploreDetailPage from '@/pages/tenant/TenantExploreDetailPage'
 import TenantExplorePage from '@/pages/tenant/TenantExplorePage'
 import TenantGroupsPage from '@/pages/tenant/TenantGroupsPage'
 import TenantMessagesPage from '@/pages/tenant/TenantMessagesPage'
@@ -23,6 +24,7 @@ export function getTenantRoutes({ onTenantOnboardingCompleted }: TenantRoutesCon
       />
       <Route path="/tenant" element={<Navigate to={paths.tenantExplore} replace />} />
       <Route path={paths.tenantExplore} element={<TenantExplorePage />} />
+      <Route path={paths.tenantExploreDetail} element={<TenantExploreDetailPage />} />
       <Route path={paths.tenantApplications} element={<TenantApplicationsPage />} />
       <Route path={paths.tenantGroups} element={<TenantGroupsPage />} />
       <Route path={paths.tenantMessages} element={<TenantMessagesPage />} />

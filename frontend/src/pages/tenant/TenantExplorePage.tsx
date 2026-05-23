@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantFilters from '@/components/tenant/tenants_explore/TenantFilters'
 import TenantPropertyGrid from '@/components/tenant/tenants_explore/TenantPropertyGrid'
 import TenantSearchBar from '@/components/tenant/tenants_explore/TenantSearchBar'
 import { mockTenantProfile } from '@/mocks/tenantData'
+import { paths } from '@/routes/paths'
 import { listTenantApartments } from '@/services/tenantService'
 import type { TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantDashboard.module.css'
 
 export default function TenantExplorePage() {
     const { t } = useTranslation()
+    const navigate = useNavigate()
     const profile = mockTenantProfile
     const [properties, setProperties] = useState<TenantProperty[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -47,7 +50,9 @@ export default function TenantExplorePage() {
     }, [t])
 
     function handlePropertyClick(property: TenantProperty) {
-        console.log('property details:', property.id)
+        navigate(paths.tenantExploreDetail.replace(':propertyId', property.id), {
+            state: { property },
+        })
     }
 
     return (

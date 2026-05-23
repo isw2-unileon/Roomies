@@ -27,6 +27,9 @@ type CreateApartmentResult struct {
 type Apartment struct {
 	ID            string
 	Title         string
+	Description   string
+	OwnerID       string
+	OwnerName     string
 	Address       string
 	Area          string
 	TotalSpots    int
@@ -35,4 +38,82 @@ type Apartment struct {
 	Status        string
 	CreatedAt     string
 	ImageURL      string
+}
+
+// ApartmentRules contains apartment coexistence preferences.
+type ApartmentRules struct {
+	SmokingAllowed         *bool
+	PetsAllowed            *bool
+	MaxNoiseLevel          string
+	CleanlinessExpectation string
+	PreferredSchedule      string
+}
+
+// TenantProfile contains profile data used for compatibility.
+type TenantProfile struct {
+	UserID        string
+	BudgetMin     int
+	BudgetMax     int
+	PreferredArea string
+	Pets          bool
+	Smoking       bool
+	NoiseLevel    string
+	Cleanliness   string
+	WorkSchedule  string
+	Age           int
+	University    string
+}
+
+// ApartmentDetail contains tenant-facing apartment detail information.
+type ApartmentDetail struct {
+	Apartment                Apartment
+	Rules                    ApartmentRules
+	CompatibilityScore       int
+	CompatibilityReason      []string
+	CurrentApplicationID     string
+	CurrentApplicationStatus string
+	CanApply                 bool
+	CanCancel                bool
+}
+
+// InterestedTenant contains public data for tenants interested in an apartment.
+type InterestedTenant struct {
+	UserID        string
+	Name          string
+	Age           int
+	Studies       string
+	AvatarURL     string
+	Compatibility int
+}
+
+// InterestedTenantCandidate contains interested tenant data plus profile preferences.
+type InterestedTenantCandidate struct {
+	InterestedTenant
+	BudgetMin     int
+	BudgetMax     int
+	PreferredArea string
+	Pets          bool
+	Smoking       bool
+	NoiseLevel    string
+	Cleanliness   string
+	WorkSchedule  string
+}
+
+// TenantApplication contains tenant-facing application data.
+type TenantApplication struct {
+	ID                 string
+	ApartmentID        string
+	PropertyTitle      string
+	OwnerName          string
+	Address            string
+	ImageURL           string
+	Places             int
+	Size               int
+	Bathrooms          int
+	Status             string
+	CreatedAt          string
+	DateLabel          string
+	CompatibilityScore int
+	RequestType        string
+	StatusMessage      string
 }

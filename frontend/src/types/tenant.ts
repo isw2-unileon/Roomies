@@ -27,6 +27,8 @@ export interface TenantProfile {
 export interface TenantProperty {
     id: string
     titleKey: string
+    description?: string
+    ownerName?: string
     addressKey: string
     areaKey: string
     availableRooms: number
@@ -105,4 +107,31 @@ export interface TenantMessage {
     content: string
     timestamp: string
     read: boolean
+}
+
+export interface TenantPropertyRules {
+    smokingAllowed: boolean | null
+    petsAllowed: boolean | null
+    maxNoiseLevel: string
+    cleanlinessExpectation: string
+    preferredSchedule: string
+}
+
+export interface TenantPropertyDetail {
+    property: TenantProperty
+    compatibilityReasons: string[]
+    rules: TenantPropertyRules
+    currentApplicationId: string
+    currentApplicationStatus: string
+    canApply: boolean
+    canCancel: boolean
+}
+
+export interface InterestedTenant {
+    userId: string
+    name: string
+    age: number
+    studies: string
+    avatarUrl: string
+    compatibility: number
 }
