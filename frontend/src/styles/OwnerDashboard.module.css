@@ -377,6 +377,17 @@
   object-fit: cover;
 }
 
+.ownerPropertyImageFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 8;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: var(--tenant-bg-soft);
+}
+
 .ownerPropertyBody {
   padding: 0.85rem;
 }
@@ -430,6 +441,14 @@
   color: var(--tenant-text-muted);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.ownerPropertyEmpty {
+  margin: 0;
+  padding: 1rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .ownerTableWrap {

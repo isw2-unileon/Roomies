@@ -15,7 +15,7 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 )
 
-// Client talks to Supabase Auth over HTTP.
+// Client talks to Supabase HTTP APIs.
 type Client struct {
 	baseURL string
 	apiKey  string
@@ -58,7 +58,16 @@ type authUserResponse struct {
 	ID string `json:"id"`
 }
 
-// NewClient creates a Supabase auth client.
+type signedURLResponse struct {
+	SignedURL   string `json:"signedURL"`
+	SignedURLV2 string `json:"signedUrl"`
+	Error       string `json:"error"`
+	Description string `json:"error_description"`
+	Message     string `json:"message"`
+	Msg         string `json:"msg"`
+}
+
+// NewClient creates a Supabase API client.
 func NewClient(baseURL, apiKey string) (*Client, error) {
 	if strings.TrimSpace(baseURL) == "" {
 		return nil, errors.New("supabase URL is required")
@@ -75,7 +84,14 @@ func NewClient(baseURL, apiKey string) (*Client, error) {
 
 // Login authenticates via Supabase token endpoint.
 func (c *Client) Login(ctx context.Context, input auth.LoginInput) (*auth.LoginResult, error) {
-	body, err := json.Marshal(input)
+	payload := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{
+		Email:    input.Email,
+		Password: input.Password,
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal login payload: %w", err)
 	}
@@ -321,6 +337,84 @@ func (c *Client) FetchUserID(ctx context.Context, accessToken string) (string, e
 		return "", errors.New("authenticated user id is missing")
 	}
 	return parsed.ID, nil
+}
+
+// CreateSignedURL creates a temporary URL for a private Supabase Storage object.
+func (c *Client) CreateSignedURL(ctx context.Context, bucket, objectPath string, expiresIn int) (string, error) {
+	bucket = strings.TrimSpace(bucket)
+	objectPath = strings.Trim(strings.TrimSpace(objectPath), "/")
+	if bucket == "" {
+		return "", errors.New("storage bucket is required")
+	}
+	if objectPath == "" {
+		return "", errors.New("storage object path is required")
+	}
+	if expiresIn <= 0 {
+		return "", errors.New("signed URL expiry must be greater than zero")
+	}
+
+	payload := struct {
+		ExpiresIn int `json:"expiresIn"`
+	}{ExpiresIn: expiresIn}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("marshal signed URL payload: %w", err)
+	}
+
+	storageURL := c.baseURL + "/storage/v1/object/sign/" + url.PathEscape(bucket) + "/" + escapeStorageObjectPath(objectPath)
+	req, err := c.newJSONRequest(ctx, http.MethodPost, storageURL, body, "")
+	if err != nil {
+		return "", fmt.Errorf("create signed URL request: %w", err)
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("request storage signed URL endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read signed URL response: %w", err)
+	}
+	var parsed signedURLResponse
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return "", fmt.Errorf("decode signed URL response: %w", err)
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return "", errors.New(supabaseErrorMessage(parsed.Description, parsed.Msg, parsed.Message, parsed.Error, "could not create signed URL"))
+	}
+
+	signedURL := strings.TrimSpace(parsed.SignedURL)
+	if signedURL == "" {
+		signedURL = strings.TrimSpace(parsed.SignedURLV2)
+	}
+	if signedURL == "" {
+		return "", errors.New("signed URL response is missing signedURL")
+	}
+	return completeStorageSignedURL(c.baseURL, signedURL), nil
+}
+
+func completeStorageSignedURL(baseURL, signedURL string) string {
+	if strings.HasPrefix(signedURL, "http://") || strings.HasPrefix(signedURL, "https://") {
+		return signedURL
+	}
+	if strings.HasPrefix(signedURL, "/storage/v1/") {
+		return baseURL + signedURL
+	}
+	if strings.HasPrefix(signedURL, "/") {
+		return baseURL + "/storage/v1" + signedURL
+	}
+	return baseURL + "/storage/v1/" + signedURL
+}
+
+// help func to ensure each segment of the object path
+// is properly URL-encoded while preserving the overall
+// path structure for Supabase Storage signed URL generation.
+func escapeStorageObjectPath(objectPath string) string {
+	parts := strings.Split(objectPath, "/")
+	for idx, part := range parts {
+		parts[idx] = url.PathEscape(part)
+	}
+	return strings.Join(parts, "/")
 }
 
 func (c *Client) verifyEmailWithPayload(ctx context.Context, payload interface{}) (*auth.VerifyResult, error) {

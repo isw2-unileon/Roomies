@@ -6,18 +6,32 @@ import (
 	"strings"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
-	profilepostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/postgres"
 )
+
+type identityProvider interface {
+	Login(ctx context.Context, input auth.LoginInput) (*auth.LoginResult, error)
+	Register(ctx context.Context, input auth.RegisterInput, emailRedirectTo string) (*auth.RegisterResult, error)
+	ForgotPassword(ctx context.Context, input auth.ForgotPasswordInput, redirectTo string) error
+	UpdatePassword(ctx context.Context, accessToken, newPassword string) error
+	VerifyEmail(ctx context.Context, tokenHash, token, verifyType, email string) (*auth.VerifyResult, error)
+	FetchUserID(ctx context.Context, accessToken string) (string, error)
+}
+
+type profileRepository interface {
+	LookupRoleByUserID(ctx context.Context, userID string) (string, error)
+	NeedsTenantProfile(ctx context.Context, userID, role string) (bool, error)
+	UpsertUserProfile(ctx context.Context, userID, email, fullName, role string) error
+	UpsertOwnerProfile(ctx context.Context, userID, displayName string) error
+}
 
 // Service contains authentication use cases.
 type Service struct {
-	supabaseClient *supabase.Client
-	profileRepo    *profilepostgres.Repository
+	supabaseClient identityProvider
+	profileRepo    profileRepository
 }
 
 // NewService creates the authentication service.
-func NewService(supabaseClient *supabase.Client, profileRepo *profilepostgres.Repository) *Service {
+func NewService(supabaseClient identityProvider, profileRepo profileRepository) *Service {
 	return &Service{
 		supabaseClient: supabaseClient,
 		profileRepo:    profileRepo,

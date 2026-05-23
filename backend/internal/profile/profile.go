@@ -3,22 +3,22 @@ package profile
 
 // TenantProfileInput contains onboarding/profile fields.
 type TenantProfileInput struct {
-	BudgetMin     int    `json:"budget_min"`
-	BudgetMax     int    `json:"budget_max"`
-	PreferredArea string `json:"preferred_area"`
-	MoveInDate    string `json:"move_in_date"`
-	Pets          bool   `json:"pets"`
-	Smoking       bool   `json:"smoking"`
-	NoiseLevel    string `json:"noise_level"`
-	Cleanliness   string `json:"cleanliness"`
-	WorkSchedule  string `json:"work_schedule"`
+	BudgetMin     int
+	BudgetMax     int
+	PreferredArea string
+	MoveInDate    string
+	Pets          bool
+	Smoking       bool
+	NoiseLevel    string
+	Cleanliness   string
+	WorkSchedule  string
 
-	SleepSchedule    string `json:"sleep_schedule,omitempty"`
-	SocialLifestyle  string `json:"social_lifestyle,omitempty"`
-	StudyHabits      string `json:"study_habits,omitempty"`
-	Language         string `json:"language,omitempty"`
-	University       string `json:"university,omitempty"`
-	Age              int    `json:"age,omitempty"`
-	GuestPreferences string `json:"guest_preferences,omitempty"`
-	PartyFrequency   string `json:"party_frequency,omitempty"`
+	SleepSchedule    string
+	SocialLifestyle  string
+	StudyHabits      string
+	Language         string
+	University       string
+	Age              int
+	GuestPreferences string
+	PartyFrequency   string
 }

@@ -113,6 +113,8 @@ const es = {
   },
   tenantDashboard: {
     resultsFound: '{{count}} pisos encontrados',
+    loading: 'Cargando pisos disponibles...',
+    loadError: 'No se pudieron cargar los pisos disponibles.',
     layout: {
       skipToContent: 'Saltar al contenido',
       closeMenu: 'Cerrar menú',

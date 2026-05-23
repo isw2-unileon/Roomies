@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	apartmentpostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/postgres"
+	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpapi"
@@ -33,6 +36,7 @@ func main() {
 	}
 	defer database.Close()
 	profileRepo := profilepostgres.NewRepository(database.DB)
+	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
 	profileService := profileservice.NewService(profileRepo)
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
@@ -41,7 +45,19 @@ func main() {
 	} else {
 		authService = authservice.NewService(supabaseClient, profileRepo)
 	}
-	r := httpapi.NewRouter(cfg, authService, profileService)
+	var apartmentImageSigner *authsupabase.Client
+	if strings.TrimSpace(cfg.SupabaseSecretKey) == "" {
+		logger.Warn("apartment image signing disabled", "reason", "SUPABASE_SECRET_KEY is missing")
+	} else {
+		storageClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseSecretKey)
+		if err != nil {
+			logger.Warn("apartment image signing disabled", "error", err)
+		} else {
+			apartmentImageSigner = storageClient
+		}
+	}
+	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner)
+	r := httpapi.NewRouter(cfg, authService, profileService, apartmentService)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,

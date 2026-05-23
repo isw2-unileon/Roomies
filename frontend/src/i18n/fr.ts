@@ -113,6 +113,8 @@ const fr = {
   },
   tenantDashboard: {
     resultsFound: '{{count}} logements trouvés',
+    loading: 'Chargement des logements disponibles...',
+    loadError: 'Impossible de charger les logements disponibles.',
     layout: {
       skipToContent: 'Aller au contenu',
       closeMenu: 'Fermer le menu',

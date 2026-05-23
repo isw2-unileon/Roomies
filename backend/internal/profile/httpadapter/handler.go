@@ -1,30 +1,52 @@
-package httpapi
+package httpadapter
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpauth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
-type profileHandler struct {
+type handler struct {
 	authService    *authservice.Service
 	profileService *profileservice.Service
 }
 
-func newProfileHandler(authService *authservice.Service, profileService *profileservice.Service) *profileHandler {
-	return &profileHandler{
-		authService:    authService,
-		profileService: profileService,
-	}
+type tenantProfileRequest struct {
+	BudgetMin        int    `json:"budget_min"`
+	BudgetMax        int    `json:"budget_max"`
+	PreferredArea    string `json:"preferred_area"`
+	MoveInDate       string `json:"move_in_date"`
+	Pets             bool   `json:"pets"`
+	Smoking          bool   `json:"smoking"`
+	NoiseLevel       string `json:"noise_level"`
+	Cleanliness      string `json:"cleanliness"`
+	WorkSchedule     string `json:"work_schedule"`
+	SleepSchedule    string `json:"sleep_schedule,omitempty"`
+	SocialLifestyle  string `json:"social_lifestyle,omitempty"`
+	StudyHabits      string `json:"study_habits,omitempty"`
+	Language         string `json:"language,omitempty"`
+	University       string `json:"university,omitempty"`
+	Age              int    `json:"age,omitempty"`
+	GuestPreferences string `json:"guest_preferences,omitempty"`
+	PartyFrequency   string `json:"party_frequency,omitempty"`
 }
 
-func (h *profileHandler) status(c *gin.Context) {
-	accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+// RegisterRoutes wires profile endpoints into the API router.
+func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service) {
+	h := &handler{authService: authService, profileService: profileService}
+	api.GET("/profile/status", h.status)
+	api.POST("/tenant-profile", h.saveTenantProfile)
+}
+
+func (h *handler) status(c *gin.Context) {
+	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -52,13 +74,9 @@ func (h *profileHandler) status(c *gin.Context) {
 	})
 }
 
-func (h *profileHandler) saveTenantProfile(c *gin.Context) {
+func (h *handler) saveTenantProfile(c *gin.Context) {
 	userID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
-		return
-	}
-	if role != "tenant" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
 		return
 	}
 	input, ok := bindAndValidateTenantProfile(c)
@@ -66,15 +84,19 @@ func (h *profileHandler) saveTenantProfile(c *gin.Context) {
 		return
 	}
 	normalizeTenantProfileInput(&input)
-	if err := h.profileService.SaveTenantProfile(c.Request.Context(), userID, input); err != nil {
+	if err := h.profileService.SaveTenantProfile(c.Request.Context(), userID, role, input); err != nil {
+		if errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save tenant profile"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "tenant profile saved", "onboarding_complete": true})
 }
 
-func (h *profileHandler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
-	accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
+	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return "", "", false
@@ -93,11 +115,12 @@ func (h *profileHandler) resolveUserAndRole(c *gin.Context) (string, string, boo
 }
 
 func bindAndValidateTenantProfile(c *gin.Context) (profile.TenantProfileInput, bool) {
-	var input profile.TenantProfileInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var request tenantProfileRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return profile.TenantProfileInput{}, false
 	}
+	input := tenantProfileInputFromRequest(request)
 	if ok := validateTenantProfileBasic(c, input); !ok {
 		return profile.TenantProfileInput{}, false
 	}
@@ -105,6 +128,28 @@ func bindAndValidateTenantProfile(c *gin.Context) (profile.TenantProfileInput, b
 		return profile.TenantProfileInput{}, false
 	}
 	return input, true
+}
+
+func tenantProfileInputFromRequest(request tenantProfileRequest) profile.TenantProfileInput {
+	return profile.TenantProfileInput{
+		BudgetMin:        request.BudgetMin,
+		BudgetMax:        request.BudgetMax,
+		PreferredArea:    request.PreferredArea,
+		MoveInDate:       request.MoveInDate,
+		Pets:             request.Pets,
+		Smoking:          request.Smoking,
+		NoiseLevel:       request.NoiseLevel,
+		Cleanliness:      request.Cleanliness,
+		WorkSchedule:     request.WorkSchedule,
+		SleepSchedule:    request.SleepSchedule,
+		SocialLifestyle:  request.SocialLifestyle,
+		StudyHabits:      request.StudyHabits,
+		Language:         request.Language,
+		University:       request.University,
+		Age:              request.Age,
+		GuestPreferences: request.GuestPreferences,
+		PartyFrequency:   request.PartyFrequency,
+	}
 }
 
 func validateTenantProfileBasic(c *gin.Context, input profile.TenantProfileInput) bool {

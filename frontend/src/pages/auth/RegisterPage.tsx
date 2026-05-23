@@ -6,20 +6,9 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
-import { apiFetch } from '@/api'
+import { register, type UserRole } from '@/services/authService'
+import { saveAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
-
-type UserRole = 'tenant' | 'owner'
-
-interface RegisterApiResponse {
-  message?: string
-  access_token?: string
-  refresh_token?: string
-  user_id?: string
-  role?: UserRole
-  needs_onboarding?: boolean
-  error?: string
-}
 
 interface RegisterPageProps {
   onNavigateToLogin: () => void
@@ -71,34 +60,21 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
     setIsLoading(true)
 
     try {
-      const response = await apiFetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, full_name: fullName.trim(), role }),
-      })
-
-      const data = (await response.json()) as RegisterApiResponse
-
-      if (!response.ok) {
-        showError(data.error ?? t('auth.register.errors.default'))
-        return
-      }
-
-      const accessToken = data.access_token?.trim() ?? ''
-      const refreshToken = data.refresh_token?.trim() ?? ''
+      const result = await register({ email, password, fullName: fullName.trim(), role })
+      const accessToken = result.accessToken?.trim() ?? ''
+      const refreshToken = result.refreshToken?.trim() ?? ''
 
       if (accessToken) {
-        localStorage.setItem('roomies.access_token', accessToken)
-        if (refreshToken) localStorage.setItem('roomies.refresh_token', refreshToken)
+        saveAuthSession({ accessToken, refreshToken })
 
-        onRegisterSuccess({ role: data.role, needsOnboarding: data.needs_onboarding })
-        showSuccess(t('auth.register.successDefault'))
+        onRegisterSuccess({ role: result.role, needsOnboarding: result.needsOnboarding })
+        showSuccess(result.message ?? t('auth.register.successDefault'))
         return
       }
 
-      showSuccess(t('auth.register.successDefault'))
-    } catch {
-      showError(t('auth.register.errors.default'))
+      showSuccess(result.message ?? t('auth.register.successDefault'))
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t('auth.register.errors.default'))
     } finally {
       setIsLoading(false)
     }

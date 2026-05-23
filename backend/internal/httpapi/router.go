@@ -4,13 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	apartmenthttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/httpadapter"
+	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
+	authhttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/httpadapter"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
+	profilehttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/httpadapter"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 // NewRouter builds the HTTP API router.
-func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service) *gin.Engine {
+func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), corsMiddleware(cfg.CORSAllowOrigin))
@@ -27,14 +31,10 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	if authService == nil || profileService == nil {
 		return r
 	}
-	authH := newAuthHandler(authService, cfg.FrontendURL)
-	profileH := newProfileHandler(authService, profileService)
-	api.POST("/auth/login", authH.login)
-	api.POST("/auth/register", authH.register)
-	api.POST("/auth/forgot-password", authH.forgotPassword)
-	api.POST("/auth/confirm", authH.confirm)
-	api.POST("/auth/reset-password", authH.resetPassword)
-	api.GET("/profile/status", profileH.status)
-	api.POST("/tenant-profile", profileH.saveTenantProfile)
+	authhttp.RegisterRoutes(api, authService, cfg.FrontendURL)
+	profilehttp.RegisterRoutes(api, authService, profileService)
+	if apartmentService != nil {
+		apartmenthttp.RegisterRoutes(api, authService, profileService, apartmentService)
+	}
 	return r
 }

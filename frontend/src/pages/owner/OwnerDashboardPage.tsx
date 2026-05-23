@@ -1,6 +1,8 @@
 import { PlusIcon } from '@heroicons/react/24/outline'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNotice } from '@/hooks/useNotice'
+import AuthNotice from '@/components/auth/AuthNotice'
 import OwnerActivityList from '@/components/owner/OwnerActivityList'
 import OwnerHelpCard from '@/components/owner/OwnerHelpCard'
 import OwnerIssuesList from '@/components/owner/OwnerIssuesList'
@@ -15,27 +17,83 @@ import {
   mockOwnerIssues,
   mockOwnerPayments,
   mockOwnerProfile,
-  mockOwnerProperties,
   mockOwnerRequests,
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
-import type { OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
+import { getAccessToken } from '@/session/authSession'
+import { getProfileStatus } from '@/services/authService'
+import { listOwnerApartments } from '@/services/ownerService'
+import type { OwnerDashboardProperty, OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
+
+const OWNER_ONLY_MESSAGE = 'Esta seccion solo esta disponible para propietarios. Inicia sesion con una cuenta owner.'
 
 export default function OwnerDashboardPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<OwnerNavTab>('properties')
   const [issues, setIssues] = useState(mockOwnerIssues)
+  const [ownerProperties, setOwnerProperties] = useState<OwnerDashboardProperty[]>([])
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false)
+  const { notice, showError, clearNotice } = useNotice()
   const unreadMessages = 1
   const unreadNotifications = 3
 
   const occupancy = useMemo(() => {
-    const total = mockOwnerProperties.reduce((acc, property) => acc + property.totalSpots, 0)
-    const occupied = mockOwnerProperties.reduce((acc, property) => acc + property.occupiedSpots, 0)
+    const total = ownerProperties.reduce((acc, property) => acc + property.totalSpots, 0)
+    const occupied = ownerProperties.reduce((acc, property) => acc + property.occupiedSpots, 0)
     const free = total - occupied
     const percent = total > 0 ? Math.round((occupied / total) * 100) : 0
     return { total, occupied, free, percent }
-  }, [])
+  }, [ownerProperties])
+
+  useEffect(() => {
+    let ignoreResult = false
+
+    async function loadOwnerProperties() {
+      const accessToken = getAccessToken()
+      if (!accessToken) {
+        setOwnerProperties([])
+        return
+      }
+
+      setIsLoadingProperties(true)
+      clearNotice()
+
+      try {
+        const profileStatus = await getProfileStatus(accessToken)
+        if (ignoreResult) {
+          return
+        }
+        if (profileStatus.role !== 'owner') {
+          setOwnerProperties([])
+          showError(OWNER_ONLY_MESSAGE)
+          return
+        }
+
+        const apartments = await listOwnerApartments()
+        if (!ignoreResult) {
+          setOwnerProperties(apartments)
+        }
+      } catch (error) {
+        if (!ignoreResult) {
+          setOwnerProperties([])
+          showError(error instanceof Error ? error.message : 'No se pudieron cargar tus pisos publicados.')
+        }
+      } finally {
+        if (!ignoreResult) {
+          setIsLoadingProperties(false)
+        }
+      }
+    }
+
+    if (activeTab === 'properties') {
+      void loadOwnerProperties()
+    }
+
+    return () => {
+      ignoreResult = true
+    }
+  }, [activeTab, clearNotice, showError])
 
   function handleStatusChange(id: string, status: OwnerIssueStatus) {
     setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, status } : issue)))
@@ -82,7 +140,12 @@ export default function OwnerDashboardPage() {
                       Publicar piso
                     </button>
                   </header>
-                  <OwnerPropertyGrid properties={mockOwnerProperties} />
+                  <AuthNotice kind={notice.kind} message={notice.message} />
+                  {isLoadingProperties ? (
+                    <p className={styles.ownerPropertyEmpty}>Cargando pisos publicados...</p>
+                  ) : (
+                    <OwnerPropertyGrid properties={ownerProperties} />
+                  )}
                 </section>
 
                 <section className={styles.ownerSectionCard}>

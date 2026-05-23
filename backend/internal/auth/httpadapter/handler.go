@@ -1,4 +1,4 @@
-package httpapi
+package httpadapter
 
 import (
 	"net/http"
@@ -7,36 +7,58 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpauth"
 )
 
-type authHandler struct {
+type handler struct {
 	authService *authservice.Service
 	frontendURL string
 }
-type confirmInput struct {
+
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type registerRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type confirmRequest struct {
 	TokenHash string `json:"token_hash"`
 	Token     string `json:"token"`
 	Type      string `json:"type"`
 	Email     string `json:"email"`
 }
-type resetPasswordInput struct {
+
+type resetPasswordRequest struct {
 	Password string `json:"password"`
 }
 
-func newAuthHandler(authService *authservice.Service, frontendURL string) *authHandler {
-	return &authHandler{
-		authService: authService,
-		frontendURL: frontendURL,
-	}
+// RegisterRoutes wires authentication endpoints into the API router.
+func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, frontendURL string) {
+	h := &handler{authService: authService, frontendURL: frontendURL}
+	api.POST("/auth/login", h.login)
+	api.POST("/auth/register", h.register)
+	api.POST("/auth/forgot-password", h.forgotPassword)
+	api.POST("/auth/confirm", h.confirm)
+	api.POST("/auth/reset-password", h.resetPassword)
 }
 
-func (h *authHandler) login(c *gin.Context) {
-	var input auth.LoginInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+func (h *handler) login(c *gin.Context) {
+	var request loginRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	result, err := h.authService.Login(c.Request.Context(), input)
+	result, err := h.authService.Login(c.Request.Context(), auth.LoginInput{Email: request.Email, Password: request.Password})
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -53,14 +75,19 @@ func (h *authHandler) login(c *gin.Context) {
 	})
 }
 
-func (h *authHandler) register(c *gin.Context) {
-	var input auth.RegisterInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+func (h *handler) register(c *gin.Context) {
+	var request registerRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 	emailRedirectTo := strings.TrimRight(h.frontendURL, "/") + "/auth/callback"
-	result, err := h.authService.Register(c.Request.Context(), input, emailRedirectTo)
+	result, err := h.authService.Register(c.Request.Context(), auth.RegisterInput{
+		Email:    request.Email,
+		Password: request.Password,
+		FullName: request.FullName,
+		Role:     request.Role,
+	}, emailRedirectTo)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -77,27 +104,27 @@ func (h *authHandler) register(c *gin.Context) {
 	})
 }
 
-func (h *authHandler) forgotPassword(c *gin.Context) {
-	var input auth.ForgotPasswordInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+func (h *handler) forgotPassword(c *gin.Context) {
+	var request forgotPasswordRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 	redirectTo := strings.TrimRight(h.frontendURL, "/") + "/reset-password"
-	if err := h.authService.ForgotPassword(c.Request.Context(), input, redirectTo); err != nil {
+	if err := h.authService.ForgotPassword(c.Request.Context(), auth.ForgotPasswordInput{Email: request.Email}, redirectTo); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "password recovery email sent"})
 }
 
-func (h *authHandler) confirm(c *gin.Context) {
-	var input confirmInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+func (h *handler) confirm(c *gin.Context) {
+	var request confirmRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	result, err := h.authService.VerifyEmail(c.Request.Context(), input.TokenHash, input.Token, input.Type, input.Email)
+	result, err := h.authService.VerifyEmail(c.Request.Context(), request.TokenHash, request.Token, request.Type, request.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -111,18 +138,18 @@ func (h *authHandler) confirm(c *gin.Context) {
 	})
 }
 
-func (h *authHandler) resetPassword(c *gin.Context) {
-	var input resetPasswordInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+func (h *handler) resetPassword(c *gin.Context) {
+	var request resetPasswordRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	accessToken, err := extractBearerToken(c.GetHeader("Authorization"))
+	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.authService.UpdatePassword(c.Request.Context(), accessToken, input.Password); err != nil {
+	if err := h.authService.UpdatePassword(c.Request.Context(), accessToken, request.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

@@ -90,6 +90,27 @@
   font-weight: 600;
 }
 
+.errorNotice,
+.successNotice {
+  margin: 0.9rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.errorNotice {
+  color: #b42318;
+  background: #fee4e2;
+  border: 1px solid #fecdca;
+}
+
+.successNotice {
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+}
+
 .fileList {
   margin: 0;
   padding: 0;

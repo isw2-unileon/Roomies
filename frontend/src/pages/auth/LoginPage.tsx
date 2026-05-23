@@ -6,23 +6,9 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
-import { apiFetch } from '@/api'
+import { forgotPassword, login } from '@/services/authService'
+import { saveAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
-
-interface LoginApiResponse {
-  message?: string
-  access_token?: string
-  refresh_token?: string
-  user_id?: string
-  role?: 'tenant' | 'owner'
-  needs_onboarding?: boolean
-  error?: string
-}
-
-interface ForgotPasswordApiResponse {
-  message?: string
-  error?: string
-}
 
 interface LoginPageProps {
   onNavigateToRegister: () => void
@@ -43,26 +29,13 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
     setIsLoading(true)
 
     try {
-      const response = await apiFetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
+      const result = await login({ email, password })
+      saveAuthSession({ accessToken: result.accessToken, refreshToken: result.refreshToken })
 
-      const data = (await response.json()) as LoginApiResponse
-
-      if (!response.ok) {
-        showError(data.error ?? t('auth.login.errors.default'))
-        return
-      }
-
-      if (data.access_token) localStorage.setItem('roomies.access_token', data.access_token)
-      if (data.refresh_token) localStorage.setItem('roomies.refresh_token', data.refresh_token)
-
-      onLoginSuccess({ role: data.role, needsOnboarding: data.needs_onboarding })
-      showSuccess(data.message ?? t('auth.login.successDefault'))
-    } catch {
-      showError(t('auth.login.errors.default'))
+      onLoginSuccess({ role: result.role, needsOnboarding: result.needsOnboarding })
+      showSuccess(result.message ?? t('auth.login.successDefault'))
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t('auth.login.errors.default'))
     } finally {
       setIsLoading(false)
     }
@@ -79,22 +52,10 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
     setIsRecovering(true)
 
     try {
-      const response = await apiFetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = (await response.json()) as ForgotPasswordApiResponse
-
-      if (!response.ok) {
-        showError(data.error ?? t('auth.login.errors.forgotDefault'))
-        return
-      }
-
-      showSuccess(data.message ?? t('auth.login.forgotSuccessDefault'))
-    } catch {
-      showError(t('auth.login.errors.forgotDefault'))
+      const message = await forgotPassword(email)
+      showSuccess(message ?? t('auth.login.forgotSuccessDefault'))
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t('auth.login.errors.forgotDefault'))
     } finally {
       setIsRecovering(false)
     }
