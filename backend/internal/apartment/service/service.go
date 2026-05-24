@@ -15,7 +15,7 @@ type repository interface {
 	ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
-	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.ApartmentRules, error)
+	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error)
 	GetTenantProfileByUserID(ctx context.Context, userID string) (*apartment.TenantProfile, error)
 	HasActiveApplication(ctx context.Context, apartmentID, tenantID string) (bool, error)
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
@@ -197,7 +197,7 @@ func normalizeListApartmentsFilters(filters apartment.ListApartmentsFilters) apa
 }
 
 // GetApartmentDetailForTenant returns apartment detail and compatibility data for a tenant.
-func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, tenantID, role string) (*apartment.ApartmentDetail, error) {
+func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, tenantID, role string) (*apartment.Detail, error) {
 	if strings.TrimSpace(apartmentID) == "" {
 		return nil, errors.New("apartment id is required")
 	}
@@ -240,7 +240,7 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 	canApply := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
 	canCancel := mappedStatus == "pending"
 
-	return &apartment.ApartmentDetail{
+	return &apartment.Detail{
 		Apartment:                apartmentsWithImage[0],
 		Rules:                    derefRules(rules),
 		CompatibilityScore:       compatibilityScore,
@@ -427,14 +427,14 @@ func (s *Service) signedImageURL(ctx context.Context, imagePath string) (string,
 	return signedURL, nil
 }
 
-func derefRules(rules *apartment.ApartmentRules) apartment.ApartmentRules {
+func derefRules(rules *apartment.Rules) apartment.Rules {
 	if rules == nil {
-		return apartment.ApartmentRules{}
+		return apartment.Rules{}
 	}
 	return *rules
 }
 
-func calculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.ApartmentRules, tenantProfile *apartment.TenantProfile) (int, []string) {
+func calculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.Rules, tenantProfile *apartment.TenantProfile) (int, []string) {
 	if tenantProfile == nil {
 		return 0, nil
 	}
@@ -526,7 +526,7 @@ func textEqualityScore(a, b string) float64 {
 	return 25
 }
 
-func boolRuleScore(rules *apartment.ApartmentRules, tenantValue bool, forPets bool) float64 {
+func boolRuleScore(rules *apartment.Rules, tenantValue bool, forPets bool) float64 {
 	if rules == nil {
 		return -1
 	}
@@ -584,21 +584,21 @@ func indexOf(items []string, value string) int {
 	return -1
 }
 
-func ruleNoiseLevel(rules *apartment.ApartmentRules) string {
+func ruleNoiseLevel(rules *apartment.Rules) string {
 	if rules == nil {
 		return ""
 	}
 	return rules.MaxNoiseLevel
 }
 
-func ruleCleanliness(rules *apartment.ApartmentRules) string {
+func ruleCleanliness(rules *apartment.Rules) string {
 	if rules == nil {
 		return ""
 	}
 	return rules.CleanlinessExpectation
 }
 
-func ruleSchedule(rules *apartment.ApartmentRules) string {
+func ruleSchedule(rules *apartment.Rules) string {
 	if rules == nil {
 		return ""
 	}

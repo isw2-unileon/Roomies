@@ -22,7 +22,7 @@ type fakeApartmentRepository struct {
 	ownerApartments    []apartment.Apartment
 	tenantApartments   []apartment.Apartment
 	apartmentByID      *apartment.Apartment
-	apartmentRules     *apartment.ApartmentRules
+	apartmentRules     *apartment.Rules
 	tenantProfile      *apartment.TenantProfile
 	interestedTenants  []apartment.InterestedTenantCandidate
 	tenantApplications []apartment.TenantApplication
@@ -55,12 +55,12 @@ func (f *fakeApartmentRepository) GetApartmentByID(ctx context.Context, apartmen
 	return &apartment.Apartment{ID: apartmentID, BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1}, nil
 }
 
-func (f *fakeApartmentRepository) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.ApartmentRules, error) {
+func (f *fakeApartmentRepository) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error) {
 	if f.apartmentRules != nil {
 		return f.apartmentRules, nil
 	}
 	allowed := false
-	return &apartment.ApartmentRules{
+	return &apartment.Rules{
 		SmokingAllowed:         &allowed,
 		PetsAllowed:            &allowed,
 		MaxNoiseLevel:          "moderate",

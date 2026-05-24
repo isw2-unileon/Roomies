@@ -54,8 +54,8 @@ type ListApartmentsFilters struct {
 	SortBy            string
 }
 
-// ApartmentRules contains apartment coexistence preferences.
-type ApartmentRules struct {
+// Rules contains apartment coexistence preferences.
+type Rules struct {
 	SmokingAllowed         *bool
 	PetsAllowed            *bool
 	MaxNoiseLevel          string
@@ -78,10 +78,10 @@ type TenantProfile struct {
 	University    string
 }
 
-// ApartmentDetail contains tenant-facing apartment detail information.
-type ApartmentDetail struct {
+// Detail contains tenant-facing apartment detail information.
+type Detail struct {
 	Apartment                Apartment
-	Rules                    ApartmentRules
+	Rules                    Rules
 	CompatibilityScore       int
 	CompatibilityReason      []string
 	CurrentApplicationID     string

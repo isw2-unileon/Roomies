@@ -140,83 +140,8 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 
 // ListAvailableApartments returns tenant-visible apartments with free spots.
 func (r *Repository) ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
-	baseQuery := `SELECT
-		a.id,
-		a.title,
-		a.address,
-		COALESCE(a.area, ''),
-		a.total_spots,
-		a.occupied_spots,
-		a.base_rent,
-		a.status,
-		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-		COALESCE((
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-			LIMIT 1
-		), '') AS image_url
-	FROM public.apartments a
-	WHERE 1=1`
-
-	whereClauses := make([]string, 0, 8)
-	args := make([]interface{}, 0, 12)
-
-	if filters.Query != "" {
-		args = append(args, "%"+filters.Query+"%")
-		arg := fmt.Sprintf("$%d", len(args))
-		whereClauses = append(whereClauses, "(a.title ILIKE "+arg+" OR a.address ILIKE "+arg+" OR COALESCE(a.area, '') ILIKE "+arg+")")
-	}
-
-	if filters.Area != "" && strings.ToLower(filters.Area) != "all" {
-		args = append(args, strings.ToLower(filters.Area))
-		whereClauses = append(whereClauses, fmt.Sprintf("LOWER(COALESCE(a.area, '')) = $%d", len(args)))
-	}
-
-	args = append(args, filters.PriceMin)
-	whereClauses = append(whereClauses, fmt.Sprintf("a.base_rent >= $%d", len(args)))
-	args = append(args, filters.PriceMax)
-	whereClauses = append(whereClauses, fmt.Sprintf("a.base_rent <= $%d", len(args)))
-
-	args = append(args, filters.TotalRoomsMin)
-	whereClauses = append(whereClauses, fmt.Sprintf("a.total_spots >= $%d", len(args)))
-	args = append(args, filters.TotalRoomsMax)
-	whereClauses = append(whereClauses, fmt.Sprintf("a.total_spots <= $%d", len(args)))
-
-	args = append(args, filters.AvailableRoomsMin)
-	whereClauses = append(whereClauses, fmt.Sprintf("(a.total_spots - a.occupied_spots) >= $%d", len(args)))
-	args = append(args, filters.AvailableRoomsMax)
-	whereClauses = append(whereClauses, fmt.Sprintf("(a.total_spots - a.occupied_spots) <= $%d", len(args)))
-
-	switch filters.Availability {
-	case "available":
-		whereClauses = append(whereClauses, "(a.total_spots - a.occupied_spots) > 0")
-		whereClauses = append(whereClauses, "a.status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED')")
-	case "soon":
-		whereClauses = append(whereClauses, "((a.total_spots - a.occupied_spots) <= 0 OR a.status IN ('FULL', 'OCCUPIED'))")
-	case "all":
-	}
-
-	query := baseQuery
-	if len(whereClauses) > 0 {
-		query += " AND " + strings.Join(whereClauses, " AND ")
-	}
-
-	switch filters.SortBy {
-	case "price_low":
-		query += " ORDER BY a.base_rent ASC, a.created_at DESC"
-	case "price_high":
-		query += " ORDER BY a.base_rent DESC, a.created_at DESC"
-	case "rooms":
-		query += " ORDER BY a.total_spots DESC, a.created_at DESC"
-	case "newest", "relevance":
-		query += " ORDER BY a.created_at DESC"
-	default:
-		query += " ORDER BY a.created_at DESC"
-	}
-
-	rows, err := r.db.Query(ctx, query, args...)
+	query := buildListAvailableApartmentsQuery(filters)
+	rows, err := r.db.Query(ctx, query.query, query.args...)
 	if err != nil {
 		return nil, fmt.Errorf("list available apartments: %w", err)
 	}
@@ -246,6 +171,110 @@ func (r *Repository) ListAvailableApartments(ctx context.Context, filters apartm
 	}
 
 	return result, nil
+}
+
+type availableApartmentsQuery struct {
+	query string
+	args  []interface{}
+}
+
+func buildListAvailableApartmentsQuery(filters apartment.ListApartmentsFilters) availableApartmentsQuery {
+	baseQuery := `SELECT
+		a.id,
+		a.title,
+		a.address,
+		COALESCE(a.area, ''),
+		a.total_spots,
+		a.occupied_spots,
+		a.base_rent,
+		a.status,
+		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE((
+			SELECT ap.url
+			FROM public.apartment_photos ap
+			WHERE ap.apartment_id = a.id
+			ORDER BY ap.position ASC, ap.created_at ASC
+			LIMIT 1
+		), '') AS image_url
+	FROM public.apartments a
+	WHERE 1=1`
+
+	whereClauses := make([]string, 0, 8)
+	args := make([]interface{}, 0, 12)
+	whereClauses, args = appendTextAndAreaFilters(whereClauses, args, filters)
+	whereClauses, args = appendRangeFilters(whereClauses, args, filters)
+	whereClauses = appendAvailabilityFilters(whereClauses, filters.Availability)
+
+	query := baseQuery
+	if len(whereClauses) > 0 {
+		query += " AND " + strings.Join(whereClauses, " AND ")
+	}
+
+	query += buildAvailableApartmentsOrderBy(filters.SortBy)
+	return availableApartmentsQuery{query: query, args: args}
+}
+
+func appendTextAndAreaFilters(whereClauses []string, args []interface{}, filters apartment.ListApartmentsFilters) ([]string, []interface{}) {
+
+	if filters.Query != "" {
+		args = append(args, "%"+filters.Query+"%")
+		arg := fmt.Sprintf("$%d", len(args))
+		whereClauses = append(whereClauses, "(a.title ILIKE "+arg+" OR a.address ILIKE "+arg+" OR COALESCE(a.area, '') ILIKE "+arg+")")
+	}
+
+	if filters.Area != "" && strings.ToLower(filters.Area) != "all" {
+		args = append(args, strings.ToLower(filters.Area))
+		whereClauses = append(whereClauses, fmt.Sprintf("LOWER(COALESCE(a.area, '')) = $%d", len(args)))
+	}
+	return whereClauses, args
+}
+
+func appendRangeFilters(whereClauses []string, args []interface{}, filters apartment.ListApartmentsFilters) ([]string, []interface{}) {
+
+	args = append(args, filters.PriceMin)
+	whereClauses = append(whereClauses, fmt.Sprintf("a.base_rent >= $%d", len(args)))
+	args = append(args, filters.PriceMax)
+	whereClauses = append(whereClauses, fmt.Sprintf("a.base_rent <= $%d", len(args)))
+
+	args = append(args, filters.TotalRoomsMin)
+	whereClauses = append(whereClauses, fmt.Sprintf("a.total_spots >= $%d", len(args)))
+	args = append(args, filters.TotalRoomsMax)
+	whereClauses = append(whereClauses, fmt.Sprintf("a.total_spots <= $%d", len(args)))
+
+	args = append(args, filters.AvailableRoomsMin)
+	whereClauses = append(whereClauses, fmt.Sprintf("(a.total_spots - a.occupied_spots) >= $%d", len(args)))
+	args = append(args, filters.AvailableRoomsMax)
+	whereClauses = append(whereClauses, fmt.Sprintf("(a.total_spots - a.occupied_spots) <= $%d", len(args)))
+
+	return whereClauses, args
+}
+
+func appendAvailabilityFilters(whereClauses []string, availability string) []string {
+
+	switch availability {
+	case "available":
+		whereClauses = append(whereClauses, "(a.total_spots - a.occupied_spots) > 0")
+		whereClauses = append(whereClauses, "a.status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED')")
+	case "soon":
+		whereClauses = append(whereClauses, "((a.total_spots - a.occupied_spots) <= 0 OR a.status IN ('FULL', 'OCCUPIED'))")
+	case "all":
+	}
+	return whereClauses
+}
+
+func buildAvailableApartmentsOrderBy(sortBy string) string {
+	switch sortBy {
+	case "price_low":
+		return " ORDER BY a.base_rent ASC, a.created_at DESC"
+	case "price_high":
+		return " ORDER BY a.base_rent DESC, a.created_at DESC"
+	case "rooms":
+		return " ORDER BY a.total_spots DESC, a.created_at DESC"
+	case "newest", "relevance":
+		return " ORDER BY a.created_at DESC"
+	default:
+		return " ORDER BY a.created_at DESC"
+	}
 }
 
 // GetApartmentByID returns one apartment by id.
@@ -300,7 +329,7 @@ func (r *Repository) GetApartmentByID(ctx context.Context, apartmentID string) (
 }
 
 // GetApartmentRules returns apartment rules, when available.
-func (r *Repository) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.ApartmentRules, error) {
+func (r *Repository) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error) {
 	const query = `SELECT
 		smoking_allowed,
 		pets_allowed,
@@ -310,7 +339,7 @@ func (r *Repository) GetApartmentRules(ctx context.Context, apartmentID string) 
 	FROM public.apartment_rules
 	WHERE apartment_id = $1`
 
-	var rules apartment.ApartmentRules
+	var rules apartment.Rules
 	err := r.db.QueryRow(ctx, query, apartmentID).Scan(
 		&rules.SmokingAllowed,
 		&rules.PetsAllowed,

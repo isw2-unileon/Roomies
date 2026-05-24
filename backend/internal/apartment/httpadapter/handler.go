@@ -129,12 +129,12 @@ func (h *handler) listAvailableApartments(c *gin.Context) {
 	filters := apartment.ListApartmentsFilters{
 		Query:             strings.TrimSpace(c.Query("q")),
 		Area:              strings.TrimSpace(c.Query("area")),
-		PriceMin:          parseIntQuery(c.Query("price_min"), 0),
-		PriceMax:          parseIntQuery(c.Query("price_max"), 0),
-		TotalRoomsMin:     parseIntQuery(c.Query("total_rooms_min"), 0),
-		TotalRoomsMax:     parseIntQuery(c.Query("total_rooms_max"), 0),
-		AvailableRoomsMin: parseIntQuery(c.Query("available_rooms_min"), 0),
-		AvailableRoomsMax: parseIntQuery(c.Query("available_rooms_max"), 0),
+		PriceMin:          parseIntQuery(c.Query("price_min")),
+		PriceMax:          parseIntQuery(c.Query("price_max")),
+		TotalRoomsMin:     parseIntQuery(c.Query("total_rooms_min")),
+		TotalRoomsMax:     parseIntQuery(c.Query("total_rooms_max")),
+		AvailableRoomsMin: parseIntQuery(c.Query("available_rooms_min")),
+		AvailableRoomsMax: parseIntQuery(c.Query("available_rooms_max")),
 		Availability:      strings.TrimSpace(c.Query("availability")),
 		SortBy:            strings.TrimSpace(c.Query("sort_by")),
 	}
@@ -148,14 +148,14 @@ func (h *handler) listAvailableApartments(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
 }
 
-func parseIntQuery(raw string, fallback int) int {
+func parseIntQuery(raw string) int {
 	value := strings.TrimSpace(raw)
 	if value == "" {
-		return fallback
+		return 0
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
-		return fallback
+		return 0
 	}
 	return parsed
 }
