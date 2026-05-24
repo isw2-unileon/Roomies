@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { listTenantApartments } from './tenantService'
+import { getTenantApartmentDetail, listTenantApartments } from './tenantService'
 
 describe('tenantService', () => {
   beforeEach(() => {
@@ -33,6 +33,8 @@ describe('tenantService', () => {
       {
         id: 'apt-1',
         titleKey: 'Piso centro',
+        description: '',
+        ownerName: '',
         addressKey: 'Calle Ancha 12',
         areaKey: 'Centro',
         availableRooms: 2,
@@ -45,6 +47,38 @@ describe('tenantService', () => {
       },
     ])
 
-    expect(fetch).toHaveBeenCalledWith('/api/apartments', undefined)
+    expect(fetch).toHaveBeenCalledWith('/api/apartments', { headers: {} })
+  })
+
+  test('parses string permission flags from apartment detail safely', async () => {
+    localStorage.setItem('roomies.access_token', 'access-token')
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        apartment: {
+          id: 'apt-22',
+          title: 'Piso norte',
+          address: 'Calle Norte 8',
+          area: 'Norte',
+          total_spots: 4,
+          available_spots: 1,
+          base_rent: 390,
+          status: 'AVAILABLE',
+          created_at: '2026-05-21T10:00:00Z',
+          image_url: 'https://example.test/apt-22.jpg',
+        },
+        can_apply: 'false',
+        can_cancel: 'false',
+      }),
+    } as Response)
+
+    await expect(getTenantApartmentDetail('apt-22')).resolves.toMatchObject({
+      canApply: false,
+      canCancel: false,
+    })
+
+    expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', {
+      headers: { Authorization: 'Bearer access-token' },
+    })
   })
 })

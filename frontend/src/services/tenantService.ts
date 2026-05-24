@@ -57,8 +57,8 @@ interface TenantApartmentDetailResponseDto {
   rules?: TenantApartmentRulesDto
   current_application_id?: string
   current_application_status?: string
-  can_apply?: boolean
-  can_cancel?: boolean
+  can_apply?: boolean | string | number | null
+  can_cancel?: boolean | string | number | null
   error?: string
 }
 
@@ -113,6 +113,44 @@ interface TenantApplicationDto {
 interface TenantApplicationsResponseDto {
   applications?: TenantApplicationDto[]
   error?: string
+}
+
+function resolveTenantErrorMessage(response: Response, fallbackMessage: string, apiMessage?: string) {
+  if (apiMessage?.trim()) {
+    return apiMessage
+  }
+
+  if (response.status === 401) {
+    return 'Tu sesion ha caducado. Inicia sesion de nuevo para continuar.'
+  }
+
+  if (response.status === 403) {
+    return 'No tienes permisos para ver este piso con la cuenta actual.'
+  }
+
+  return fallbackMessage
+}
+
+function toBoolean(value: boolean | string | number | null | undefined, defaultValue: boolean) {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true' || normalized === '1' || normalized === 't') {
+      return true
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'f' || normalized === '') {
+      return false
+    }
+  }
+
+  return defaultValue
 }
 
 function tenantApartmentStatusFromDto(dto: TenantApartmentDto): PropertyAvailability {
@@ -208,10 +246,14 @@ export async function saveTenantProfile(input: SaveTenantProfileInput) {
 }
 
 export async function listTenantApartments() {
-  const response = await apiFetch('/api/apartments')
+  const response = await apiFetch('/api/apartments', {
+    headers: {
+      ...getAuthorizationHeader(),
+    },
+  })
   const data = (await response.json()) as TenantApartmentsResponseDto
   if (!response.ok) {
-    throw new Error(data.error ?? 'No se pudieron cargar los pisos disponibles.')
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los pisos disponibles.', data.error))
   }
   return (data.apartments ?? []).map(tenantApartmentFromDto)
 }
@@ -224,7 +266,7 @@ export async function getTenantApartmentDetail(apartmentID: string): Promise<Ten
   })
   const data = (await response.json()) as TenantApartmentDetailResponseDto
   if (!response.ok) {
-    throw new Error(data.error ?? 'No se pudo cargar el detalle del piso.')
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo cargar el detalle del piso.', data.error))
   }
   const apartment = data.apartment
   if (!apartment) {
@@ -237,8 +279,8 @@ export async function getTenantApartmentDetail(apartmentID: string): Promise<Ten
     rules: tenantPropertyRulesFromDto(data.rules),
     currentApplicationId: data.current_application_id ?? '',
     currentApplicationStatus: data.current_application_status ?? '',
-    canApply: data.can_apply ?? true,
-    canCancel: data.can_cancel ?? false,
+    canApply: toBoolean(data.can_apply, true),
+    canCancel: toBoolean(data.can_cancel, false),
   }
 }
 

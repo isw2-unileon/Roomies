@@ -155,6 +155,9 @@ export default function TenantExploreDetailPage() {
   const compatibility = property.compatibilityScore
   const compatibilityReasons = detail?.compatibilityReasons ?? []
   const rules = detail?.rules
+  const applicationId = detail?.currentApplicationId?.trim() ?? ''
+  const applicationStatus = detail?.currentApplicationStatus?.trim().toLowerCase() ?? ''
+  const hasActiveApplication = applicationId.length > 0 && applicationStatus !== 'cancelled' && applicationStatus !== 'rejected'
 
   return (
     <TenantLayout>
@@ -193,11 +196,11 @@ export default function TenantExploreDetailPage() {
               <ArrowUpTrayIcon className={styles.iconTiny} aria-hidden="true" />
               Compartir
             </button>
-            {detail?.canCancel ? (
+            {detail?.canCancel && hasActiveApplication ? (
               <button type="button" className={styles.applyButton} onClick={handleCancelApplication} disabled={isApplying}>
                 {isApplying ? 'Anulando...' : 'Anular solicitud'}
               </button>
-            ) : detail?.canApply ? (
+            ) : detail?.canApply && !hasActiveApplication ? (
               <button type="button" className={styles.applyButton} onClick={handleApplyToApartment} disabled={isApplying}>
                 {isApplying ? 'Enviando...' : 'Solicitar plaza'}
               </button>
