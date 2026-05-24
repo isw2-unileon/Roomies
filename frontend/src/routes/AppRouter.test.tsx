@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import App from '@/App'
 
@@ -10,36 +10,47 @@ vi.mock('@/services/tenantService', () => ({
   listTenantApartments: vi.fn(async () => []),
 }))
 
+vi.mock('@/services/authService', () => ({
+  getProfileStatus: vi.fn(async () => ({ role: 'tenant', needsOnboarding: false })),
+}))
+
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
   return render(<App />)
 }
 
 describe('AppRouter', () => {
-  test('renders tenant explore from the tenant explore route', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  test('renders tenant explore from the tenant explore route', async () => {
+    localStorage.setItem('roomies.access_token', 'access-token')
     renderAppAt(paths.tenantExplore)
 
-    expect(screen.getByRole('heading', { name: /explora pisos/i })).toBeInTheDocument()
-    expect(screen.getByLabelText(/buscar viviendas/i)).toBeInTheDocument()
-    const sidebar = screen.getByRole('complementary', { name: /panel de inquilino/i })
+    expect(await screen.findByRole('heading', { name: /explora pisos/i })).toBeInTheDocument()
+    expect(await screen.findByLabelText(/buscar viviendas/i)).toBeInTheDocument()
+    const sidebar = await screen.findByRole('complementary', { name: /panel de inquilino/i })
     expect(within(sidebar).getByRole('navigation', { name: /navegación de inquilino/i })).toBeInTheDocument()
     expect(within(sidebar).queryByRole('combobox', { name: /idioma de la interfaz/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /publicar piso/i })).not.toBeInTheDocument()
   })
 
-  test('renders placeholder tenant pages inside the tenant layout', () => {
+  test('renders placeholder tenant pages inside the tenant layout', async () => {
+    localStorage.setItem('roomies.access_token', 'access-token')
     renderAppAt(paths.tenantMessages)
 
-    expect(screen.getByRole('heading', { name: /mensajes/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /mensajes/i })).toBeInTheDocument()
     expect(screen.getByText(/esta sección se completará más adelante/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /mensajes/i })).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByRole('combobox', { name: /idioma de la interfaz/i })).not.toBeInTheDocument()
   })
 
-  test('renders language preferences inside the tenant profile page', () => {
+  test('renders language preferences inside the tenant profile page', async () => {
+    localStorage.setItem('roomies.access_token', 'access-token')
     renderAppAt(paths.tenantProfile)
 
-    expect(screen.getByRole('heading', { name: /perfil/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /perfil/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^preferencias$/i })).toBeInTheDocument()
     expect(screen.getByText(/elige el idioma de la interfaz/i)).toBeInTheDocument()
     const languageSelect = screen.getByRole('combobox', { name: /idioma de la interfaz/i })
@@ -52,10 +63,11 @@ describe('AppRouter', () => {
   })
 
   test('tenant sidebar collapse toggle exposes its expanded state', async () => {
+    localStorage.setItem('roomies.access_token', 'access-token')
     const user = userEvent.setup()
     renderAppAt(paths.tenantExplore)
 
-    const toggleButton = screen.getByRole('button', { name: /ocultar menú/i })
+    const toggleButton = await screen.findByRole('button', { name: /ocultar menú/i })
 
     expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
 
@@ -65,10 +77,11 @@ describe('AppRouter', () => {
   })
 
   test('opens a share dialog from the tenant invite card', async () => {
+    localStorage.setItem('roomies.access_token', 'access-token')
     const user = userEvent.setup()
     renderAppAt(paths.tenantExplore)
 
-    await user.click(screen.getByRole('button', { name: /invita a un amigo/i }))
+    await user.click(await screen.findByRole('button', { name: /invita a un amigo/i }))
 
     expect(screen.getByRole('dialog', { name: /invita a un amigo/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /whatsapp/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/'))

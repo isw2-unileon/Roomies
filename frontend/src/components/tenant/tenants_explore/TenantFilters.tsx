@@ -7,7 +7,10 @@ export interface FilterValues {
     area: string
     priceMin: number
     priceMax: number
-    rooms: number
+    totalRoomsMin: number
+    totalRoomsMax: number
+    availableRoomsMin: number
+    availableRoomsMax: number
     availability: string
     sortBy: string
 }
@@ -24,7 +27,6 @@ const areas = [
     { value: 'eras', labelKey: 'tenantDashboard.areas.eras' },
     { value: 'campus', labelKey: 'tenantDashboard.areas.campus' },
 ]
-const roomOptions = [1, 2, 3, 4]
 const availabilityOptions = [
     { value: 'available', labelKey: 'tenantDashboard.filters.availability.available' },
     { value: 'soon', labelKey: 'tenantDashboard.filters.availability.soon' },
@@ -38,17 +40,22 @@ const sortOptions = [
     { value: 'newest', labelKey: 'tenantDashboard.filters.sort.newest' },
 ]
 
+export const DEFAULT_FILTER_VALUES: FilterValues = {
+    area: 'all',
+    priceMin: 0,
+    priceMax: 1000,
+    totalRoomsMin: 0,
+    totalRoomsMax: 10,
+    availableRoomsMin: 0,
+    availableRoomsMax: 10,
+    availability: 'available',
+    sortBy: 'relevance',
+}
+
 export default function TenantFilters({ onFilterChange = () => {} }: TenantFiltersProps) {
     const { t } = useTranslation()
     const [isOpen, setIsOpen] = useState(false)
-    const [filters, setFilters] = useState<FilterValues>({
-        area: 'all',
-        priceMin: 0,
-        priceMax: 1000,
-        rooms: 0,
-        availability: 'available',
-        sortBy: 'relevance',
-    })
+    const [filters, setFilters] = useState<FilterValues>(DEFAULT_FILTER_VALUES)
 
     function updateFilter<K extends keyof FilterValues>(key: K, value: FilterValues[K]) {
         const newFilters = { ...filters, [key]: value }
@@ -112,25 +119,52 @@ export default function TenantFilters({ onFilterChange = () => {} }: TenantFilte
                     </div>
 
                     <div className={styles.field}>
-                        <label className={styles.label}>{t('tenantDashboard.filters.rooms')}</label>
+                        <label className={styles.label}>{t('tenantDashboard.filters.totalRooms')}</label>
+                        <div className={styles.priceInputs}>
+                            <input
+                                type="number"
+                                min={0}
+                                value={filters.totalRoomsMin || ''}
+                                onChange={(e) => updateFilter('totalRoomsMin', Number(e.target.value))}
+                                placeholder={t('tenantDashboard.filters.min')}
+                                aria-label={t('tenantDashboard.filters.minTotalRooms')}
+                                className={styles.numberInput}
+                            />
+                            <span className={styles.rangeSeparator} aria-hidden="true">-</span>
+                            <input
+                                type="number"
+                                min={0}
+                                value={filters.totalRoomsMax || ''}
+                                onChange={(e) => updateFilter('totalRoomsMax', Number(e.target.value))}
+                                placeholder={t('tenantDashboard.filters.max')}
+                                aria-label={t('tenantDashboard.filters.maxTotalRooms')}
+                                className={styles.numberInput}
+                            />
+                        </div>
+                    </div>
+
+                    <div className={styles.field}>
+                        <label className={styles.label}>{t('tenantDashboard.filters.availableRooms')}</label>
                         <div className={styles.buttonGroup}>
-                            <button
-                                type="button"
-                                onClick={() => updateFilter('rooms', 0)}
-                                className={`${styles.choiceButton} ${filters.rooms === 0 ? styles.selected : ''}`}
-                            >
-                                {t('tenantDashboard.filters.allRooms')}
-                            </button>
-                            {roomOptions.map((room) => (
-                                <button
-                                    key={room}
-                                    type="button"
-                                    onClick={() => updateFilter('rooms', room)}
-                                    className={`${styles.choiceButton} ${filters.rooms === room ? styles.selected : ''}`}
-                                >
-                                    {t('tenantDashboard.filters.roomOption', { count: room })}
-                                </button>
-                            ))}
+                            <input
+                                type="number"
+                                min={0}
+                                value={filters.availableRoomsMin || ''}
+                                onChange={(e) => updateFilter('availableRoomsMin', Number(e.target.value))}
+                                placeholder={t('tenantDashboard.filters.min')}
+                                aria-label={t('tenantDashboard.filters.minAvailableRooms')}
+                                className={styles.numberInput}
+                            />
+                            <span className={styles.rangeSeparator} aria-hidden="true">-</span>
+                            <input
+                                type="number"
+                                min={0}
+                                value={filters.availableRoomsMax || ''}
+                                onChange={(e) => updateFilter('availableRoomsMax', Number(e.target.value))}
+                                placeholder={t('tenantDashboard.filters.max')}
+                                aria-label={t('tenantDashboard.filters.maxAvailableRooms')}
+                                className={styles.numberInput}
+                            />
                         </div>
                     </div>
 

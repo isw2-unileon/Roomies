@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import TenantApplicationCard from '@/components/tenant/tenant_applications/TenantApplicationCard'
 import TenantApplicationTabs from '@/components/tenant/tenant_applications/TenantApplicationTabs'
 import TenantApplicationsSidebar from '@/components/tenant/tenant_applications/TenantApplicationsSidebar'
 import TenantLayout from '@/components/tenant/TenantLayout'
-import { mockTenantApplications } from '@/mocks/tenantData'
+import { cancelTenantApplication, listTenantApplications } from '@/services/tenantService'
 import styles from '@/styles/TenantApplications.module.css'
-import type { ApplicationFilter } from '@/types/tenant'
+import type { ApplicationFilter, TenantApplication } from '@/types/tenant'
 
 type ApplicationSort = 'recent' | 'compatibility'
 
@@ -21,12 +21,45 @@ const filters: { id: ApplicationFilter; label: string }[] = [
 export default function TenantApplicationsPage() {
     const [activeFilter, setActiveFilter] = useState<ApplicationFilter>('all')
     const [sort, setSort] = useState<ApplicationSort>('recent')
+    const [tenantApplications, setTenantApplications] = useState<TenantApplication[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState('')
+    const [cancellingApplicationId, setCancellingApplicationId] = useState('')
+
+    useEffect(() => {
+        let ignoreResult = false
+
+        async function loadApplications() {
+            setIsLoading(true)
+            setError('')
+            try {
+                const response = await listTenantApplications()
+                if (!ignoreResult) {
+                    setTenantApplications(response)
+                }
+            } catch (loadError) {
+                if (!ignoreResult) {
+                    setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar tus solicitudes.')
+                }
+            } finally {
+                if (!ignoreResult) {
+                    setIsLoading(false)
+                }
+            }
+        }
+
+        void loadApplications()
+
+        return () => {
+            ignoreResult = true
+        }
+    }, [])
 
     const applicationCounts = useMemo(() => {
         return filters.reduce<Record<ApplicationFilter, number>>((counts, filter) => {
             counts[filter.id] = filter.id === 'all'
-                ? mockTenantApplications.length
-                : mockTenantApplications.filter((application) => application.status === filter.id).length
+                ? tenantApplications.length
+                : tenantApplications.filter((application) => application.status === filter.id).length
 
             return counts
         }, {
@@ -36,19 +69,19 @@ export default function TenantApplicationsPage() {
             rejected: 0,
             cancelled: 0,
         })
-    }, [])
+    }, [tenantApplications])
 
     const filteredApplications = useMemo(() => {
         const applications = activeFilter === 'all'
-            ? mockTenantApplications
-            : mockTenantApplications.filter((application) => application.status === activeFilter)
+            ? tenantApplications
+            : tenantApplications.filter((application) => application.status === activeFilter)
 
         if (sort === 'compatibility') {
             return [...applications].sort((a, b) => b.compatibility - a.compatibility)
         }
 
         return [...applications].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    }, [activeFilter, sort])
+    }, [activeFilter, tenantApplications, sort])
 
     function getApplicationCount(filter: ApplicationFilter) {
         return applicationCounts[filter]
@@ -56,6 +89,20 @@ export default function TenantApplicationsPage() {
 
     function handleSortChange(value: string) {
         setSort(value === 'compatibility' ? 'compatibility' : 'recent')
+    }
+
+    async function handleCancelApplication(applicationId: string) {
+        setCancellingApplicationId(applicationId)
+        setError('')
+        try {
+            await cancelTenantApplication(applicationId)
+            const updatedApplications = await listTenantApplications()
+            setTenantApplications(updatedApplications)
+        } catch (cancelError) {
+            setError(cancelError instanceof Error ? cancelError.message : 'No se pudo anular la solicitud.')
+        } finally {
+            setCancellingApplicationId('')
+        }
     }
 
     return (
@@ -91,11 +138,26 @@ export default function TenantApplicationsPage() {
 
                 <div className={styles.layout}>
                     <section className={styles.list} aria-label="Listado de solicitudes">
-                        {filteredApplications.length > 0 ? (
+                        {error ? (
+                            <div className={styles.empty}>
+                                <div>
+                                    <p className={styles.emptyTitle}>No se pudieron cargar tus solicitudes</p>
+                                    <p className={styles.emptySubtitle}>{error}</p>
+                                </div>
+                            </div>
+                        ) : isLoading ? (
+                            <div className={styles.empty}>
+                                <div>
+                                    <p className={styles.emptyTitle}>Cargando solicitudes...</p>
+                                </div>
+                            </div>
+                        ) : filteredApplications.length > 0 ? (
                             filteredApplications.map((application) => (
                                 <TenantApplicationCard
                                     key={application.id}
                                     application={application}
+                                    onCancel={handleCancelApplication}
+                                    isCancelling={cancellingApplicationId === application.id}
                                 />
                             ))
                         ) : (

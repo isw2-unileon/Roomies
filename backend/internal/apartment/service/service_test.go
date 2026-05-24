@@ -9,10 +9,23 @@ import (
 )
 
 type fakeApartmentRepository struct {
-	createdDescription string
-	createdStatus      string
+	createdDescription            string
+	createdStatus                 string
+	createdApplicationApartmentID string
+	createdApplicationTenantID    string
+	createdCompatibilityScore     int
+	hasActiveApplication          bool
+	applicationForApartmentID     string
+	applicationForApartmentStatus string
+	cancelApplicationUpdated      bool
+
 	ownerApartments    []apartment.Apartment
 	tenantApartments   []apartment.Apartment
+	apartmentByID      *apartment.Apartment
+	apartmentRules     *apartment.Rules
+	tenantProfile      *apartment.TenantProfile
+	interestedTenants  []apartment.InterestedTenantCandidate
+	tenantApplications []apartment.TenantApplication
 }
 
 func (f *fakeApartmentRepository) CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error) {
@@ -28,11 +41,98 @@ func (f *fakeApartmentRepository) ListOwnerApartments(ctx context.Context, owner
 	return []apartment.Apartment{{ID: "apartment-1", Title: "Flat"}}, nil
 }
 
-func (f *fakeApartmentRepository) ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error) {
+func (f *fakeApartmentRepository) ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
 	if f.tenantApartments != nil {
 		return f.tenantApartments, nil
 	}
 	return []apartment.Apartment{{ID: "apartment-1", Title: "Flat", TotalSpots: 3, OccupiedSpots: 1}}, nil
+}
+
+func (f *fakeApartmentRepository) GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error) {
+	if f.apartmentByID != nil {
+		return f.apartmentByID, nil
+	}
+	return &apartment.Apartment{ID: apartmentID, BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1}, nil
+}
+
+func (f *fakeApartmentRepository) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error) {
+	if f.apartmentRules != nil {
+		return f.apartmentRules, nil
+	}
+	allowed := false
+	return &apartment.Rules{
+		SmokingAllowed:         &allowed,
+		PetsAllowed:            &allowed,
+		MaxNoiseLevel:          "moderate",
+		CleanlinessExpectation: "normal",
+		PreferredSchedule:      "flexible",
+	}, nil
+}
+
+func (f *fakeApartmentRepository) GetTenantProfileByUserID(ctx context.Context, userID string) (*apartment.TenantProfile, error) {
+	if f.tenantProfile != nil {
+		return f.tenantProfile, nil
+	}
+	return &apartment.TenantProfile{
+		UserID:        userID,
+		BudgetMin:     300,
+		BudgetMax:     450,
+		PreferredArea: "centro",
+		Pets:          false,
+		Smoking:       false,
+		NoiseLevel:    "moderate",
+		Cleanliness:   "normal",
+		WorkSchedule:  "flexible",
+	}, nil
+}
+
+func (f *fakeApartmentRepository) HasActiveApplication(ctx context.Context, apartmentID, tenantID string) (bool, error) {
+	return f.hasActiveApplication, nil
+}
+
+func (f *fakeApartmentRepository) CreateTenantApplication(ctx context.Context, apartmentID, tenantID string, compatibilityScore int) (string, error) {
+	f.createdApplicationApartmentID = apartmentID
+	f.createdApplicationTenantID = tenantID
+	f.createdCompatibilityScore = compatibilityScore
+	return "application-1", nil
+}
+
+func (f *fakeApartmentRepository) GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error) {
+	return f.applicationForApartmentID, f.applicationForApartmentStatus, nil
+}
+
+func (f *fakeApartmentRepository) CancelTenantApplication(ctx context.Context, applicationID, tenantID string) (bool, error) {
+	return f.cancelApplicationUpdated, nil
+}
+
+func (f *fakeApartmentRepository) ListInterestedTenants(ctx context.Context, apartmentID string) ([]apartment.InterestedTenantCandidate, error) {
+	if f.interestedTenants != nil {
+		return f.interestedTenants, nil
+	}
+	return []apartment.InterestedTenantCandidate{{
+		InterestedTenant: apartment.InterestedTenant{UserID: "tenant-2", Name: "Laura", Age: 21, Studies: "Veterinaria"},
+		BudgetMin:        320,
+		BudgetMax:        460,
+		PreferredArea:    "centro",
+		Pets:             false,
+		Smoking:          false,
+		NoiseLevel:       "moderate",
+		Cleanliness:      "normal",
+		WorkSchedule:     "flexible",
+	}}, nil
+}
+
+func (f *fakeApartmentRepository) ListTenantApplications(ctx context.Context, tenantID string) ([]apartment.TenantApplication, error) {
+	if f.tenantApplications != nil {
+		return f.tenantApplications, nil
+	}
+	return []apartment.TenantApplication{{
+		ID:            "application-1",
+		ApartmentID:   "apartment-1",
+		PropertyTitle: "Flat",
+		Status:        "PENDING_OWNER",
+		CreatedAt:     "2026-05-23",
+	}}, nil
 }
 
 type fakeImageSigner struct {
@@ -152,5 +252,102 @@ func TestListAvailableApartmentsSignsTenantImagePaths(t *testing.T) {
 
 	if apartments[0].ImageURL != "https://signed.example.test/mock_1.avif" {
 		t.Fatalf("ImageURL = %q, want signed URL", apartments[0].ImageURL)
+	}
+}
+
+func TestGetApartmentDetailForTenantReturnsCompatibility(t *testing.T) {
+	repo := &fakeApartmentRepository{applicationForApartmentID: "application-1", applicationForApartmentStatus: "PENDING_OWNER"}
+	svc := NewService(repo, nil)
+
+	detail, err := svc.GetApartmentDetailForTenant(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("GetApartmentDetailForTenant returned error: %v", err)
+	}
+	if detail.CompatibilityScore <= 0 {
+		t.Fatalf("CompatibilityScore = %d, want > 0", detail.CompatibilityScore)
+	}
+	if !detail.CanCancel {
+		t.Fatalf("CanCancel = %t, want true", detail.CanCancel)
+	}
+	if detail.CanApply {
+		t.Fatalf("CanApply = %t, want false", detail.CanApply)
+	}
+}
+
+func TestApplyToApartmentCreatesTenantApplication(t *testing.T) {
+	repo := &fakeApartmentRepository{}
+	svc := NewService(repo, nil)
+
+	applicationID, err := svc.ApplyToApartment(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("ApplyToApartment returned error: %v", err)
+	}
+	if applicationID != "application-1" {
+		t.Fatalf("applicationID = %q, want application-1", applicationID)
+	}
+	if repo.createdCompatibilityScore <= 0 {
+		t.Fatalf("createdCompatibilityScore = %d, want > 0", repo.createdCompatibilityScore)
+	}
+}
+
+func TestApplyToApartmentRejectsDuplicateActiveApplication(t *testing.T) {
+	repo := &fakeApartmentRepository{hasActiveApplication: true}
+	svc := NewService(repo, nil)
+
+	_, err := svc.ApplyToApartment(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if !errors.Is(err, ErrApplicationAlreadyExists) {
+		t.Fatalf("err = %v, want %v", err, ErrApplicationAlreadyExists)
+	}
+}
+
+func TestListInterestedTenantsCalculatesCompatibility(t *testing.T) {
+	repo := &fakeApartmentRepository{}
+	svc := NewService(repo, nil)
+
+	result, err := svc.ListInterestedTenants(context.Background(), "apartment-1")
+	if err != nil {
+		t.Fatalf("ListInterestedTenants returned error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("len(result) = %d, want 1", len(result))
+	}
+	if result[0].Compatibility <= 0 {
+		t.Fatalf("Compatibility = %d, want > 0", result[0].Compatibility)
+	}
+}
+
+func TestListTenantApplicationsMapsStatus(t *testing.T) {
+	repo := &fakeApartmentRepository{}
+	svc := NewService(repo, nil)
+
+	result, err := svc.ListTenantApplications(context.Background(), "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("ListTenantApplications returned error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("len(result) = %d, want 1", len(result))
+	}
+	if result[0].Status != "pending" {
+		t.Fatalf("Status = %q, want pending", result[0].Status)
+	}
+}
+
+func TestCancelTenantApplicationRejectsNotCancelable(t *testing.T) {
+	repo := &fakeApartmentRepository{cancelApplicationUpdated: false}
+	svc := NewService(repo, nil)
+
+	err := svc.CancelTenantApplication(context.Background(), "application-1", "tenant-1", "tenant")
+	if !errors.Is(err, ErrApplicationNotCancelable) {
+		t.Fatalf("err = %v, want %v", err, ErrApplicationNotCancelable)
+	}
+}
+
+func TestCancelTenantApplicationUpdatesPendingApplication(t *testing.T) {
+	repo := &fakeApartmentRepository{cancelApplicationUpdated: true}
+	svc := NewService(repo, nil)
+
+	err := svc.CancelTenantApplication(context.Background(), "application-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("CancelTenantApplication returned error: %v", err)
 	}
 }

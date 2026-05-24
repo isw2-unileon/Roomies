@@ -15,6 +15,8 @@ import type { TenantApplication, ApplicationStatus } from '@/types/tenant'
 
 interface TenantApplicationCardProps {
     application: TenantApplication
+    onCancel?: (applicationId: string) => void
+    isCancelling?: boolean
 }
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -54,7 +56,7 @@ function getStatusIcon(status: ApplicationStatus) {
     return <ClockIcon className={styles.iconMedium} aria-hidden="true" />
 }
 
-export default function TenantApplicationCard({ application }: TenantApplicationCardProps) {
+export default function TenantApplicationCard({ application, onCancel, isCancelling = false }: TenantApplicationCardProps) {
     return (
         <article className={styles.card}>
             <img className={styles.image} src={application.image} alt="" loading="lazy" />
@@ -116,6 +118,15 @@ export default function TenantApplicationCard({ application }: TenantApplication
                     {application.status === 'approved' ? (
                         <button type="button" className={styles.confirmButton}>
                             Confirmar plaza
+                        </button>
+                    ) : application.status === 'pending' ? (
+                        <button
+                            type="button"
+                            className={styles.detailsButton}
+                            onClick={() => onCancel?.(application.id)}
+                            disabled={isCancelling}
+                        >
+                            {isCancelling ? 'Anulando...' : 'Anular solicitud'}
                         </button>
                     ) : (
                         <button type="button" className={styles.detailsButton}>

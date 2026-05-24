@@ -5,6 +5,7 @@ export const paths = {
   resetPassword: '/reset-password',
   tenantOnboarding: '/onboarding/tenant',
   tenantExplore: '/tenant/explore',
+  tenantExploreDetail: '/tenant/explore/:propertyId',
   tenantApplications: '/tenant/applications',
   tenantGroups: '/tenant/groups',
   tenantMessages: '/tenant/messages',

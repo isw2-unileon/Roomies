@@ -1,0 +1,474 @@
+.content {
+  width: 100%;
+}
+
+.content > * + * {
+  margin-top: 1rem;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.crumbLink,
+.crumbCurrent {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.crumbLink {
+  color: var(--tenant-text-soft);
+  text-decoration: none;
+}
+
+.crumbCurrent {
+  color: var(--tenant-text);
+}
+
+.crumbSeparator {
+  color: var(--tenant-text-muted);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+}
+
+.backButton,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.statusBadge {
+  padding: 0.35rem 0.75rem;
+  color: #087046;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #eaf8f2;
+  border: 1px solid #bde4d5;
+  border-radius: 0.625rem;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mapLink {
+  padding: 0;
+  color: var(--tenant-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.actionRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.shareButton,
+.applyButton {
+  min-height: 3rem;
+  padding: 0 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.shareButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--tenant-text);
+  background: #fff;
+  border: 1px solid var(--tenant-border);
+}
+
+.applyButton {
+  min-width: 13rem;
+  color: #fff;
+  background: var(--tenant-primary);
+  border: 1px solid var(--tenant-primary);
+}
+
+.mainGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.galleryCard,
+.compatibilityCard,
+.detailsCard,
+.servicesCard,
+.peopleCard,
+.statusBox {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.galleryCard {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mainImage,
+.sideImage {
+  width: 100%;
+  object-fit: cover;
+  background: #eeeae5;
+  border-radius: 0.75rem;
+}
+
+.mainImage {
+  min-height: 16rem;
+}
+
+.sideImages {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sideImage {
+  min-height: 5.5rem;
+}
+
+.imageFallback {
+  display: grid;
+  place-items: center;
+  min-height: 18rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: #eeeae5;
+  border-radius: 0.75rem;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.compatibilityRow {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.ringWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.ring {
+  --ring-angle: calc(var(--compatibility, 0) * 1%);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 999px;
+  background: conic-gradient(#149f60 var(--ring-angle), #e7efe9 0);
+}
+
+.ring::before {
+  position: absolute;
+  inset: 1.1rem;
+  width: 7.8rem;
+  height: 7.8rem;
+  content: '';
+  background: #fff;
+  border-radius: 999px;
+}
+
+.ringContent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
+  z-index: 1;
+}
+
+.ringValue {
+  color: #149f60;
+  font-size: clamp(1.6rem, 2.6vw, 2rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ringLabel {
+  color: #149f60;
+  font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+  font-weight: 700;
+}
+
+.reasonList {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.reasonTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.reasonItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tipBox {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #f7f4ff;
+  border: 1px solid #e8ddff;
+  border-radius: 0.75rem;
+}
+
+.tipTitle {
+  margin: 0;
+  color: var(--tenant-primary);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.tipText {
+  margin: 0.35rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.detailsGrid {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.label {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.value {
+  margin: 0.15rem 0 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.description {
+  margin: 1rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.servicesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.serviceBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  color: var(--tenant-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.65rem;
+}
+
+
+.emptyPeopleText {
+  margin: 1rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.interestedList {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.interestedItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.interestedName {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.interestedMeta {
+  margin: 0.15rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.interestedScore {
+  margin: 0;
+  color: #149f60;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.statusText {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.statusBox {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.iconTiny {
+  width: 1rem;
+  height: 1rem;
+}
+
+.iconSmall {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+@media (min-width: 980px) {
+  .mainGrid {
+    grid-template-columns: minmax(0, 1fr) 27rem;
+  }
+
+  .galleryCard,
+  .detailsCard,
+  .servicesCard {
+    grid-column: 1;
+  }
+
+  .compatibilityCard,
+  .peopleCard {
+    grid-column: 2;
+  }
+
+  .galleryCard {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+  }
+
+  .compatibilityRow {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .title {
+    font-size: 1.7rem;
+  }
+
+  .actionRow {
+    width: 100%;
+  }
+
+  .shareButton,
+  .applyButton {
+    flex: 1;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ring {
+    width: 9rem;
+    height: 9rem;
+  }
+
+  .ring::before {
+    inset: 1rem;
+    width: auto;
+    height: auto;
+  }
+}

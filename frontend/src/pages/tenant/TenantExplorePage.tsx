@@ -1,20 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import TenantLayout from '@/components/tenant/TenantLayout'
-import TenantFilters from '@/components/tenant/tenants_explore/TenantFilters'
+import TenantFilters, { DEFAULT_FILTER_VALUES, type FilterValues } from '@/components/tenant/tenants_explore/TenantFilters'
 import TenantPropertyGrid from '@/components/tenant/tenants_explore/TenantPropertyGrid'
 import TenantSearchBar from '@/components/tenant/tenants_explore/TenantSearchBar'
 import { mockTenantProfile } from '@/mocks/tenantData'
+import { paths } from '@/routes/paths'
 import { listTenantApartments } from '@/services/tenantService'
 import type { TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantDashboard.module.css'
 
 export default function TenantExplorePage() {
     const { t } = useTranslation()
+    const navigate = useNavigate()
     const profile = mockTenantProfile
     const [properties, setProperties] = useState<TenantProperty[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState('')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [activeFilters, setActiveFilters] = useState<FilterValues>(DEFAULT_FILTER_VALUES)
 
     useEffect(() => {
         let ignoreResult = false
@@ -24,7 +29,18 @@ export default function TenantExplorePage() {
             setError('')
 
             try {
-                const apartments = await listTenantApartments()
+                const apartments = await listTenantApartments({
+                    query: searchQuery,
+                    area: activeFilters.area,
+                    priceMin: activeFilters.priceMin,
+                    priceMax: activeFilters.priceMax,
+                    totalRoomsMin: activeFilters.totalRoomsMin,
+                    totalRoomsMax: activeFilters.totalRoomsMax,
+                    availableRoomsMin: activeFilters.availableRoomsMin,
+                    availableRoomsMax: activeFilters.availableRoomsMax,
+                    availability: activeFilters.availability,
+                    sortBy: activeFilters.sortBy,
+                })
                 if (!ignoreResult) {
                     setProperties(apartments)
                 }
@@ -44,11 +60,20 @@ export default function TenantExplorePage() {
         return () => {
             ignoreResult = true
         }
-    }, [t])
+    }, [activeFilters, searchQuery, t])
 
     function handlePropertyClick(property: TenantProperty) {
-        console.log('property details:', property.id)
+        navigate(paths.tenantExploreDetail.replace(':propertyId', property.id), {
+            state: { property },
+        })
     }
+
+    function handleResetSearchAndFilters() {
+        setSearchQuery('')
+        setActiveFilters(DEFAULT_FILTER_VALUES)
+    }
+
+    const filteredProperties = useMemo(() => properties, [properties])
 
     return (
         <TenantLayout>
@@ -70,16 +95,17 @@ export default function TenantExplorePage() {
             </section>
 
             <TenantSearchBar
-                onSearch={(query) => console.log('search:', query)}
+                onSearch={setSearchQuery}
+                onReset={handleResetSearchAndFilters}
             />
 
             <TenantFilters
-                onFilterChange={(filters) => console.log('filters:', filters)}
+                onFilterChange={setActiveFilters}
             />
 
             <div className={styles.resultsRow}>
                 <p className={styles.resultsText}>
-                    {t('tenantDashboard.resultsFound', { count: properties.length })}
+                    {t('tenantDashboard.resultsFound', { count: filteredProperties.length })}
                 </p>
             </div>
 
@@ -89,7 +115,7 @@ export default function TenantExplorePage() {
                 <p role="status" className={styles.loadingText}>{t('tenantDashboard.loading')}</p>
             ) : (
                 <TenantPropertyGrid
-                    properties={properties}
+                    properties={filteredProperties}
                     onPropertyClick={handlePropertyClick}
                 />
             )}
