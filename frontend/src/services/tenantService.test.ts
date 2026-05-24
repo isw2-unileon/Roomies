@@ -50,6 +50,31 @@ describe('tenantService', () => {
     expect(fetch).toHaveBeenCalledWith('/api/apartments', { headers: {} })
   })
 
+  test('sends search and filter params to apartments endpoint', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ apartments: [] }),
+    } as Response)
+
+    await listTenantApartments({
+      query: 'centro',
+      area: 'centro',
+      priceMin: 300,
+      priceMax: 500,
+      totalRoomsMin: 2,
+      totalRoomsMax: 4,
+      availableRoomsMin: 1,
+      availableRoomsMax: 2,
+      availability: 'soon',
+      sortBy: 'price_low',
+    })
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/apartments?q=centro&area=centro&price_min=300&price_max=500&total_rooms_min=2&total_rooms_max=4&available_rooms_min=1&available_rooms_max=2&availability=soon&sort_by=price_low',
+      { headers: {} },
+    )
+  })
+
   test('parses string permission flags from apartment detail safely', async () => {
     localStorage.setItem('roomies.access_token', 'access-token')
     vi.spyOn(global, 'fetch').mockResolvedValue({

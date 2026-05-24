@@ -40,6 +40,20 @@ type Apartment struct {
 	ImageURL      string
 }
 
+// ListApartmentsFilters defines server-side filters for tenant explore listings.
+type ListApartmentsFilters struct {
+	Query             string
+	Area              string
+	PriceMin          int
+	PriceMax          int
+	TotalRoomsMin     int
+	TotalRoomsMax     int
+	AvailableRoomsMin int
+	AvailableRoomsMax int
+	Availability      string
+	SortBy            string
+}
+
 // ApartmentRules contains apartment coexistence preferences.
 type ApartmentRules struct {
 	SmokingAllowed         *bool

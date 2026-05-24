@@ -166,6 +166,7 @@ const es = {
       submit: 'Buscar',
       location: 'Ubicación',
       filters: 'Filtros',
+      reset: 'Restablecer',
     },
     filters: {
       title: 'Filtros',
@@ -176,8 +177,14 @@ const es = {
       minPrice: 'Precio mínimo',
       maxPrice: 'Precio máximo',
       rooms: 'Habitaciones',
+      totalRooms: 'Habitaciones totales',
+      availableRooms: 'Plazas disponibles',
       allRooms: 'Todas',
       roomOption: '{{count}}+',
+      minTotalRooms: 'Minimo habitaciones totales',
+      maxTotalRooms: 'Maximo habitaciones totales',
+      minAvailableRooms: 'Minimo plazas disponibles',
+      maxAvailableRooms: 'Maximo plazas disponibles',
       availabilityLabel: 'Disponibilidad',
       sortLabel: 'Ordenar por',
       availability: {

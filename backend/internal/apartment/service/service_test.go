@@ -41,7 +41,7 @@ func (f *fakeApartmentRepository) ListOwnerApartments(ctx context.Context, owner
 	return []apartment.Apartment{{ID: "apartment-1", Title: "Flat"}}, nil
 }
 
-func (f *fakeApartmentRepository) ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error) {
+func (f *fakeApartmentRepository) ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
 	if f.tenantApartments != nil {
 		return f.tenantApartments, nil
 	}

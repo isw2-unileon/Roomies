@@ -166,6 +166,7 @@ const en = {
       submit: 'Search',
       location: 'Location',
       filters: 'Filters',
+      reset: 'Reset',
     },
     filters: {
       title: 'Filters',
@@ -176,8 +177,14 @@ const en = {
       minPrice: 'Minimum price',
       maxPrice: 'Maximum price',
       rooms: 'Rooms',
+      totalRooms: 'Total rooms',
+      availableRooms: 'Available spots',
       allRooms: 'All',
       roomOption: '{{count}}+',
+      minTotalRooms: 'Minimum total rooms',
+      maxTotalRooms: 'Maximum total rooms',
+      minAvailableRooms: 'Minimum available spots',
+      maxAvailableRooms: 'Maximum available spots',
       availabilityLabel: 'Availability',
       sortLabel: 'Sort by',
       availability: {

@@ -115,6 +115,19 @@ interface TenantApplicationsResponseDto {
   error?: string
 }
 
+export interface TenantApartmentListFilters {
+  query?: string
+  area?: string
+  priceMin?: number
+  priceMax?: number
+  totalRoomsMin?: number
+  totalRoomsMax?: number
+  availableRoomsMin?: number
+  availableRoomsMax?: number
+  availability?: string
+  sortBy?: string
+}
+
 function resolveTenantErrorMessage(response: Response, fallbackMessage: string, apiMessage?: string) {
   if (apiMessage?.trim()) {
     return apiMessage
@@ -245,8 +258,50 @@ export async function saveTenantProfile(input: SaveTenantProfileInput) {
   return data.message
 }
 
-export async function listTenantApartments() {
-  const response = await apiFetch('/api/apartments', {
+function buildApartmentsQuery(filters?: TenantApartmentListFilters) {
+  const params = new URLSearchParams()
+  if (!filters) {
+    return ''
+  }
+
+  if (filters.query?.trim()) {
+    params.set('q', filters.query.trim())
+  }
+  if (filters.area?.trim()) {
+    params.set('area', filters.area.trim())
+  }
+  if (filters.priceMin !== undefined) {
+    params.set('price_min', String(filters.priceMin))
+  }
+  if (filters.priceMax !== undefined) {
+    params.set('price_max', String(filters.priceMax))
+  }
+  if (filters.totalRoomsMin !== undefined) {
+    params.set('total_rooms_min', String(filters.totalRoomsMin))
+  }
+  if (filters.totalRoomsMax !== undefined) {
+    params.set('total_rooms_max', String(filters.totalRoomsMax))
+  }
+  if (filters.availableRoomsMin !== undefined) {
+    params.set('available_rooms_min', String(filters.availableRoomsMin))
+  }
+  if (filters.availableRoomsMax !== undefined) {
+    params.set('available_rooms_max', String(filters.availableRoomsMax))
+  }
+  if (filters.availability?.trim()) {
+    params.set('availability', filters.availability.trim())
+  }
+  if (filters.sortBy?.trim()) {
+    params.set('sort_by', filters.sortBy.trim())
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+export async function listTenantApartments(filters?: TenantApartmentListFilters) {
+  const query = buildApartmentsQuery(filters)
+  const response = await apiFetch(`/api/apartments${query}`, {
     headers: {
       ...getAuthorizationHeader(),
     },

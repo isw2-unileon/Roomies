@@ -13,7 +13,7 @@ import (
 type repository interface {
 	CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error)
 	ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error)
-	ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error)
+	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
 	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.ApartmentRules, error)
 	GetTenantProfileByUserID(ctx context.Context, userID string) (*apartment.TenantProfile, error)
@@ -134,11 +134,66 @@ func (s *Service) ListOwnerApartments(ctx context.Context, ownerID, role string)
 
 // ListAvailableApartments returns tenant-visible apartment listings.
 func (s *Service) ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error) {
-	apartments, err := s.repo.ListAvailableApartments(ctx)
+	return s.ListAvailableApartmentsFiltered(ctx, apartment.ListApartmentsFilters{})
+}
+
+// ListAvailableApartmentsFiltered returns tenant-visible apartment listings with filters.
+func (s *Service) ListAvailableApartmentsFiltered(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
+	normalized := normalizeListApartmentsFilters(filters)
+	apartments, err := s.repo.ListAvailableApartments(ctx, normalized)
 	if err != nil {
 		return nil, err
 	}
 	return s.signApartmentImages(ctx, apartments)
+}
+
+func normalizeListApartmentsFilters(filters apartment.ListApartmentsFilters) apartment.ListApartmentsFilters {
+	filters.Query = strings.TrimSpace(filters.Query)
+	filters.Area = strings.TrimSpace(filters.Area)
+	filters.Availability = strings.ToLower(strings.TrimSpace(filters.Availability))
+	filters.SortBy = strings.ToLower(strings.TrimSpace(filters.SortBy))
+
+	if filters.PriceMin < 0 {
+		filters.PriceMin = 0
+	}
+	if filters.PriceMax <= 0 {
+		filters.PriceMax = 100000
+	}
+	if filters.PriceMin > filters.PriceMax {
+		filters.PriceMin, filters.PriceMax = filters.PriceMax, filters.PriceMin
+	}
+
+	if filters.TotalRoomsMin < 0 {
+		filters.TotalRoomsMin = 0
+	}
+	if filters.TotalRoomsMax <= 0 {
+		filters.TotalRoomsMax = 100000
+	}
+	if filters.TotalRoomsMin > filters.TotalRoomsMax {
+		filters.TotalRoomsMin, filters.TotalRoomsMax = filters.TotalRoomsMax, filters.TotalRoomsMin
+	}
+
+	if filters.AvailableRoomsMin < 0 {
+		filters.AvailableRoomsMin = 0
+	}
+	if filters.AvailableRoomsMax <= 0 {
+		filters.AvailableRoomsMax = 100000
+	}
+	if filters.AvailableRoomsMin > filters.AvailableRoomsMax {
+		filters.AvailableRoomsMin, filters.AvailableRoomsMax = filters.AvailableRoomsMax, filters.AvailableRoomsMin
+	}
+
+	if filters.Availability != "available" && filters.Availability != "soon" && filters.Availability != "all" {
+		filters.Availability = "all"
+	}
+
+	switch filters.SortBy {
+	case "price_low", "price_high", "rooms", "newest", "relevance":
+	default:
+		filters.SortBy = "relevance"
+	}
+
+	return filters
 }
 
 // GetApartmentDetailForTenant returns apartment detail and compatibility data for a tenant.

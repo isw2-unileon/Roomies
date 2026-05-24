@@ -1,4 +1,4 @@
-import { AdjustmentsHorizontalIcon, MagnifyingGlassIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from '@/styles/TenantSearchBar.module.css'
@@ -6,15 +6,29 @@ import styles from '@/styles/TenantSearchBar.module.css'
 interface TenantSearchBarProps {
     placeholder?: string
     onSearch?: (query: string) => void
+    onReset?: () => void
 }
 
-export default function TenantSearchBar({ placeholder, onSearch = () => {} }: TenantSearchBarProps) {
+export default function TenantSearchBar({ placeholder, onSearch = () => {}, onReset = () => {} }: TenantSearchBarProps) {
     const { t } = useTranslation()
     const [query, setQuery] = useState('')
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault()
         onSearch(query)
+    }
+
+    function handleChange(nextValue: string) {
+        setQuery(nextValue)
+        if (nextValue.trim() === '') {
+            onSearch('')
+        }
+    }
+
+    function handleReset() {
+        setQuery('')
+        onReset()
+        onSearch('')
     }
 
     return (
@@ -26,7 +40,7 @@ export default function TenantSearchBar({ placeholder, onSearch = () => {} }: Te
                 <input
                     type="search"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => handleChange(e.target.value)}
                     placeholder={placeholder ?? t('tenantDashboard.search.placeholder')}
                     aria-label={t('tenantDashboard.search.ariaLabel')}
                     className={styles.input}
@@ -43,19 +57,9 @@ export default function TenantSearchBar({ placeholder, onSearch = () => {} }: Te
             <button
                 type="button"
                 className={styles.secondaryButton}
-                aria-label={t('tenantDashboard.search.location')}
+                onClick={handleReset}
             >
-                <MapPinIcon className={styles.icon} aria-hidden="true" />
-                <span className={styles.secondaryLabel}>{t('tenantDashboard.search.location')}</span>
-            </button>
-
-            <button
-                type="button"
-                className={styles.secondaryButton}
-                aria-label={t('tenantDashboard.search.filters')}
-            >
-                <AdjustmentsHorizontalIcon className={styles.icon} aria-hidden="true" />
-                <span className={styles.secondaryLabel}>{t('tenantDashboard.search.filters')}</span>
+                <span className={styles.secondaryLabel}>{t('tenantDashboard.search.reset')}</span>
             </button>
         </form>
     )
