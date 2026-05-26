@@ -73,7 +73,13 @@ describe('OwnerDashboardPage', () => {
     renderOwnerDashboard()
 
     const logoutButtons = await screen.findAllByRole('button', { name: /cerrar sesion/i })
-    await user.click(logoutButtons[0])
+    const logoutButton = logoutButtons[0]
+
+    if (!logoutButton) {
+      throw new Error('Expected logout button')
+    }
+
+    await user.click(logoutButton)
 
     expect(mockedLogout).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Login page')).toBeInTheDocument()
