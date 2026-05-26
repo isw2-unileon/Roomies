@@ -39,7 +39,6 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 
 	authenticated := api.Group("")
 	authenticated.Use(requireAuth(authService, profileService))
-	authhttp.RegisterAuthenticatedRoutes(authenticated, authService, secureCookies)
 	profilehttp.RegisterRoutes(authenticated, profileService)
 
 	tenant := authenticated.Group("")

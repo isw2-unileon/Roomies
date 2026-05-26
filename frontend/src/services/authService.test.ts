@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { login, logout } from './authService'
+import { login, logout, resetPassword } from './authService'
 
 describe('authService', () => {
   beforeEach(() => {
@@ -37,6 +37,23 @@ describe('authService', () => {
     expect(fetchSpy).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({
       method: 'POST',
       credentials: 'include',
+    }))
+  })
+
+  test('resets password with recovery bearer token', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'password updated successfully' }),
+    } as Response)
+
+    await expect(resetPassword('recovery-token', 'new-secret')).resolves.toBe('password updated successfully')
+
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/reset-password', expect.objectContaining({
+      method: 'POST',
+      credentials: 'include',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer recovery-token',
+      }),
     }))
   })
 })

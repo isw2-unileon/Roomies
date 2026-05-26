@@ -19,7 +19,6 @@ const (
 	accessTokenCookieName  = "roomies_access_token"
 	refreshTokenCookieName = "roomies_refresh_token"
 	refreshTokenMaxAge     = 60 * 60 * 24 * 30
-	contextAccessTokenKey  = "roomies.access_token"
 )
 
 type loginRequest struct {
@@ -57,11 +56,6 @@ func RegisterPublicRoutes(api *gin.RouterGroup, authService *authservice.Service
 	api.POST("/auth/forgot-password", h.forgotPassword)
 	api.POST("/auth/confirm", h.confirm)
 	api.POST("/auth/logout", h.logout)
-}
-
-// RegisterAuthenticatedRoutes wires authentication endpoints that need a session.
-func RegisterAuthenticatedRoutes(api *gin.RouterGroup, authService *authservice.Service, secureCookies bool) {
-	h := &handler{authService: authService, secureCookies: secureCookies}
 	api.POST("/auth/reset-password", h.resetPassword)
 }
 
@@ -148,7 +142,7 @@ func (h *handler) resetPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	accessToken := c.GetString(contextAccessTokenKey)
+	accessToken := bearerToken(c.GetHeader("Authorization"))
 	if accessToken == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 		return
@@ -158,6 +152,14 @@ func (h *handler) resetPassword(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "password updated successfully"})
+}
+
+func bearerToken(header string) string {
+	value := strings.TrimSpace(header)
+	if !strings.HasPrefix(strings.ToLower(value), "bearer ") {
+		return ""
+	}
+	return strings.TrimSpace(value[len("bearer "):])
 }
 
 func (h *handler) logout(c *gin.Context) {

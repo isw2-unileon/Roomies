@@ -108,10 +108,10 @@ export async function confirmEmail(input: { tokenHash: string; token: string; ty
   return authResultFromDto(data)
 }
 
-export async function resetPassword(_accessToken: string, password: string) {
+export async function resetPassword(accessToken: string, password: string) {
   const response = await apiFetch('/api/auth/reset-password', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ password }),
   })
   const data = await parseJson<MessageResponseDto>(response)
