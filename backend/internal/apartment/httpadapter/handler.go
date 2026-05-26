@@ -75,17 +75,19 @@ type apartmentRulesResponse struct {
 	PreferredSchedule      string `json:"preferred_schedule"`
 }
 
-// RegisterRoutes wires apartment endpoints into the API router.
+// RegisterPublicRoutes wires public apartment endpoints into the API router.
 func RegisterPublicRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/apartments", h.listAvailableApartments)
 }
 
+// RegisterTenantRoutes wires tenant apartment endpoints into the API router.
 func RegisterTenantRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/apartments/:id", h.getApartmentDetail)
 }
 
+// RegisterOwnerRoutes wires owner apartment endpoints into the API router.
 func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/owner/apartments", h.listOwnerApartments)

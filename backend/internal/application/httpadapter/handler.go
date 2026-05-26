@@ -45,7 +45,7 @@ type tenantApplicationResponse struct {
 	StatusMessage string `json:"status_message"`
 }
 
-// RegisterRoutes wires application endpoints into the API router.
+// RegisterTenantRoutes wires tenant application endpoints into the API router.
 func RegisterTenantRoutes(api *gin.RouterGroup, applicationService *applicationservice.Service) {
 	h := &handler{applicationService: applicationService}
 	api.POST("/apartments/:id/applications", h.applyToApartment)
@@ -54,6 +54,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, applicationService *applications
 	api.GET("/tenant/applications", h.listTenantApplications)
 }
 
+// RegisterOwnerRoutes wires owner application endpoints into the API router.
 func RegisterOwnerRoutes(*gin.RouterGroup, *applicationservice.Service) {
 }
 
