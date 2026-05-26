@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/matching"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 )
 
 type repository interface {
@@ -16,13 +18,14 @@ type repository interface {
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
 	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error)
-	GetTenantProfileByUserID(ctx context.Context, userID string) (*apartment.TenantProfile, error)
-	HasActiveApplication(ctx context.Context, apartmentID, tenantID string) (bool, error)
+}
+
+type profileReader interface {
+	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error)
+}
+
+type applicationReader interface {
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
-	CreateTenantApplication(ctx context.Context, apartmentID, tenantID string, compatibilityScore int) (string, error)
-	CancelTenantApplication(ctx context.Context, applicationID, tenantID string) (bool, error)
-	ListInterestedTenants(ctx context.Context, apartmentID string) ([]apartment.InterestedTenantCandidate, error)
-	ListTenantApplications(ctx context.Context, tenantID string) ([]apartment.TenantApplication, error)
 }
 
 type imageURLSigner interface {
@@ -54,13 +57,15 @@ var ErrApplicationNotCancelable = errors.New("application is not cancelable")
 
 // Service contains apartment use cases.
 type Service struct {
-	repo        repository
-	imageSigner imageURLSigner
+	repo              repository
+	profileReader     profileReader
+	applicationReader applicationReader
+	imageSigner       imageURLSigner
 }
 
 // NewService creates the apartment service.
-func NewService(repo repository, imageSigner imageURLSigner) *Service {
-	return &Service{repo: repo, imageSigner: imageSigner}
+func NewService(repo repository, imageSigner imageURLSigner, profileReader profileReader, applicationReader applicationReader) *Service {
+	return &Service{repo: repo, imageSigner: imageSigner, profileReader: profileReader, applicationReader: applicationReader}
 }
 
 // CreateApartment validates and stores a new owner apartment listing.
@@ -221,22 +226,22 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 		return nil, err
 	}
 
-	tenantProfile, err := s.repo.GetTenantProfileByUserID(ctx, tenantID)
+	tenantProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	compatibilityScore, compatibilityReason := calculateCompatibility(*apartmentRow, rules, tenantProfile)
+	compatibilityScore, compatibilityReason := matching.CalculateCompatibility(*apartmentRow, rules, tenantProfile)
 	apartmentsWithImage, err := s.signApartmentImages(ctx, []apartment.Apartment{*apartmentRow})
 	if err != nil {
 		return nil, err
 	}
 
-	applicationID, applicationStatus, err := s.repo.GetTenantApplicationForApartment(ctx, apartmentID, tenantID)
+	applicationID, applicationStatus, err := s.applicationReader.GetTenantApplicationForApartment(ctx, apartmentID, tenantID)
 	if err != nil {
 		return nil, err
 	}
-	mappedStatus := mapApplicationStatus(applicationStatus)
+	mappedStatus := application.MapStatus(applicationStatus)
 	canApply := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
 	canCancel := mappedStatus == "pending"
 
@@ -250,154 +255,6 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 		CanApply:                 canApply,
 		CanCancel:                canCancel,
 	}, nil
-}
-
-// ApplyToApartment creates an individual application for a tenant.
-func (s *Service) ApplyToApartment(ctx context.Context, apartmentID, tenantID, role string) (string, error) {
-	if strings.TrimSpace(apartmentID) == "" {
-		return "", errors.New("apartment id is required")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return "", errors.New("tenant id is required")
-	}
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return "", ErrTenantRequired
-	}
-
-	apartmentRow, err := s.repo.GetApartmentByID(ctx, apartmentID)
-	if err != nil {
-		return "", err
-	}
-	if apartmentRow == nil {
-		return "", ErrApartmentNotFound
-	}
-	if apartmentRow.TotalSpots-apartmentRow.OccupiedSpots <= 0 {
-		return "", ErrApartmentFull
-	}
-
-	hasActive, err := s.repo.HasActiveApplication(ctx, apartmentID, tenantID)
-	if err != nil {
-		return "", err
-	}
-	if hasActive {
-		return "", ErrApplicationAlreadyExists
-	}
-
-	rules, err := s.repo.GetApartmentRules(ctx, apartmentID)
-	if err != nil {
-		return "", err
-	}
-	tenantProfile, err := s.repo.GetTenantProfileByUserID(ctx, tenantID)
-	if err != nil {
-		return "", err
-	}
-	compatibilityScore, _ := calculateCompatibility(*apartmentRow, rules, tenantProfile)
-
-	return s.repo.CreateTenantApplication(ctx, apartmentID, tenantID, compatibilityScore)
-}
-
-// CancelTenantApplication cancels a pending tenant application.
-func (s *Service) CancelTenantApplication(ctx context.Context, applicationID, tenantID, role string) error {
-	if strings.TrimSpace(applicationID) == "" {
-		return errors.New("application id is required")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return errors.New("tenant id is required")
-	}
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return ErrTenantRequired
-	}
-	updated, err := s.repo.CancelTenantApplication(ctx, applicationID, tenantID)
-	if err != nil {
-		return err
-	}
-	if !updated {
-		return ErrApplicationNotCancelable
-	}
-	return nil
-}
-
-// ListInterestedTenants returns currently interested tenants for an apartment.
-func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID string) ([]apartment.InterestedTenant, error) {
-	if strings.TrimSpace(apartmentID) == "" {
-		return nil, errors.New("apartment id is required")
-	}
-	apartmentRow, err := s.repo.GetApartmentByID(ctx, apartmentID)
-	if err != nil {
-		return nil, err
-	}
-	if apartmentRow == nil {
-		return nil, ErrApartmentNotFound
-	}
-	rules, err := s.repo.GetApartmentRules(ctx, apartmentID)
-	if err != nil {
-		return nil, err
-	}
-	candidates, err := s.repo.ListInterestedTenants(ctx, apartmentID)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]apartment.InterestedTenant, 0, len(candidates))
-	for _, candidate := range candidates {
-		tenantProfile := &apartment.TenantProfile{
-			UserID:        candidate.UserID,
-			BudgetMin:     candidate.BudgetMin,
-			BudgetMax:     candidate.BudgetMax,
-			PreferredArea: candidate.PreferredArea,
-			Pets:          candidate.Pets,
-			Smoking:       candidate.Smoking,
-			NoiseLevel:    candidate.NoiseLevel,
-			Cleanliness:   candidate.Cleanliness,
-			WorkSchedule:  candidate.WorkSchedule,
-			Age:           candidate.Age,
-			University:    candidate.Studies,
-		}
-		score, _ := calculateCompatibility(*apartmentRow, rules, tenantProfile)
-		result = append(result, apartment.InterestedTenant{
-			UserID:        candidate.UserID,
-			Name:          candidate.Name,
-			Age:           candidate.Age,
-			Studies:       candidate.Studies,
-			AvatarURL:     candidate.AvatarURL,
-			Compatibility: score,
-		})
-	}
-	return result, nil
-}
-
-// ListTenantApplications returns tenant applications with status and compatibility.
-func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role string) ([]apartment.TenantApplication, error) {
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, errors.New("tenant id is required")
-	}
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return nil, ErrTenantRequired
-	}
-	applications, err := s.repo.ListTenantApplications(ctx, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	tenantProfile, err := s.repo.GetTenantProfileByUserID(ctx, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	for idx := range applications {
-		if applications[idx].CompatibilityScore <= 0 {
-			apartmentRow, apartmentErr := s.repo.GetApartmentByID(ctx, applications[idx].ApartmentID)
-			if apartmentErr == nil && apartmentRow != nil {
-				rules, rulesErr := s.repo.GetApartmentRules(ctx, applications[idx].ApartmentID)
-				if rulesErr == nil {
-					score, _ := calculateCompatibility(*apartmentRow, rules, tenantProfile)
-					applications[idx].CompatibilityScore = score
-				}
-			}
-		}
-		applications[idx].Status = mapApplicationStatus(applications[idx].Status)
-		applications[idx].DateLabel = buildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
-		applications[idx].RequestType = "Solicitud individual"
-		applications[idx].StatusMessage = buildStatusMessage(applications[idx].Status)
-	}
-	return applications, nil
 }
 
 func (s *Service) signApartmentImages(ctx context.Context, apartments []apartment.Apartment) ([]apartment.Apartment, error) {
@@ -432,221 +289,4 @@ func derefRules(rules *apartment.Rules) apartment.Rules {
 		return apartment.Rules{}
 	}
 	return *rules
-}
-
-func calculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.Rules, tenantProfile *apartment.TenantProfile) (int, []string) {
-	if tenantProfile == nil {
-		return 0, nil
-	}
-
-	totalWeight := 0.0
-	weightedScore := 0.0
-	reasons := make([]string, 0, 4)
-
-	addScore := func(weight float64, score float64, reason string) {
-		if score < 0 {
-			return
-		}
-		totalWeight += weight
-		weightedScore += weight * score
-		if score >= 70 && reason != "" {
-			reasons = append(reasons, reason)
-		}
-	}
-
-	addScore(0.20, budgetCompatibility(apartmentRow.BaseRent, tenantProfile.BudgetMin, tenantProfile.BudgetMax), "Presupuesto alineado")
-	addScore(0.15, textEqualityScore(tenantProfile.PreferredArea, apartmentRow.Area), "Zona preferida similar")
-	addScore(0.15, boolRuleScore(rules, tenantProfile.Pets, true), "Preferencias de mascotas compatibles")
-	addScore(0.15, boolRuleScore(rules, tenantProfile.Smoking, false), "Normas de convivencia compatibles")
-	addScore(0.10, orderedLevelScore(tenantProfile.NoiseLevel, ruleNoiseLevel(rules), []string{"quiet", "moderate", "loud"}), "Rangos de ruido compatibles")
-	addScore(0.10, orderedLevelScore(tenantProfile.Cleanliness, ruleCleanliness(rules), []string{"relaxed", "normal", "very_clean"}), "Preferencias de limpieza compatibles")
-	addScore(0.05, orderedLevelScore(tenantProfile.WorkSchedule, ruleSchedule(rules), []string{"morning", "flexible", "night"}), "Horarios compatibles")
-
-	if totalWeight == 0 {
-		return 0, nil
-	}
-	score := int(math.Round((weightedScore / totalWeight)))
-	if score < 0 {
-		score = 0
-	}
-	if score > 100 {
-		score = 100
-	}
-	if len(reasons) == 0 {
-		reasons = append(reasons, "Perfil parcialmente compatible")
-	}
-	return score, reasons
-}
-
-func budgetCompatibility(baseRent, budgetMin, budgetMax int) float64 {
-	if baseRent <= 0 || budgetMax <= 0 {
-		return -1
-	}
-	if budgetMin > budgetMax {
-		return -1
-	}
-	if baseRent >= budgetMin && baseRent <= budgetMax {
-		return 100
-	}
-	if baseRent < budgetMin {
-		delta := budgetMin - baseRent
-		if delta <= 50 {
-			return 90
-		}
-		if delta <= 120 {
-			return 75
-		}
-		return 60
-	}
-	delta := baseRent - budgetMax
-	if delta <= 40 {
-		return 85
-	}
-	if delta <= 100 {
-		return 60
-	}
-	if delta <= 180 {
-		return 35
-	}
-	return 10
-}
-
-func textEqualityScore(a, b string) float64 {
-	a = normalizeText(a)
-	b = normalizeText(b)
-	if a == "" || b == "" {
-		return -1
-	}
-	if a == b {
-		return 100
-	}
-	if strings.Contains(a, b) || strings.Contains(b, a) {
-		return 70
-	}
-	return 25
-}
-
-func boolRuleScore(rules *apartment.Rules, tenantValue bool, forPets bool) float64 {
-	if rules == nil {
-		return -1
-	}
-	if forPets {
-		if rules.PetsAllowed == nil {
-			return -1
-		}
-		if *rules.PetsAllowed == tenantValue {
-			return 100
-		}
-		if !tenantValue {
-			return 80
-		}
-		return 10
-	}
-	if rules.SmokingAllowed == nil {
-		return -1
-	}
-	if *rules.SmokingAllowed == tenantValue {
-		return 100
-	}
-	if !tenantValue {
-		return 80
-	}
-	return 10
-}
-
-func orderedLevelScore(tenantLevel, ruleLevel string, order []string) float64 {
-	tenantLevel = normalizeText(tenantLevel)
-	ruleLevel = normalizeText(ruleLevel)
-	if tenantLevel == "" || ruleLevel == "" {
-		return -1
-	}
-	tenantIdx := indexOf(order, tenantLevel)
-	ruleIdx := indexOf(order, ruleLevel)
-	if tenantIdx < 0 || ruleIdx < 0 {
-		return -1
-	}
-	diff := math.Abs(float64(tenantIdx - ruleIdx))
-	if diff == 0 {
-		return 100
-	}
-	if diff == 1 {
-		return 65
-	}
-	return 20
-}
-
-func indexOf(items []string, value string) int {
-	for idx := range items {
-		if items[idx] == value {
-			return idx
-		}
-	}
-	return -1
-}
-
-func ruleNoiseLevel(rules *apartment.Rules) string {
-	if rules == nil {
-		return ""
-	}
-	return rules.MaxNoiseLevel
-}
-
-func ruleCleanliness(rules *apartment.Rules) string {
-	if rules == nil {
-		return ""
-	}
-	return rules.CleanlinessExpectation
-}
-
-func ruleSchedule(rules *apartment.Rules) string {
-	if rules == nil {
-		return ""
-	}
-	return rules.PreferredSchedule
-}
-
-func normalizeText(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
-}
-
-func mapApplicationStatus(status string) string {
-	status = strings.ToUpper(strings.TrimSpace(status))
-	switch status {
-	case "PENDING_OWNER", "PENDING_CONFIRMED_TENANTS":
-		return "pending"
-	case "FULLY_CONFIRMED":
-		return "approved"
-	case "REJECTED_BY_OWNER", "REJECTED_BY_CONFIRMED_TENANTS":
-		return "rejected"
-	case "CANCELLED":
-		return "cancelled"
-	default:
-		return "pending"
-	}
-}
-
-func buildDateLabel(status string, createdAt string) string {
-	switch status {
-	case "approved":
-		return "Aceptada el " + createdAt
-	case "rejected":
-		return "Respondida el " + createdAt
-	case "cancelled":
-		return "Cancelada el " + createdAt
-	default:
-		return "Solicitada el " + createdAt
-	}
-}
-
-func buildStatusMessage(status string) string {
-	switch status {
-	case "approved":
-		return "Tu solicitud ha sido aceptada por el propietario."
-	case "rejected":
-		return "El propietario ha rechazado tu solicitud para este piso."
-	case "cancelled":
-		return "La solicitud fue cancelada."
-	default:
-		return "Tu solicitud esta pendiente de revision por el propietario."
-	}
 }
