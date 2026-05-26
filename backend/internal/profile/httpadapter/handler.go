@@ -8,14 +8,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpauth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 type handler struct {
-	authService    *authservice.Service
-	profileService *profileservice.Service
+	authService        *authservice.Service
+	profileService     *profileservice.Service
+	extractBearerToken func(string) (string, error)
 }
 
 type tenantProfileRequest struct {
@@ -39,14 +39,14 @@ type tenantProfileRequest struct {
 }
 
 // RegisterRoutes wires profile endpoints into the API router.
-func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service) {
-	h := &handler{authService: authService, profileService: profileService}
+func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service, extractBearerToken func(string) (string, error)) {
+	h := &handler{authService: authService, profileService: profileService, extractBearerToken: extractBearerToken}
 	api.GET("/profile/status", h.status)
 	api.POST("/tenant-profile", h.saveTenantProfile)
 }
 
 func (h *handler) status(c *gin.Context) {
-	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
+	accessToken, err := h.extractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -96,7 +96,7 @@ func (h *handler) saveTenantProfile(c *gin.Context) {
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
-	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
+	accessToken, err := h.extractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return "", "", false

@@ -22,3 +22,18 @@ type TenantProfileInput struct {
 	GuestPreferences string
 	PartyFrequency   string
 }
+
+// TenantProfile contains tenant profile data used by matching and application use cases.
+type TenantProfile struct {
+	UserID        string
+	BudgetMin     int
+	BudgetMax     int
+	PreferredArea string
+	Pets          bool
+	Smoking       bool
+	NoiseLevel    string
+	Cleanliness   string
+	WorkSchedule  string
+	Age           int
+	University    string
+}

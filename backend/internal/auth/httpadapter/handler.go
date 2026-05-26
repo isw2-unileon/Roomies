@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpauth"
 )
 
 type handler struct {
-	authService *authservice.Service
-	frontendURL string
+	authService        *authservice.Service
+	frontendURL        string
+	extractBearerToken func(string) (string, error)
 }
 
 type loginRequest struct {
@@ -43,8 +43,8 @@ type resetPasswordRequest struct {
 }
 
 // RegisterRoutes wires authentication endpoints into the API router.
-func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, frontendURL string) {
-	h := &handler{authService: authService, frontendURL: frontendURL}
+func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, frontendURL string, extractBearerToken func(string) (string, error)) {
+	h := &handler{authService: authService, frontendURL: frontendURL, extractBearerToken: extractBearerToken}
 	api.POST("/auth/login", h.login)
 	api.POST("/auth/register", h.register)
 	api.POST("/auth/forgot-password", h.forgotPassword)
@@ -144,7 +144,7 @@ func (h *handler) resetPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	accessToken, err := httpauth.ExtractBearerToken(c.GetHeader("Authorization"))
+	accessToken, err := h.extractBearerToken(c.GetHeader("Authorization"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

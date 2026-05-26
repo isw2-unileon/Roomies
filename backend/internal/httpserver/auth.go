@@ -1,4 +1,4 @@
-package httpauth
+package httpserver
 
 import (
 	"errors"
