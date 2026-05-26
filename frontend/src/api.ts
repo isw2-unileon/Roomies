@@ -13,5 +13,5 @@ function resolveRequestUrl(input: RequestInfo | URL): RequestInfo | URL {
 }
 
 export function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
-  return fetch(resolveRequestUrl(input), init)
+  return fetch(resolveRequestUrl(input), { ...init, credentials: init?.credentials ?? 'include' })
 }

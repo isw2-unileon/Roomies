@@ -5,7 +5,6 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import { paths } from '@/routes/paths'
 import { confirmEmail, getProfileStatus } from '@/services/authService'
-import { saveAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
 
 type NoticeKind = 'idle' | 'error' | 'success'
@@ -67,27 +66,21 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
         return
       }
 
-      let accessToken = authData.accessToken
-      let refreshToken = authData.refreshToken
-
-      if (!accessToken && !authData.tokenHash && !authData.token) {
+      if (!authData.accessToken && !authData.tokenHash && !authData.token) {
         if (!cancelled) {
           setNotice({ kind: 'success', message: 'Cuenta confirmada correctamente. Ya puedes iniciar sesion.' })
         }
         return
       }
 
-      if (!accessToken && (authData.tokenHash || authData.token)) {
+      if (authData.tokenHash || authData.token) {
         try {
-          const confirmResult = await confirmEmail({
+          await confirmEmail({
             tokenHash: authData.tokenHash,
             token: authData.token,
             type: authData.verifyType || 'signup',
             email: authData.email,
           })
-
-          accessToken = (confirmResult.accessToken || '').trim()
-          refreshToken = (confirmResult.refreshToken || '').trim()
         } catch (error) {
           if (!cancelled) {
             const message = error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE
@@ -97,19 +90,10 @@ export default function AuthCallbackPage({ onResolved, onNavigateToLogin }: Auth
         }
       }
 
-      if (!accessToken) {
-        if (!cancelled) {
-          setNotice({ kind: 'error', message: DEFAULT_ERROR_MESSAGE })
-        }
-        return
-      }
-
-      saveAuthSession({ accessToken, refreshToken })
-
       window.history.replaceState({}, '', paths.authCallback)
 
       try {
-        const profileStatus = await getProfileStatus(accessToken)
+        const profileStatus = await getProfileStatus()
 
         if (!cancelled) {
           setNotice({ kind: 'success', message: 'Cuenta confirmada correctamente. Redirigiendo...' })

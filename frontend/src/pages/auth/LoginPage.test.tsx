@@ -88,10 +88,10 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /iniciar sesi[oó]n/i }))
     expect(fetch).toHaveBeenCalled()
     await waitFor(() => {
-    expect(localStorage.getItem('roomies.access_token')).toBe('access-token')
-    expect(localStorage.getItem('roomies.refresh_token')).toBe('refresh-token')
-    expect(onLoginSuccess).toHaveBeenCalledWith({ role: 'tenant', needsOnboarding: true })
-  })
+      expect(localStorage.getItem('roomies.access_token')).toBeNull()
+      expect(localStorage.getItem('roomies.refresh_token')).toBeNull()
+      expect(onLoginSuccess).toHaveBeenCalledWith({ role: 'tenant', needsOnboarding: true })
+    })
     expect(await screen.findByText(/login correcto/i)).toBeInTheDocument()
   })
 

@@ -6,7 +6,6 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
-import { getAccessToken } from '@/session/authSession'
 import { saveTenantProfile } from '@/services/tenantService'
 import styles from '@/styles/auth.module.css'
 
@@ -58,12 +57,6 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
 
     if (!moveInDate) {
       showError(t('auth.tenantOnboarding.errors.moveInDateRequired'))
-      return
-    }
-
-    const token = getAccessToken()
-    if (!token) {
-      showError(t('auth.tenantOnboarding.errors.sessionExpired'))
       return
     }
 

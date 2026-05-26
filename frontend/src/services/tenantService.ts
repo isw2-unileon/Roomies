@@ -1,5 +1,4 @@
 import { apiFetch } from '@/api'
-import { getAuthorizationHeader } from '@/session/authSession'
 import type {
   InterestedTenant,
   PropertyAvailability,
@@ -235,10 +234,7 @@ function tenantApplicationFromDto(dto: TenantApplicationDto): TenantApplication 
 export async function saveTenantProfile(input: SaveTenantProfileInput) {
   const response = await apiFetch('/api/tenant-profile', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthorizationHeader(),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       budget_min: input.budgetMin,
       budget_max: input.budgetMax,
@@ -301,11 +297,7 @@ function buildApartmentsQuery(filters?: TenantApartmentListFilters) {
 
 export async function listTenantApartments(filters?: TenantApartmentListFilters) {
   const query = buildApartmentsQuery(filters)
-  const response = await apiFetch(`/api/apartments${query}`, {
-    headers: {
-      ...getAuthorizationHeader(),
-    },
-  })
+  const response = await apiFetch(`/api/apartments${query}`)
   const data = (await response.json()) as TenantApartmentsResponseDto
   if (!response.ok) {
     throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los pisos disponibles.', data.error))
@@ -314,11 +306,7 @@ export async function listTenantApartments(filters?: TenantApartmentListFilters)
 }
 
 export async function getTenantApartmentDetail(apartmentID: string): Promise<TenantPropertyDetail> {
-  const response = await apiFetch(`/api/apartments/${apartmentID}`, {
-    headers: {
-      ...getAuthorizationHeader(),
-    },
-  })
+  const response = await apiFetch(`/api/apartments/${apartmentID}`)
   const data = (await response.json()) as TenantApartmentDetailResponseDto
   if (!response.ok) {
     throw new Error(resolveTenantErrorMessage(response, 'No se pudo cargar el detalle del piso.', data.error))
@@ -342,10 +330,7 @@ export async function getTenantApartmentDetail(apartmentID: string): Promise<Ten
 export async function applyToTenantApartment(apartmentID: string): Promise<string> {
   const response = await apiFetch(`/api/apartments/${apartmentID}/applications`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthorizationHeader(),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   })
   const data = (await response.json()) as ApplyApartmentResponseDto
@@ -370,10 +355,7 @@ export async function listInterestedTenants(apartmentID: string): Promise<Intere
 export async function cancelTenantApplication(applicationID: string) {
   const response = await apiFetch(`/api/applications/${applicationID}/cancel`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthorizationHeader(),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   })
   const data = (await response.json()) as CancelApplicationResponseDto
@@ -384,11 +366,7 @@ export async function cancelTenantApplication(applicationID: string) {
 }
 
 export async function listTenantApplications() {
-  const response = await apiFetch('/api/tenant/applications', {
-    headers: {
-      ...getAuthorizationHeader(),
-    },
-  })
+  const response = await apiFetch('/api/tenant/applications')
   const data = (await response.json()) as TenantApplicationsResponseDto
   if (!response.ok) {
     throw new Error(data.error ?? 'No se pudieron cargar tus solicitudes.')

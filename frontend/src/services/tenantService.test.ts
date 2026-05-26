@@ -47,7 +47,7 @@ describe('tenantService', () => {
       },
     ])
 
-    expect(fetch).toHaveBeenCalledWith('/api/apartments', { headers: {} })
+    expect(fetch).toHaveBeenCalledWith('/api/apartments', { credentials: 'include' })
   })
 
   test('sends search and filter params to apartments endpoint', async () => {
@@ -71,12 +71,11 @@ describe('tenantService', () => {
 
     expect(fetch).toHaveBeenCalledWith(
       '/api/apartments?q=centro&area=centro&price_min=300&price_max=500&total_rooms_min=2&total_rooms_max=4&available_rooms_min=1&available_rooms_max=2&availability=soon&sort_by=price_low',
-      { headers: {} },
+      { credentials: 'include' },
     )
   })
 
   test('parses string permission flags from apartment detail safely', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -102,8 +101,6 @@ describe('tenantService', () => {
       canCancel: false,
     })
 
-    expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', {
-      headers: { Authorization: 'Bearer access-token' },
-    })
+    expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', { credentials: 'include' })
   })
 })
