@@ -139,6 +139,7 @@ const fr = {
       publish: 'Publier un logement',
       referTitle: 'Inviter un ami',
       referSubtitle: 'Obtenez 50 € de crédit',
+      logout: 'Se deconnecter',
     },
     invite: {
       kicker: 'Partager Roomies',

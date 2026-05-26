@@ -139,6 +139,7 @@ const de = {
       publish: 'Wohnung inserieren',
       referTitle: 'Freund einladen',
       referSubtitle: 'Erhalte 50 € Guthaben',
+      logout: 'Abmelden',
     },
     invite: {
       kicker: 'Roomies teilen',
