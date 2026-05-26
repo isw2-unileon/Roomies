@@ -50,12 +50,17 @@ func RegisterTenantRoutes(api *gin.RouterGroup, applicationService *applications
 	h := &handler{applicationService: applicationService}
 	api.POST("/apartments/:id/applications", h.applyToApartment)
 	api.POST("/applications/:id/cancel", h.cancelTenantApplication)
-	api.GET("/apartments/:id/interested", h.listInterestedTenants)
 	api.GET("/tenant/applications", h.listTenantApplications)
 }
 
 // RegisterOwnerRoutes wires owner application endpoints into the API router.
 func RegisterOwnerRoutes(*gin.RouterGroup, *applicationservice.Service) {
+}
+
+// RegisterSharedRoutes wires authenticated application endpoints available to multiple roles.
+func RegisterSharedRoutes(api *gin.RouterGroup, applicationService *applicationservice.Service) {
+	h := &handler{applicationService: applicationService}
+	api.GET("/apartments/:id/interested", h.listInterestedTenants)
 }
 
 func (h *handler) applyToApartment(c *gin.Context) {
@@ -93,15 +98,23 @@ func (h *handler) applyToApartment(c *gin.Context) {
 }
 
 func (h *handler) listInterestedTenants(c *gin.Context) {
+	viewerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
 	apartmentID := strings.TrimSpace(c.Param("id"))
 	if apartmentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
 		return
 	}
-	interested, err := h.applicationService.ListInterestedTenants(c.Request.Context(), apartmentID)
+	interested, err := h.applicationService.ListInterestedTenants(c.Request.Context(), apartmentID, viewerID, role)
 	if err != nil {
 		if errors.Is(err, applicationservice.ErrApartmentNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
+			return
+		}
+		if errors.Is(err, applicationservice.ErrInterestedTenantsForbidden) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "interested tenants are not available for this user"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load interested tenants"})

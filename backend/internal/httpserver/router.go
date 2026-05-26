@@ -53,6 +53,7 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 		apartmenthttp.RegisterOwnerRoutes(owner, apartmentService)
 	}
 	if applicationService != nil {
+		applicationhttp.RegisterSharedRoutes(authenticated, applicationService)
 		applicationhttp.RegisterTenantRoutes(tenant, applicationService)
 		applicationhttp.RegisterOwnerRoutes(owner, applicationService)
 	}

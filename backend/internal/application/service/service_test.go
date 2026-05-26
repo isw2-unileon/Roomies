@@ -69,10 +69,15 @@ func (f *fakeApplicationRepository) ListTenantApplications(ctx context.Context, 
 	}}, nil
 }
 
-type fakeApartmentReader struct{}
+type fakeApartmentReader struct {
+	apartment *apartment.Apartment
+}
 
 func (f fakeApartmentReader) GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error) {
-	return &apartment.Apartment{ID: apartmentID, BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1}, nil
+	if f.apartment != nil {
+		return f.apartment, nil
+	}
+	return &apartment.Apartment{ID: apartmentID, OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1, Status: apartment.StatusAvailable}, nil
 }
 
 func (f fakeApartmentReader) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error) {
@@ -132,7 +137,7 @@ func TestListInterestedTenantsCalculatesCompatibility(t *testing.T) {
 	repo := &fakeApplicationRepository{}
 	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
 
-	result, err := svc.ListInterestedTenants(context.Background(), "apartment-1")
+	result, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "tenant-1", "tenant")
 	if err != nil {
 		t.Fatalf("ListInterestedTenants returned error: %v", err)
 	}
@@ -141,6 +146,52 @@ func TestListInterestedTenantsCalculatesCompatibility(t *testing.T) {
 	}
 	if result[0].Compatibility <= 0 {
 		t.Fatalf("Compatibility = %d, want > 0", result[0].Compatibility)
+	}
+}
+
+func TestListInterestedTenantsAllowsOwnerForOwnApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "HIDDEN"}}
+	svc := NewService(repo, reader, fakeProfileReader{})
+
+	result, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "owner-1", "owner")
+	if err != nil {
+		t.Fatalf("ListInterestedTenants returned error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("len(result) = %d, want 1", len(result))
+	}
+}
+
+func TestListInterestedTenantsRejectsOwnerForOtherApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-2", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: apartment.StatusAvailable}}
+	svc := NewService(repo, reader, fakeProfileReader{})
+
+	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "owner-1", "owner")
+	if !errors.Is(err, ErrInterestedTenantsForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrInterestedTenantsForbidden)
+	}
+}
+
+func TestListInterestedTenantsHidesClosedApartmentFromTenant(t *testing.T) {
+	repo := &fakeApplicationRepository{}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "CLOSED"}}
+	svc := NewService(repo, reader, fakeProfileReader{})
+
+	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if !errors.Is(err, ErrApartmentNotFound) {
+		t.Fatalf("err = %v, want %v", err, ErrApartmentNotFound)
+	}
+}
+
+func TestListInterestedTenantsRejectsUnknownRole(t *testing.T) {
+	repo := &fakeApplicationRepository{}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+
+	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "user-1", "admin")
+	if !errors.Is(err, ErrInterestedTenantsForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrInterestedTenantsForbidden)
 	}
 }
 
