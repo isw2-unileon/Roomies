@@ -15,6 +15,7 @@ import styles from '@/styles/OwnerDashboard.module.css'
 interface OwnerSidebarProps {
   activeTab: OwnerNavTab
   onTabChange: (tab: OwnerNavTab) => void
+  onLogout?: () => void
   unreadNotifications: number
 }
 
@@ -29,7 +30,7 @@ const tabs: { id: OwnerNavTab; label: string; Icon: IconComponent }[] = [
   { id: 'profile', label: 'Perfil', Icon: UserIcon },
 ]
 
-export default function OwnerSidebar({ activeTab, onTabChange, unreadNotifications }: OwnerSidebarProps) {
+export default function OwnerSidebar({ activeTab, onTabChange, onLogout, unreadNotifications }: OwnerSidebarProps) {
   return (
     <aside className={styles.ownerSidebar}>
       <div className={styles.ownerSidebarHeader}>
@@ -59,7 +60,7 @@ export default function OwnerSidebar({ activeTab, onTabChange, unreadNotificatio
       </nav>
 
       <div className={styles.ownerLogoutWrap}>
-        <button type="button" className={styles.ownerLogoutButton}>
+        <button type="button" className={styles.ownerLogoutButton} onClick={onLogout}>
           <ArrowLeftOnRectangleIcon className={styles.ownerIconSmall} aria-hidden="true" />
           Cerrar sesion
         </button>

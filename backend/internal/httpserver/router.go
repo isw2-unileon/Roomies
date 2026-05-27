@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	apartmenthttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/httpadapter"
@@ -33,13 +34,27 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	if authService == nil || profileService == nil {
 		return r
 	}
-	authhttp.RegisterRoutes(api, authService, cfg.FrontendURL, ExtractBearerToken)
-	profilehttp.RegisterRoutes(api, authService, profileService, ExtractBearerToken)
+	secureCookies := strings.EqualFold(cfg.GinMode, gin.ReleaseMode)
+	authhttp.RegisterPublicRoutes(api, authService, cfg.FrontendURL, secureCookies)
+
+	authenticated := api.Group("")
+	authenticated.Use(requireAuth(authService, profileService))
+	profilehttp.RegisterRoutes(authenticated, profileService)
+
+	tenant := authenticated.Group("")
+	tenant.Use(requireRole("tenant"))
+	owner := authenticated.Group("")
+	owner.Use(requireRole("owner"))
+
 	if apartmentService != nil {
-		apartmenthttp.RegisterRoutes(api, authService, profileService, apartmentService, ExtractBearerToken)
+		apartmenthttp.RegisterPublicRoutes(api, apartmentService)
+		apartmenthttp.RegisterTenantRoutes(tenant, apartmentService)
+		apartmenthttp.RegisterOwnerRoutes(owner, apartmentService)
 	}
 	if applicationService != nil {
-		applicationhttp.RegisterRoutes(api, authService, profileService, applicationService, ExtractBearerToken)
+		applicationhttp.RegisterSharedRoutes(authenticated, applicationService)
+		applicationhttp.RegisterTenantRoutes(tenant, applicationService)
+		applicationhttp.RegisterOwnerRoutes(owner, applicationService)
 	}
 	return r
 }

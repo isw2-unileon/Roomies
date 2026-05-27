@@ -4,8 +4,6 @@ export type UserRole = 'tenant' | 'owner'
 
 export interface AuthResult {
   message?: string
-  accessToken?: string
-  refreshToken?: string
   userId?: string
   role?: UserRole
   needsOnboarding?: boolean
@@ -18,8 +16,6 @@ export interface ProfileStatus {
 
 interface AuthResponseDto {
   message?: string
-  access_token?: string
-  refresh_token?: string
   user_id?: string
   role?: UserRole
   needs_onboarding?: boolean
@@ -40,8 +36,6 @@ interface ProfileStatusResponseDto {
 function authResultFromDto(dto: AuthResponseDto): AuthResult {
   return {
     message: dto.message,
-    accessToken: dto.access_token,
-    refreshToken: dto.refresh_token,
     userId: dto.user_id,
     role: dto.role,
     needsOnboarding: dto.needs_onboarding,
@@ -117,10 +111,7 @@ export async function confirmEmail(input: { tokenHash: string; token: string; ty
 export async function resetPassword(accessToken: string, password: string) {
   const response = await apiFetch('/api/auth/reset-password', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ password }),
   })
   const data = await parseJson<MessageResponseDto>(response)
@@ -130,10 +121,18 @@ export async function resetPassword(accessToken: string, password: string) {
   return data.message
 }
 
-export async function getProfileStatus(accessToken: string): Promise<ProfileStatus> {
-  const response = await apiFetch('/api/profile/status', {
-    headers: { Authorization: `Bearer ${accessToken}` },
+export async function logout() {
+  const response = await apiFetch('/api/auth/logout', {
+    method: 'POST',
   })
+  const data = await parseJson<MessageResponseDto>(response)
+  if (!response.ok) {
+    throw new Error(data.error ?? 'logout failed')
+  }
+}
+
+export async function getProfileStatus(): Promise<ProfileStatus> {
+  const response = await apiFetch('/api/profile/status')
   const data = await parseJson<ProfileStatusResponseDto>(response)
   if (!response.ok) {
     throw new Error(data.error ?? 'profile status failed')

@@ -82,8 +82,8 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /^crear cuenta$/i }))
     expect(fetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({ method: 'POST' }))
     await waitFor(() => {
-      expect(localStorage.getItem('roomies.access_token')).toBe('access-token')
-      expect(localStorage.getItem('roomies.refresh_token')).toBe('refresh-token')
+      expect(localStorage.getItem('roomies.access_token')).toBeNull()
+      expect(localStorage.getItem('roomies.refresh_token')).toBeNull()
       expect(onRegisterSuccess).toHaveBeenCalledWith({ role: 'tenant', needsOnboarding: true })
     })
     expect(await screen.findByText(/cuenta creada correctamente/i)).toBeInTheDocument()

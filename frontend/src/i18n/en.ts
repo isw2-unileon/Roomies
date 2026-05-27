@@ -139,6 +139,7 @@ const en = {
       publish: 'List a flat',
       referTitle: 'Refer a friend',
       referSubtitle: 'Get €50 credit',
+      logout: 'Sign out',
     },
     invite: {
       kicker: 'Share Roomies',

@@ -7,7 +7,6 @@ import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
 import { forgotPassword, login } from '@/services/authService'
-import { saveAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
 
 interface LoginPageProps {
@@ -30,7 +29,6 @@ export default function LoginPage({ onNavigateToRegister, onLoginSuccess }: Logi
 
     try {
       const result = await login({ email, password })
-      saveAuthSession({ accessToken: result.accessToken, refreshToken: result.refreshToken })
 
       onLoginSuccess({ role: result.role, needsOnboarding: result.needsOnboarding })
       showSuccess(result.message ?? t('auth.login.successDefault'))

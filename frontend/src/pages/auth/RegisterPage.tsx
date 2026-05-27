@@ -7,7 +7,6 @@ import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { useNotice } from '@/hooks/useNotice'
 import { register, type UserRole } from '@/services/authService'
-import { saveAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
 
 interface RegisterPageProps {
@@ -61,17 +60,7 @@ export default function RegisterPage({ onNavigateToLogin, onRegisterSuccess }: R
 
     try {
       const result = await register({ email, password, fullName: fullName.trim(), role })
-      const accessToken = result.accessToken?.trim() ?? ''
-      const refreshToken = result.refreshToken?.trim() ?? ''
-
-      if (accessToken) {
-        saveAuthSession({ accessToken, refreshToken })
-
-        onRegisterSuccess({ role: result.role, needsOnboarding: result.needsOnboarding })
-        showSuccess(result.message ?? t('auth.register.successDefault'))
-        return
-      }
-
+      onRegisterSuccess({ role: result.role, needsOnboarding: result.needsOnboarding })
       showSuccess(result.message ?? t('auth.register.successDefault'))
     } catch (error) {
       showError(error instanceof Error ? error.message : t('auth.register.errors.default'))

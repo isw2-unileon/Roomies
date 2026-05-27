@@ -44,6 +44,9 @@ var ErrApplicationAlreadyExists = errors.New("active application already exists"
 // ErrApplicationNotCancelable is returned when application cannot be cancelled.
 var ErrApplicationNotCancelable = errors.New("application is not cancelable")
 
+// ErrInterestedTenantsForbidden is returned when a user cannot view interested tenants.
+var ErrInterestedTenantsForbidden = errors.New("interested tenants are not available for this user")
+
 // Service contains application use cases.
 type Service struct {
 	repo            repository
@@ -127,9 +130,12 @@ func (s *Service) CancelTenantApplication(ctx context.Context, applicationID, te
 }
 
 // ListInterestedTenants returns currently interested tenants for an apartment.
-func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID string) ([]application.InterestedTenant, error) {
+func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID, viewerID, role string) ([]application.InterestedTenant, error) {
 	if strings.TrimSpace(apartmentID) == "" {
 		return nil, errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(viewerID) == "" {
+		return nil, ErrInterestedTenantsForbidden
 	}
 	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, apartmentID)
 	if err != nil {
@@ -137,6 +143,9 @@ func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID string)
 	}
 	if apartmentRow == nil {
 		return nil, ErrApartmentNotFound
+	}
+	if err := authorizeInterestedTenantsViewer(apartmentRow, viewerID, role); err != nil {
+		return nil, err
 	}
 	rules, err := s.apartmentReader.GetApartmentRules(ctx, apartmentID)
 	if err != nil {
@@ -172,6 +181,24 @@ func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID string)
 		})
 	}
 	return result, nil
+}
+
+func authorizeInterestedTenantsViewer(apartmentRow *apartment.Apartment, viewerID, role string) error {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "tenant":
+		status := strings.ToUpper(strings.TrimSpace(apartmentRow.Status))
+		if status == "CLOSED" || status == "HIDDEN" {
+			return ErrApartmentNotFound
+		}
+		return nil
+	case "owner":
+		if strings.TrimSpace(apartmentRow.OwnerID) != strings.TrimSpace(viewerID) {
+			return ErrInterestedTenantsForbidden
+		}
+		return nil
+	default:
+		return ErrInterestedTenantsForbidden
+	}
 }
 
 // ListTenantApplications returns tenant applications with status and compatibility.

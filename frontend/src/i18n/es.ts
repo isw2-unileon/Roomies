@@ -139,6 +139,7 @@ const es = {
       publish: 'Publicar piso',
       referTitle: 'Invita a un amigo',
       referSubtitle: 'Consigue 50 € de crédito',
+      logout: 'Cerrar sesión',
     },
     invite: {
       kicker: 'Comparte Roomies',

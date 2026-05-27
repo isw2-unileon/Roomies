@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 
 import { paths } from '@/routes/paths'
 import { getProfileStatus, type UserRole } from '@/services/authService'
-import { clearAuthSession, getAccessToken } from '@/session/authSession'
+import { clearAuthSession } from '@/session/authSession'
 
 interface ProtectedRoleRouteProps {
   requiredRole: UserRole
@@ -18,15 +18,8 @@ export default function ProtectedRoleRoute({ requiredRole, children }: Protected
     let ignoreResult = false
 
     async function verifyAccess() {
-      const accessToken = getAccessToken()
-      if (!accessToken) {
-        setResolvedRole('')
-        setStatus('blocked')
-        return
-      }
-
       try {
-        const profile = await getProfileStatus(accessToken)
+        const profile = await getProfileStatus()
         if (ignoreResult) {
           return
         }

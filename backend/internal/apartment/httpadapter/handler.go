@@ -10,15 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment"
 	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
-	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
-	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 type handler struct {
-	authService        *authservice.Service
-	profileService     *profileservice.Service
-	apartmentService   *apartmentservice.Service
-	extractBearerToken func(string) (string, error)
+	apartmentService *apartmentservice.Service
 }
 
 type createApartmentRequest struct {
@@ -80,11 +75,21 @@ type apartmentRulesResponse struct {
 	PreferredSchedule      string `json:"preferred_schedule"`
 }
 
-// RegisterRoutes wires apartment endpoints into the API router.
-func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service, extractBearerToken func(string) (string, error)) {
-	h := &handler{authService: authService, profileService: profileService, apartmentService: apartmentService, extractBearerToken: extractBearerToken}
+// RegisterPublicRoutes wires public apartment endpoints into the API router.
+func RegisterPublicRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
+	h := &handler{apartmentService: apartmentService}
 	api.GET("/apartments", h.listAvailableApartments)
+}
+
+// RegisterTenantRoutes wires tenant apartment endpoints into the API router.
+func RegisterTenantRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
+	h := &handler{apartmentService: apartmentService}
 	api.GET("/apartments/:id", h.getApartmentDetail)
+}
+
+// RegisterOwnerRoutes wires owner apartment endpoints into the API router.
+func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
+	h := &handler{apartmentService: apartmentService}
 	api.GET("/owner/apartments", h.listOwnerApartments)
 	api.POST("/apartments", h.createApartment)
 }
@@ -225,19 +230,10 @@ func (h *handler) listOwnerApartments(c *gin.Context) {
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
-	accessToken, err := h.extractBearerToken(c.GetHeader("Authorization"))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return "", "", false
-	}
-	userID, err := h.authService.ResolveUserIDFromAccessToken(c.Request.Context(), accessToken)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return "", "", false
-	}
-	role, err := h.profileService.LookupRoleByUserID(c.Request.Context(), userID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	userID := c.GetString("roomies.user_id")
+	role := c.GetString("roomies.role")
+	if userID == "" || role == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 		return "", "", false
 	}
 	return userID, role, true

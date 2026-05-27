@@ -7,15 +7,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 type handler struct {
-	authService        *authservice.Service
-	profileService     *profileservice.Service
-	extractBearerToken func(string) (string, error)
+	profileService *profileservice.Service
 }
 
 type tenantProfileRequest struct {
@@ -39,28 +36,19 @@ type tenantProfileRequest struct {
 }
 
 // RegisterRoutes wires profile endpoints into the API router.
-func RegisterRoutes(api *gin.RouterGroup, authService *authservice.Service, profileService *profileservice.Service, extractBearerToken func(string) (string, error)) {
-	h := &handler{authService: authService, profileService: profileService, extractBearerToken: extractBearerToken}
+func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service) {
+	h := &handler{profileService: profileService}
 	api.GET("/profile/status", h.status)
 	api.POST("/tenant-profile", h.saveTenantProfile)
 }
 
 func (h *handler) status(c *gin.Context) {
-	accessToken, err := h.extractBearerToken(c.GetHeader("Authorization"))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	userID, role, ok := currentUserAndRole(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 		return
 	}
-	userID, err := h.authService.ResolveUserIDFromAccessToken(c.Request.Context(), accessToken)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return
-	}
-	role, err := h.profileService.LookupRoleByUserID(c.Request.Context(), userID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
+
 	needsTenantProfile, err := h.profileService.NeedsTenantProfile(c.Request.Context(), userID, role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not resolve profile status"})
@@ -96,22 +84,18 @@ func (h *handler) saveTenantProfile(c *gin.Context) {
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
-	accessToken, err := h.extractBearerToken(c.GetHeader("Authorization"))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return "", "", false
-	}
-	userID, err := h.authService.ResolveUserIDFromAccessToken(c.Request.Context(), accessToken)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		return "", "", false
-	}
-	role, err := h.profileService.LookupRoleByUserID(c.Request.Context(), userID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	userID, role, ok := currentUserAndRole(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 		return "", "", false
 	}
 	return userID, role, true
+}
+
+func currentUserAndRole(c *gin.Context) (string, string, bool) {
+	userID := c.GetString("roomies.user_id")
+	role := c.GetString("roomies.role")
+	return userID, role, userID != "" && role != ""
 }
 
 func bindAndValidateTenantProfile(c *gin.Context) (profile.TenantProfileInput, bool) {

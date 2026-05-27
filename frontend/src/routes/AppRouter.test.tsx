@@ -6,12 +6,17 @@ import App from '@/App'
 
 import { paths } from './paths'
 
+const authServiceMock = vi.hoisted(() => ({
+  logout: vi.fn(async () => undefined),
+}))
+
 vi.mock('@/services/tenantService', () => ({
   listTenantApartments: vi.fn(async () => []),
 }))
 
 vi.mock('@/services/authService', () => ({
   getProfileStatus: vi.fn(async () => ({ role: 'tenant', needsOnboarding: false })),
+  logout: authServiceMock.logout,
 }))
 
 function renderAppAt(path: string) {
@@ -22,10 +27,10 @@ function renderAppAt(path: string) {
 describe('AppRouter', () => {
   beforeEach(() => {
     localStorage.clear()
+    authServiceMock.logout.mockClear()
   })
 
   test('renders tenant explore from the tenant explore route', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     renderAppAt(paths.tenantExplore)
 
     expect(await screen.findByRole('heading', { name: /explora pisos/i })).toBeInTheDocument()
@@ -34,10 +39,21 @@ describe('AppRouter', () => {
     expect(within(sidebar).getByRole('navigation', { name: /navegación de inquilino/i })).toBeInTheDocument()
     expect(within(sidebar).queryByRole('combobox', { name: /idioma de la interfaz/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /publicar piso/i })).not.toBeInTheDocument()
+    expect(within(sidebar).getByRole('button', { name: /cerrar sesión/i })).toBeInTheDocument()
+  })
+
+  test('logs out from the tenant sidebar and returns to login', async () => {
+    const user = userEvent.setup()
+    renderAppAt(paths.tenantExplore)
+
+    const sidebar = await screen.findByRole('complementary', { name: /panel de inquilino/i })
+    await user.click(within(sidebar).getByRole('button', { name: /cerrar sesión/i }))
+
+    expect(authServiceMock.logout).toHaveBeenCalledTimes(1)
+    expect(window.location.pathname).toBe(paths.login)
   })
 
   test('renders placeholder tenant pages inside the tenant layout', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     renderAppAt(paths.tenantMessages)
 
     expect(await screen.findByRole('heading', { name: /mensajes/i })).toBeInTheDocument()
@@ -47,7 +63,6 @@ describe('AppRouter', () => {
   })
 
   test('renders language preferences inside the tenant profile page', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     renderAppAt(paths.tenantProfile)
 
     expect(await screen.findByRole('heading', { name: /perfil/i })).toBeInTheDocument()
@@ -63,7 +78,6 @@ describe('AppRouter', () => {
   })
 
   test('tenant sidebar collapse toggle exposes its expanded state', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     const user = userEvent.setup()
     renderAppAt(paths.tenantExplore)
 
@@ -77,7 +91,6 @@ describe('AppRouter', () => {
   })
 
   test('opens a share dialog from the tenant invite card', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     const user = userEvent.setup()
     renderAppAt(paths.tenantExplore)
 
