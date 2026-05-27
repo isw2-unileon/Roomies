@@ -3,6 +3,32 @@
   gap: 1rem;
 }
 
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  color: var(--tenant-primary);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--tenant-primary-strong);
+}
+
+.backLink:focus-visible {
+  outline: 3px solid var(--tenant-primary);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+.backIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .pageHeader {
   display: grid;
   gap: 0.2rem;
