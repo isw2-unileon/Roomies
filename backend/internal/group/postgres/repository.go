@@ -11,14 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Repository stores tenant group data in PostgreSQL.
 type Repository struct {
 	db *pgxpool.Pool
 }
 
+// NewRepository creates a PostgreSQL tenant group repository.
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
+// ListTenantGroups returns the groups related to a tenant.
 func (r *Repository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
 	query, args := buildListTenantGroupsQuery(userID, filters)
 
@@ -44,6 +47,7 @@ func (r *Repository) ListTenantGroups(ctx context.Context, userID string, filter
 	return result, nil
 }
 
+// GetTenantGroupByID returns a group detail when the tenant is related to it.
 func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID string) (*group.Group, error) {
 	const query = `SELECT
 		g.id::text,
@@ -166,6 +170,7 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 	return &item, nil
 }
 
+// CreateGroup inserts a new tenant group.
 func (r *Repository) CreateGroup(ctx context.Context, creatorID string, input group.CreateGroupInput) (string, error) {
 	const query = `INSERT INTO public.groups
 		(created_by, name, description, apartment_id, status)
@@ -193,10 +198,12 @@ func (r *Repository) CreateGroup(ctx context.Context, creatorID string, input gr
 	return id, nil
 }
 
+// AddGroupOwnerMember adds the group creator as accepted owner.
 func (r *Repository) AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error {
 	return r.AddGroupMember(ctx, groupID, creatorID, group.MemberRoleOwner)
 }
 
+// CreatePendingInvitations creates pending invitations for selected tenants.
 func (r *Repository) CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error {
 	const query = `INSERT INTO public.group_invitations
 		(group_id, invited_by, invited_user_id, status)
@@ -221,6 +228,7 @@ func (r *Repository) CreatePendingInvitations(ctx context.Context, groupID, invi
 	return nil
 }
 
+// ListGroupCandidates returns tenant profiles that can be invited to groups.
 func (r *Repository) ListGroupCandidates(ctx context.Context, currentUserID string, filters group.CandidateFilters) ([]group.Candidate, error) {
 	query, args := buildListGroupCandidatesQuery(currentUserID, filters)
 
@@ -262,6 +270,7 @@ func (r *Repository) ListGroupCandidates(ctx context.Context, currentUserID stri
 	return result, nil
 }
 
+// GetApartmentCapacity returns the available spots for an apartment.
 func (r *Repository) GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error) {
 	const query = `SELECT available_spots
 	FROM public.apartments
@@ -279,6 +288,7 @@ func (r *Repository) GetApartmentCapacity(ctx context.Context, apartmentID strin
 	return availableSpots, nil
 }
 
+// CountAcceptedMembersAndPendingInvitations counts accepted members and pending invitations.
 func (r *Repository) CountAcceptedMembersAndPendingInvitations(ctx context.Context, groupID string) (int, error) {
 	const query = `SELECT
 		(
@@ -303,6 +313,7 @@ func (r *Repository) CountAcceptedMembersAndPendingInvitations(ctx context.Conte
 	return total, nil
 }
 
+// GetInvitationForUser returns an invitation that belongs to the given tenant.
 func (r *Repository) GetInvitationForUser(ctx context.Context, invitationID, userID string) (*group.Invitation, error) {
 	const query = `SELECT
 		gi.id::text,
@@ -335,6 +346,7 @@ func (r *Repository) GetInvitationForUser(ctx context.Context, invitationID, use
 	return &item, nil
 }
 
+// AcceptInvitation marks a pending invitation as accepted.
 func (r *Repository) AcceptInvitation(ctx context.Context, invitationID, userID string) error {
 	const query = `UPDATE public.group_invitations
 	SET status = 'ACCEPTED',
@@ -354,6 +366,7 @@ func (r *Repository) AcceptInvitation(ctx context.Context, invitationID, userID 
 	return nil
 }
 
+// RejectInvitation marks a pending invitation as rejected.
 func (r *Repository) RejectInvitation(ctx context.Context, invitationID, userID string) error {
 	const query = `UPDATE public.group_invitations
 	SET status = 'REJECTED',
@@ -373,6 +386,7 @@ func (r *Repository) RejectInvitation(ctx context.Context, invitationID, userID 
 	return nil
 }
 
+// AddGroupMember adds or restores a tenant as accepted group member.
 func (r *Repository) AddGroupMember(ctx context.Context, groupID, userID, role string) error {
 	const query = `INSERT INTO public.group_members
 		(group_id, user_id, role, status, joined_at)
@@ -391,6 +405,7 @@ func (r *Repository) AddGroupMember(ctx context.Context, groupID, userID, role s
 	return nil
 }
 
+// IsGroupCreator checks whether the tenant created the group.
 func (r *Repository) IsGroupCreator(ctx context.Context, groupID, userID string) (bool, error) {
 	const query = `SELECT EXISTS (
 		SELECT 1
@@ -407,6 +422,7 @@ func (r *Repository) IsGroupCreator(ctx context.Context, groupID, userID string)
 	return exists, nil
 }
 
+// UpdateGroupApartment assigns or removes the apartment linked to a group.
 func (r *Repository) UpdateGroupApartment(ctx context.Context, groupID string, apartmentID *string) error {
 	const query = `UPDATE public.groups
 	SET apartment_id = $2
@@ -423,6 +439,7 @@ func (r *Repository) UpdateGroupApartment(ctx context.Context, groupID string, a
 	return nil
 }
 
+// FilterExistingTenantIDs keeps only user IDs that belong to tenant users.
 func (r *Repository) FilterExistingTenantIDs(ctx context.Context, userIDs []string) ([]string, error) {
 	if len(userIDs) == 0 {
 		return []string{}, nil
@@ -601,11 +618,6 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 	}
 
 	return result, nil
-}
-
-type tenantGroupsQuery struct {
-	query string
-	args  []interface{}
 }
 
 func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) (string, []interface{}) {

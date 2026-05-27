@@ -1,29 +1,47 @@
 package group
 
 const (
-	StatusForming  = "FORMING"
-	StatusReady    = "READY"
-	StatusApplied  = "APPLIED"
+	// StatusForming indicates that the group is still looking for members.
+	StatusForming = "FORMING"
+	// StatusReady indicates that the group is ready to apply to an apartment.
+	StatusReady = "READY"
+	// StatusApplied indicates that the group has already applied to an apartment.
+	StatusApplied = "APPLIED"
+	// StatusAccepted indicates that the group application was accepted.
 	StatusAccepted = "ACCEPTED"
+	// StatusRejected indicates that the group application was rejected.
 	StatusRejected = "REJECTED"
-	StatusClosed   = "CLOSED"
+	// StatusClosed indicates that the group is no longer active.
+	StatusClosed = "CLOSED"
 
-	MemberRoleOwner  = "owner"
+	// MemberRoleOwner identifies the group creator.
+	MemberRoleOwner = "owner"
+	// MemberRoleMember identifies a regular accepted group member.
 	MemberRoleMember = "member"
 
+	// MemberStatusAccepted indicates that the user belongs to the group.
 	MemberStatusAccepted = "ACCEPTED"
-	MemberStatusLeft     = "LEFT"
+	// MemberStatusLeft indicates that the user left the group.
+	MemberStatusLeft = "LEFT"
 
-	InvitationStatusPending  = "PENDING"
+	// InvitationStatusPending indicates that the invitation has not been answered.
+	InvitationStatusPending = "PENDING"
+	// InvitationStatusAccepted indicates that the invitation was accepted.
 	InvitationStatusAccepted = "ACCEPTED"
+	// InvitationStatusRejected indicates that the invitation was rejected.
 	InvitationStatusRejected = "REJECTED"
-	InvitationStatusExpired  = "EXPIRED"
+	// InvitationStatusExpired indicates that the invitation expired.
+	InvitationStatusExpired = "EXPIRED"
 
-	UserRelationCreator           = "creator"
-	UserRelationMember            = "member"
+	// UserRelationCreator indicates that the current user created the group.
+	UserRelationCreator = "creator"
+	// UserRelationMember indicates that the current user is an accepted member.
+	UserRelationMember = "member"
+	// UserRelationPendingInvitation indicates that the current user has a pending invitation.
 	UserRelationPendingInvitation = "pending_invitation"
 )
 
+// CreateGroupInput contains the data required to create a tenant group.
 type CreateGroupInput struct {
 	Name           string
 	Description    string
@@ -31,10 +49,12 @@ type CreateGroupInput struct {
 	InvitedUserIDs []string
 }
 
+// UpdateGroupApartmentInput contains the apartment assignment update for a group.
 type UpdateGroupApartmentInput struct {
 	ApartmentID string
 }
 
+// ListGroupsFilters contains the filters used to list tenant groups.
 type ListGroupsFilters struct {
 	Search       string
 	Status       string
@@ -43,11 +63,13 @@ type ListGroupsFilters struct {
 	SortBy       string
 }
 
+// CandidateFilters contains the filters used to search tenant candidates.
 type CandidateFilters struct {
 	Search     string
 	University string
 }
 
+// Group represents a tenant group with members, invitations and optional apartment.
 type Group struct {
 	ID                      string
 	Name                    string
@@ -66,6 +88,7 @@ type Group struct {
 	PendingInvitations      []Invitation
 }
 
+// Apartment represents the apartment assigned to a group.
 type Apartment struct {
 	ID             string
 	Title          string
@@ -78,6 +101,7 @@ type Apartment struct {
 	ImageURL       string
 }
 
+// Member represents an accepted group member.
 type Member struct {
 	UserID        string
 	Name          string
@@ -99,6 +123,7 @@ type Member struct {
 	IsCurrentUser bool
 }
 
+// Invitation represents a pending or answered group invitation.
 type Invitation struct {
 	ID            string
 	GroupID       string
@@ -110,6 +135,7 @@ type Invitation struct {
 	User          Candidate
 }
 
+// Candidate represents a tenant profile that can be invited to a group.
 type Candidate struct {
 	UserID        string
 	Name          string

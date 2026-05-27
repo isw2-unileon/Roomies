@@ -26,24 +26,38 @@ type repository interface {
 	FilterExistingTenantIDs(ctx context.Context, userIDs []string) ([]string, error)
 }
 
-var (
-	ErrTenantRequired       = errors.New("tenant role is required")
-	ErrGroupNotFound        = errors.New("group not found")
-	ErrForbidden            = errors.New("forbidden")
-	ErrInvitationNotFound   = errors.New("invitation not found")
-	ErrInvitationNotPending = errors.New("invitation is not pending")
-	ErrApartmentFull        = errors.New("group exceeds apartment available spots")
-	ErrNoValidInvitedUsers  = errors.New("no valid invited users found")
-)
+// ErrTenantRequired is returned when the authenticated user is not a tenant.
+var ErrTenantRequired = errors.New("tenant role is required")
 
+// ErrGroupNotFound is returned when the requested group does not exist or is not visible to the user.
+var ErrGroupNotFound = errors.New("group not found")
+
+// ErrForbidden is returned when the user cannot perform the requested group action.
+var ErrForbidden = errors.New("forbidden")
+
+// ErrInvitationNotFound is returned when the requested invitation does not exist for the user.
+var ErrInvitationNotFound = errors.New("invitation not found")
+
+// ErrInvitationNotPending is returned when the invitation has already been answered.
+var ErrInvitationNotPending = errors.New("invitation is not pending")
+
+// ErrApartmentFull is returned when the group exceeds the apartment available spots.
+var ErrApartmentFull = errors.New("group exceeds apartment available spots")
+
+// ErrNoValidInvitedUsers is returned when no invited users are valid tenants.
+var ErrNoValidInvitedUsers = errors.New("no valid invited users found")
+
+// Service contains tenant group business logic.
 type Service struct {
 	repo repository
 }
 
+// NewService creates a tenant group service.
 func NewService(repo repository) *Service {
 	return &Service{repo: repo}
 }
 
+// ListTenantGroups returns the groups related to the authenticated tenant.
 func (s *Service) ListTenantGroups(ctx context.Context, userID, role string, filters group.ListGroupsFilters) ([]group.Group, error) {
 	if err := validateTenant(userID, role); err != nil {
 		return nil, err
@@ -61,6 +75,7 @@ func (s *Service) ListTenantGroups(ctx context.Context, userID, role string, fil
 	return s.repo.ListTenantGroups(ctx, strings.TrimSpace(userID), filters)
 }
 
+// GetTenantGroupByID returns a group detail if the tenant is related to it.
 func (s *Service) GetTenantGroupByID(ctx context.Context, groupID, userID, role string) (*group.Group, error) {
 	if err := validateTenant(userID, role); err != nil {
 		return nil, err
@@ -80,6 +95,7 @@ func (s *Service) GetTenantGroupByID(ctx context.Context, groupID, userID, role 
 	return result, nil
 }
 
+// CreateGroup creates a group, adds the creator as owner and creates pending invitations.
 func (s *Service) CreateGroup(ctx context.Context, creatorID, role string, input group.CreateGroupInput) (string, error) {
 	if err := validateTenant(creatorID, role); err != nil {
 		return "", err
@@ -125,6 +141,7 @@ func (s *Service) CreateGroup(ctx context.Context, creatorID, role string, input
 	return groupID, nil
 }
 
+// ListGroupCandidates returns tenant profiles that can be invited to groups.
 func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role string, filters group.CandidateFilters) ([]group.Candidate, error) {
 	if err := validateTenant(currentUserID, role); err != nil {
 		return nil, err
@@ -136,6 +153,7 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 	return s.repo.ListGroupCandidates(ctx, strings.TrimSpace(currentUserID), filters)
 }
 
+// AcceptInvitation accepts a pending group invitation and adds the tenant as member.
 func (s *Service) AcceptInvitation(ctx context.Context, invitationID, userID, role string) error {
 	if err := validateTenant(userID, role); err != nil {
 		return err
@@ -180,6 +198,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, invitationID, userID, ro
 	return s.repo.AddGroupMember(ctx, invitation.GroupID, strings.TrimSpace(userID), group.MemberRoleMember)
 }
 
+// RejectInvitation rejects a pending group invitation.
 func (s *Service) RejectInvitation(ctx context.Context, invitationID, userID, role string) error {
 	if err := validateTenant(userID, role); err != nil {
 		return err
@@ -202,6 +221,7 @@ func (s *Service) RejectInvitation(ctx context.Context, invitationID, userID, ro
 	return s.repo.RejectInvitation(ctx, strings.TrimSpace(invitationID), strings.TrimSpace(userID))
 }
 
+// UpdateGroupApartment assigns or removes the apartment linked to a group.
 func (s *Service) UpdateGroupApartment(ctx context.Context, groupID, userID, role string, input group.UpdateGroupApartmentInput) error {
 	if err := validateTenant(userID, role); err != nil {
 		return err

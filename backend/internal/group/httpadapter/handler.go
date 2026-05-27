@@ -1,6 +1,7 @@
 package httpadapter
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -106,6 +107,7 @@ type candidateResponse struct {
 	WorkSchedule  string `json:"work_schedule"`
 }
 
+// RegisterTenantRoutes registers tenant group HTTP routes.
 func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Service) {
 	h := &handler{groupService: groupService}
 
@@ -216,26 +218,26 @@ func (h *handler) listGroupCandidates(c *gin.Context) {
 }
 
 func (h *handler) acceptGroupInvitation(c *gin.Context) {
-	userID, role, ok := h.resolveUserAndRole(c)
-	if !ok {
-		return
-	}
-
-	invitationID := strings.TrimSpace(c.Param("id"))
-	if invitationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invitation id is required"})
-		return
-	}
-
-	if err := h.groupService.AcceptInvitation(c.Request.Context(), invitationID, userID, role); err != nil {
-		h.handleServiceError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "group invitation accepted"})
+	h.respondToGroupInvitation(
+		c,
+		h.groupService.AcceptInvitation,
+		"group invitation accepted",
+	)
 }
 
 func (h *handler) rejectGroupInvitation(c *gin.Context) {
+	h.respondToGroupInvitation(
+		c,
+		h.groupService.RejectInvitation,
+		"group invitation rejected",
+	)
+}
+
+func (h *handler) respondToGroupInvitation(
+	c *gin.Context,
+	action func(ctx context.Context, invitationID, userID, role string) error,
+	successMessage string,
+) {
 	userID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
 		return
@@ -247,12 +249,12 @@ func (h *handler) rejectGroupInvitation(c *gin.Context) {
 		return
 	}
 
-	if err := h.groupService.RejectInvitation(c.Request.Context(), invitationID, userID, role); err != nil {
+	if err := action(c.Request.Context(), invitationID, userID, role); err != nil {
 		h.handleServiceError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "group invitation rejected"})
+	c.JSON(http.StatusOK, gin.H{"message": successMessage})
 }
 
 func (h *handler) updateGroupApartment(c *gin.Context) {
