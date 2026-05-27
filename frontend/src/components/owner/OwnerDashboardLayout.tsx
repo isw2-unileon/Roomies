@@ -1,23 +1,24 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import OwnerSidebar from '@/components/owner/OwnerSidebar'
-import OwnerTopBar from '@/components/owner/OwnerTopBar'
-import { mockOwnerProfile } from '@/mocks/ownerData'
 import { paths } from '@/routes/paths'
 import { logout } from '@/services/authService'
 import styles from '@/styles/OwnerDashboard.module.css'
-import type { OwnerNavTab } from '@/types/owner'
+
+const UNREAD_MESSAGES = 1
+const UNREAD_NOTIFICATIONS = 3
 
 interface OwnerDashboardLayoutProps {
-  activeTab: OwnerNavTab
-  onTabChange: (tab: OwnerNavTab) => void
   children: ReactNode
 }
 
-export default function OwnerDashboardLayout({ activeTab, onTabChange, children }: OwnerDashboardLayoutProps) {
+export default function OwnerDashboardLayout({ children }: OwnerDashboardLayoutProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const unreadMessages = 1
-  const unreadNotifications = 3
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   async function handleLogout() {
     try {
@@ -28,38 +29,71 @@ export default function OwnerDashboardLayout({ activeTab, onTabChange, children 
   }
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
+      <a href="#owner-main" className={styles.skipLink}>
+        {t('ownerDashboard.layout.skipToContent')}
+      </a>
+
       <div className={styles.layout}>
         <div className={styles.desktopSidebar}>
           <OwnerSidebar
-            activeTab={activeTab}
-            onTabChange={onTabChange}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapsed={() => setIsSidebarCollapsed((value) => !value)}
             onLogout={handleLogout}
-            unreadNotifications={unreadNotifications}
+            unreadMessages={UNREAD_MESSAGES}
+            unreadNotifications={UNREAD_NOTIFICATIONS}
           />
         </div>
 
         <div className={styles.mainColumn}>
-          <OwnerTopBar
-            profile={mockOwnerProfile}
-            unreadMessages={unreadMessages}
-            unreadNotifications={unreadNotifications}
-          />
+          <header className={styles.utilityBar}>
+            <button
+              type="button"
+              className={styles.mobileMenuButton}
+              aria-label={t('ownerDashboard.sidebar.menu')}
+              aria-expanded={isMobileSidebarOpen}
+              aria-controls="owner-mobile-sidebar"
+              onClick={() => setIsMobileSidebarOpen(true)}
+            >
+              <Bars3Icon className={styles.ownerIconMedium} aria-hidden="true" />
+            </button>
+          </header>
 
-          <div className={styles.content}>
-            <div className={styles.mobileSidebar}>
-              <OwnerSidebar
-                activeTab={activeTab}
-                onTabChange={onTabChange}
-                onLogout={handleLogout}
-                unreadNotifications={unreadNotifications}
-              />
-            </div>
-
+          <main id="owner-main" className={styles.content}>
             {children}
-          </div>
+          </main>
         </div>
       </div>
-    </main>
+
+      {isMobileSidebarOpen ? (
+        <div className={styles.mobileLayer} role="presentation">
+          <button
+            type="button"
+            className={styles.mobileBackdrop}
+            aria-label={t('ownerDashboard.layout.closeMenu')}
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          <div id="owner-mobile-sidebar" className={styles.mobilePanel}>
+            <button
+              type="button"
+              className={styles.mobileCloseButton}
+              aria-label={t('ownerDashboard.layout.closeMenu')}
+              onClick={() => setIsMobileSidebarOpen(false)}
+            >
+              <XMarkIcon className={styles.ownerIconMedium} aria-hidden="true" />
+            </button>
+            <OwnerSidebar
+              isCollapsed={false}
+              showCollapseToggle={false}
+              onToggleCollapsed={() => undefined}
+              onNavigate={() => setIsMobileSidebarOpen(false)}
+              onLogout={handleLogout}
+              unreadMessages={UNREAD_MESSAGES}
+              unreadNotifications={UNREAD_NOTIFICATIONS}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }

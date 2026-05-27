@@ -1,6 +1,6 @@
 export type PropertyStatus = 'open' | 'closed' | 'full'
 export type MatchStatus = 'pending' | 'approved' | 'rejected'
-export type OwnerNavTab = 'explore' | 'properties' | 'requests' | 'messages' | 'notifications' | 'profile'
+export type OwnerNavTab = 'properties' | 'applications' | 'messages' | 'notifications' | 'profile'
 export type OwnerIssueStatus = 'pending' | 'in_progress' | 'resolved'
 
 export interface OwnerProperty {
