@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useNotice } from '@/hooks/useNotice'
 import { createApartment } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
+import LocationPicker from '@/components/owner/LocationPicker'
+import type { Location } from '@/components/owner/LocationPicker'
 
 interface PublishValues {
   title: string
@@ -13,6 +15,8 @@ interface PublishValues {
   description: string
   availableFrom: string
   imageUrls: string
+  latitude?: number
+  longitude?: number
 }
 
 const initialValues: PublishValues = {
@@ -34,6 +38,16 @@ export default function OwnerPropertyPublishForm() {
 
   function updateField<K extends keyof PublishValues>(key: K, value: PublishValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function handleLocationSelect(location: Location) {
+    setValues((prev) => ({
+      ...prev,
+      address: location.address || prev.address,
+      area: location.zone || prev.area,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }))
   }
 
   function extractImageURLs(raw: string) {
@@ -86,6 +100,8 @@ export default function OwnerPropertyPublishForm() {
         baseRent: parsedBaseRent,
         availableFrom: values.availableFrom || '',
         imageUrls: parsedImageURLs,
+        latitude: values.latitude,
+        longitude: values.longitude,
       })
       showSuccess(result.message ?? 'Piso publicado correctamente.')
       setValues(initialValues)
@@ -115,6 +131,11 @@ export default function OwnerPropertyPublishForm() {
               required
             />
           </label>
+
+          <div className={`${styles.field} ${styles.full}`}>
+            <span className={styles.label}>Ubicacion en el mapa</span>
+            <LocationPicker onLocationSelect={handleLocationSelect} />
+          </div>
 
           <label className={styles.field}>
             <span className={styles.label}>Direccion</span>

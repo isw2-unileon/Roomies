@@ -16,7 +16,11 @@ import (
 	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
+
+	geocodenominatim "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/nominatim"
+
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpserver"
+
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/database"
 	profilepostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/postgres"
@@ -59,9 +63,12 @@ func main() {
 			apartmentImageSigner = storageClient
 		}
 	}
+
 	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo)
 	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner, profileRepo, applicationService)
-	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService)
+	geocodeService := geocodenominatim.NewService()
+	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, geocodeService)
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,

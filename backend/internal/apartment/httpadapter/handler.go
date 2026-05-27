@@ -26,35 +26,41 @@ type createApartmentRequest struct {
 	BaseRent      int      `json:"base_rent"`
 	AvailableFrom string   `json:"available_from"`
 	ImageURLs     []string `json:"image_urls"`
+	Latitude      float64  `json:"latitude"`
+	Longitude     float64  `json:"longitude"`
 }
 
 type ownerApartmentResponse struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	Address       string `json:"address"`
-	Area          string `json:"area"`
-	TotalSpots    int    `json:"total_spots"`
-	OccupiedSpots int    `json:"occupied_spots"`
-	BaseRent      int    `json:"base_rent"`
-	Status        string `json:"status"`
-	CreatedAt     string `json:"created_at"`
-	ImageURL      string `json:"image_url"`
+	ID            string  `json:"id"`
+	Title         string  `json:"title"`
+	Address       string  `json:"address"`
+	Area          string  `json:"area"`
+	TotalSpots    int     `json:"total_spots"`
+	OccupiedSpots int     `json:"occupied_spots"`
+	BaseRent      int     `json:"base_rent"`
+	Status        string  `json:"status"`
+	CreatedAt     string  `json:"created_at"`
+	ImageURL      string  `json:"image_url"`
+	Latitude      float64 `json:"latitude"`
+	Longitude     float64 `json:"longitude"`
 }
 
 type tenantApartmentResponse struct {
-	ID             string `json:"id"`
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Address        string `json:"address"`
-	Area           string `json:"area"`
-	TotalSpots     int    `json:"total_spots"`
-	AvailableSpots int    `json:"available_spots"`
-	BaseRent       int    `json:"base_rent"`
-	Status         string `json:"status"`
-	CreatedAt      string `json:"created_at"`
-	ImageURL       string `json:"image_url"`
-	OwnerName      string `json:"owner_name"`
-	Compatibility  int    `json:"compatibility_score"`
+	ID             string  `json:"id"`
+	Title          string  `json:"title"`
+	Description    string  `json:"description"`
+	Address        string  `json:"address"`
+	Area           string  `json:"area"`
+	TotalSpots     int     `json:"total_spots"`
+	AvailableSpots int     `json:"available_spots"`
+	BaseRent       int     `json:"base_rent"`
+	Status         string  `json:"status"`
+	CreatedAt      string  `json:"created_at"`
+	ImageURL       string  `json:"image_url"`
+	OwnerName      string  `json:"owner_name"`
+	Compatibility  int     `json:"compatibility_score"`
+	Latitude       float64 `json:"latitude"`
+	Longitude      float64 `json:"longitude"`
 }
 
 type tenantApartmentDetailResponse struct {
@@ -289,6 +295,8 @@ func apartmentInputFromRequest(request createApartmentRequest) apartment.CreateA
 		BaseRent:      request.BaseRent,
 		AvailableFrom: request.AvailableFrom,
 		ImageURLs:     request.ImageURLs,
+		Latitude:      request.Latitude,
+		Longitude:     request.Longitude,
 	}
 }
 
@@ -323,6 +331,8 @@ func ownerApartmentResponses(apartments []apartment.Apartment) []ownerApartmentR
 			Status:        item.Status,
 			CreatedAt:     item.CreatedAt,
 			ImageURL:      item.ImageURL,
+			Latitude:      item.Latitude,
+			Longitude:     item.Longitude,
 		})
 	}
 	return responses
@@ -345,6 +355,8 @@ func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmen
 			ImageURL:       item.ImageURL,
 			OwnerName:      item.OwnerName,
 			Compatibility:  0,
+			Latitude:       item.Latitude,
+			Longitude:      item.Longitude,
 		})
 	}
 	return responses

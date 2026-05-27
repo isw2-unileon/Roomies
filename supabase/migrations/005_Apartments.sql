@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS apartments (
     available_spots INT NOT NULL,
     base_rent INT NOT NULL,
     current_rent INT NOT NULL,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     status TEXT NOT NULL CHECK (
         status IN (
             'AVAILABLE',

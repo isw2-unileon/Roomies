@@ -40,9 +40,9 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID string, input 
 	}()
 
 	const insertApartmentSQL = `INSERT INTO public.apartments
-		(owner_id, title, description, address, area, total_spots, occupied_spots, available_spots, base_rent, current_rent, status)
+		(owner_id, title, description, address, area, total_spots, occupied_spots, available_spots, base_rent, current_rent, status, latitude, longitude)
 	VALUES
-		($1, $2, $3, $4, $5, $6, 0, $6, $7, $7, $8)
+		($1, $2, $3, $4, $5, $6, 0, $6, $7, $7, $8, $9, $10)
 	RETURNING id`
 
 	var apartmentID string
@@ -57,6 +57,8 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID string, input 
 		input.TotalSpots,
 		input.BaseRent,
 		input.Status,
+		input.Latitude,
+		input.Longitude,
 	).Scan(&apartmentID); err != nil {
 		return "", 0, fmt.Errorf("insert apartment: %w", err)
 	}
@@ -101,7 +103,9 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 			WHERE ap.apartment_id = a.id
 			ORDER BY ap.position ASC, ap.created_at ASC
 			LIMIT 1
-		), '') AS image_url
+		), '') AS image_url,
+		COALESCE(a.latitude, 0),
+		COALESCE(a.longitude, 0)
 	FROM public.apartments a
 	WHERE a.owner_id = $1
 	ORDER BY a.created_at DESC`
@@ -126,6 +130,8 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 			&item.Status,
 			&item.CreatedAt,
 			&item.ImageURL,
+			&item.Latitude,
+			&item.Longitude,
 		); err != nil {
 			return nil, fmt.Errorf("scan owner apartments: %w", err)
 		}
@@ -161,6 +167,8 @@ func (r *Repository) ListAvailableApartments(ctx context.Context, filters apartm
 			&item.Status,
 			&item.CreatedAt,
 			&item.ImageURL,
+			&item.Latitude,
+			&item.Longitude,
 		); err != nil {
 			return nil, fmt.Errorf("scan available apartments: %w", err)
 		}
@@ -195,7 +203,9 @@ func buildListAvailableApartmentsQuery(filters apartment.ListApartmentsFilters) 
 			WHERE ap.apartment_id = a.id
 			ORDER BY ap.position ASC, ap.created_at ASC
 			LIMIT 1
-		), '') AS image_url
+		), '') AS image_url,
+		COALESCE(a.latitude, 0),
+		COALESCE(a.longitude, 0)
 	FROM public.apartments a
 	WHERE 1=1`
 
@@ -298,7 +308,9 @@ func (r *Repository) GetApartmentByID(ctx context.Context, apartmentID string) (
 			WHERE ap.apartment_id = a.id
 			ORDER BY ap.position ASC, ap.created_at ASC
 			LIMIT 1
-		), '') AS image_url
+		), '') AS image_url,
+		COALESCE(a.latitude, 0),
+		COALESCE(a.longitude, 0)
 	FROM public.apartments a
 	LEFT JOIN public.users u ON u.id = a.owner_id
 	WHERE a.id = $1`
@@ -318,6 +330,8 @@ func (r *Repository) GetApartmentByID(ctx context.Context, apartmentID string) (
 		&item.Status,
 		&item.CreatedAt,
 		&item.ImageURL,
+		&item.Latitude,
+		&item.Longitude,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
