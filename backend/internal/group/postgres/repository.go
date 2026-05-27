@@ -1,0 +1,871 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/group"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Repository struct {
+	db *pgxpool.Pool
+}
+
+func NewRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db}
+}
+
+func (r *Repository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
+	query, args := buildListTenantGroupsQuery(userID, filters)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list tenant groups: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]group.Group, 0)
+	for rows.Next() {
+		item, err := scanGroupSummary(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tenant groups: %w", err)
+	}
+
+	return result, nil
+}
+
+func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID string) (*group.Group, error) {
+	const query = `SELECT
+		g.id::text,
+		COALESCE(g.name, ''),
+		COALESCE(g.description, ''),
+		g.status,
+		g.created_by::text,
+		TO_CHAR(g.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		CASE
+			WHEN g.created_by = $2 THEN 'creator'
+			WHEN EXISTS (
+				SELECT 1
+				FROM public.group_members gm
+				WHERE gm.group_id = g.id
+					AND gm.user_id = $2
+					AND gm.status = 'ACCEPTED'
+			) THEN 'member'
+			WHEN EXISTS (
+				SELECT 1
+				FROM public.group_invitations gi
+				WHERE gi.group_id = g.id
+					AND gi.invited_user_id = $2
+					AND gi.status = 'PENDING'
+			) THEN 'pending_invitation'
+			ELSE ''
+		END AS user_relation,
+		COALESCE((
+			SELECT gi.id::text
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.invited_user_id = $2
+				AND gi.status = 'PENDING'
+			ORDER BY gi.created_at DESC
+			LIMIT 1
+		), '') AS invitation_id,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS accepted_members_count,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.status = 'PENDING'
+		), 0)::int AS pending_invitations_count,
+		COALESCE((
+			SELECT ROUND(AVG(tp.budget_min))::int
+			FROM public.group_members gm
+			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS average_budget_min,
+		COALESCE((
+			SELECT ROUND(AVG(tp.budget_max))::int
+			FROM public.group_members gm
+			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS average_budget_max,
+		COALESCE(a.id::text, '') AS apartment_id,
+		COALESCE(a.title, '') AS apartment_title,
+		COALESCE(a.address, '') AS apartment_address,
+		COALESCE(a.area, '') AS apartment_area,
+		COALESCE(a.total_spots, 0) AS total_spots,
+		COALESCE(a.occupied_spots, 0) AS occupied_spots,
+		COALESCE(a.available_spots, 0) AS available_spots,
+		COALESCE(a.base_rent, 0) AS base_rent,
+		COALESCE((
+			SELECT ap.url
+			FROM public.apartment_photos ap
+			WHERE ap.apartment_id = a.id
+			ORDER BY ap.position ASC, ap.created_at ASC
+			LIMIT 1
+		), '') AS image_url
+	FROM public.groups g
+	LEFT JOIN public.apartments a ON a.id = g.apartment_id
+	WHERE g.id = $1
+		AND (
+			g.created_by = $2
+			OR EXISTS (
+				SELECT 1
+				FROM public.group_members gm
+				WHERE gm.group_id = g.id
+					AND gm.user_id = $2
+					AND gm.status = 'ACCEPTED'
+			)
+			OR EXISTS (
+				SELECT 1
+				FROM public.group_invitations gi
+				WHERE gi.group_id = g.id
+					AND gi.invited_user_id = $2
+					AND gi.status = 'PENDING'
+			)
+		)`
+
+	row := r.db.QueryRow(ctx, query, groupID, userID)
+
+	item, err := scanGroupSummary(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get tenant group by id: %w", err)
+	}
+
+	members, err := r.listGroupMembers(ctx, groupID, userID)
+	if err != nil {
+		return nil, err
+	}
+	item.Members = members
+
+	invitations, err := r.listPendingInvitations(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	item.PendingInvitations = invitations
+
+	return &item, nil
+}
+
+func (r *Repository) CreateGroup(ctx context.Context, creatorID string, input group.CreateGroupInput) (string, error) {
+	const query = `INSERT INTO public.groups
+		(created_by, name, description, apartment_id, status)
+	VALUES
+		($1, $2, $3, $4, 'FORMING')
+	RETURNING id::text`
+
+	var apartmentID interface{}
+	if strings.TrimSpace(input.ApartmentID) != "" {
+		apartmentID = strings.TrimSpace(input.ApartmentID)
+	}
+
+	var id string
+	if err := r.db.QueryRow(
+		ctx,
+		query,
+		creatorID,
+		input.Name,
+		nullIfEmpty(input.Description),
+		apartmentID,
+	).Scan(&id); err != nil {
+		return "", fmt.Errorf("create group: %w", err)
+	}
+
+	return id, nil
+}
+
+func (r *Repository) AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error {
+	return r.AddGroupMember(ctx, groupID, creatorID, group.MemberRoleOwner)
+}
+
+func (r *Repository) CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error {
+	const query = `INSERT INTO public.group_invitations
+		(group_id, invited_by, invited_user_id, status)
+	SELECT $1, $2, $3, 'PENDING'
+	WHERE NOT EXISTS (
+		SELECT 1
+		FROM public.group_invitations gi
+		WHERE gi.group_id = $1
+			AND gi.invited_user_id = $3
+			AND gi.status = 'PENDING'
+	)`
+
+	for _, invitedUserID := range invitedUserIDs {
+		if strings.TrimSpace(invitedUserID) == "" {
+			continue
+		}
+		if _, err := r.db.Exec(ctx, query, groupID, invitedBy, invitedUserID); err != nil {
+			return fmt.Errorf("create pending invitation: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *Repository) ListGroupCandidates(ctx context.Context, currentUserID string, filters group.CandidateFilters) ([]group.Candidate, error) {
+	query, args := buildListGroupCandidatesQuery(currentUserID, filters)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list group candidates: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]group.Candidate, 0)
+	for rows.Next() {
+		var item group.Candidate
+		if err := rows.Scan(
+			&item.UserID,
+			&item.Name,
+			&item.Email,
+			&item.AvatarURL,
+			&item.Age,
+			&item.University,
+			&item.BudgetMin,
+			&item.BudgetMax,
+			&item.PreferredArea,
+			&item.MoveInDate,
+			&item.Pets,
+			&item.Smoking,
+			&item.NoiseLevel,
+			&item.Cleanliness,
+			&item.WorkSchedule,
+		); err != nil {
+			return nil, fmt.Errorf("scan group candidate: %w", err)
+		}
+		result = append(result, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate group candidates: %w", err)
+	}
+
+	return result, nil
+}
+
+func (r *Repository) GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error) {
+	const query = `SELECT available_spots
+	FROM public.apartments
+	WHERE id = $1
+		AND status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED')`
+
+	var availableSpots int
+	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&availableSpots); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, fmt.Errorf("apartment not found or not available")
+		}
+		return 0, fmt.Errorf("get apartment capacity: %w", err)
+	}
+
+	return availableSpots, nil
+}
+
+func (r *Repository) CountAcceptedMembersAndPendingInvitations(ctx context.Context, groupID string) (int, error) {
+	const query = `SELECT
+		(
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = $1
+				AND gm.status = 'ACCEPTED'
+		)
+		+
+		(
+			SELECT COUNT(*)
+			FROM public.group_invitations gi
+			WHERE gi.group_id = $1
+				AND gi.status = 'PENDING'
+		) AS total_people`
+
+	var total int
+	if err := r.db.QueryRow(ctx, query, groupID).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count group people: %w", err)
+	}
+
+	return total, nil
+}
+
+func (r *Repository) GetInvitationForUser(ctx context.Context, invitationID, userID string) (*group.Invitation, error) {
+	const query = `SELECT
+		gi.id::text,
+		gi.group_id::text,
+		gi.invited_by::text,
+		gi.invited_user_id::text,
+		gi.status,
+		TO_CHAR(gi.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE(TO_CHAR(gi.responded_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '') AS responded_at
+	FROM public.group_invitations gi
+	WHERE gi.id = $1
+		AND gi.invited_user_id = $2`
+
+	var item group.Invitation
+	if err := r.db.QueryRow(ctx, query, invitationID, userID).Scan(
+		&item.ID,
+		&item.GroupID,
+		&item.InvitedBy,
+		&item.InvitedUserID,
+		&item.Status,
+		&item.CreatedAt,
+		&item.RespondedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get invitation for user: %w", err)
+	}
+
+	return &item, nil
+}
+
+func (r *Repository) AcceptInvitation(ctx context.Context, invitationID, userID string) error {
+	const query = `UPDATE public.group_invitations
+	SET status = 'ACCEPTED',
+		responded_at = NOW()
+	WHERE id = $1
+		AND invited_user_id = $2
+		AND status = 'PENDING'`
+
+	result, err := r.db.Exec(ctx, query, invitationID, userID)
+	if err != nil {
+		return fmt.Errorf("accept invitation: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("pending invitation not found")
+	}
+
+	return nil
+}
+
+func (r *Repository) RejectInvitation(ctx context.Context, invitationID, userID string) error {
+	const query = `UPDATE public.group_invitations
+	SET status = 'REJECTED',
+		responded_at = NOW()
+	WHERE id = $1
+		AND invited_user_id = $2
+		AND status = 'PENDING'`
+
+	result, err := r.db.Exec(ctx, query, invitationID, userID)
+	if err != nil {
+		return fmt.Errorf("reject invitation: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("pending invitation not found")
+	}
+
+	return nil
+}
+
+func (r *Repository) AddGroupMember(ctx context.Context, groupID, userID, role string) error {
+	const query = `INSERT INTO public.group_members
+		(group_id, user_id, role, status, joined_at)
+	VALUES
+		($1, $2, $3, 'ACCEPTED', NOW())
+	ON CONFLICT (group_id, user_id)
+	DO UPDATE SET
+		role = EXCLUDED.role,
+		status = 'ACCEPTED',
+		joined_at = COALESCE(public.group_members.joined_at, NOW())`
+
+	if _, err := r.db.Exec(ctx, query, groupID, userID, role); err != nil {
+		return fmt.Errorf("add group member: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) IsGroupCreator(ctx context.Context, groupID, userID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.groups
+		WHERE id = $1
+			AND created_by = $2
+	)`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, groupID, userID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check group creator: %w", err)
+	}
+
+	return exists, nil
+}
+
+func (r *Repository) UpdateGroupApartment(ctx context.Context, groupID string, apartmentID *string) error {
+	const query = `UPDATE public.groups
+	SET apartment_id = $2
+	WHERE id = $1`
+
+	result, err := r.db.Exec(ctx, query, groupID, apartmentID)
+	if err != nil {
+		return fmt.Errorf("update group apartment: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("group not found")
+	}
+
+	return nil
+}
+
+func (r *Repository) FilterExistingTenantIDs(ctx context.Context, userIDs []string) ([]string, error) {
+	if len(userIDs) == 0 {
+		return []string{}, nil
+	}
+
+	const query = `SELECT u.id::text
+	FROM public.users u
+	WHERE u.id::text = ANY($1)
+		AND u.role = 'tenant'
+	ORDER BY u.full_name ASC`
+
+	rows, err := r.db.Query(ctx, query, userIDs)
+	if err != nil {
+		return nil, fmt.Errorf("filter existing tenant ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]string, 0, len(userIDs))
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("scan existing tenant id: %w", err)
+		}
+		result = append(result, userID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate existing tenant ids: %w", err)
+	}
+
+	return result, nil
+}
+
+func (r *Repository) listGroupMembers(ctx context.Context, groupID, currentUserID string) ([]group.Member, error) {
+	const query = `SELECT
+		u.id::text,
+		u.full_name,
+		u.email,
+		COALESCE(u.avatar_url, ''),
+		gm.role,
+		gm.status,
+		COALESCE(tp.age, 0),
+		COALESCE(tp.university, ''),
+		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.budget_max, 0),
+		COALESCE(tp.preferred_area, ''),
+		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
+		COALESCE(tp.pets, FALSE),
+		COALESCE(tp.smoking, FALSE),
+		COALESCE(tp.noise_level, ''),
+		COALESCE(tp.cleanliness, ''),
+		COALESCE(tp.work_schedule, ''),
+		(u.id = $2) AS is_current_user
+	FROM public.group_members gm
+	INNER JOIN public.users u ON u.id = gm.user_id
+	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
+	WHERE gm.group_id = $1
+		AND gm.status = 'ACCEPTED'
+	ORDER BY
+		CASE WHEN gm.role = 'owner' THEN 0 ELSE 1 END,
+		gm.joined_at ASC NULLS LAST,
+		u.full_name ASC`
+
+	rows, err := r.db.Query(ctx, query, groupID, currentUserID)
+	if err != nil {
+		return nil, fmt.Errorf("list group members: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]group.Member, 0)
+	for rows.Next() {
+		var item group.Member
+		if err := rows.Scan(
+			&item.UserID,
+			&item.Name,
+			&item.Email,
+			&item.AvatarURL,
+			&item.Role,
+			&item.Status,
+			&item.Age,
+			&item.University,
+			&item.BudgetMin,
+			&item.BudgetMax,
+			&item.PreferredArea,
+			&item.MoveInDate,
+			&item.Pets,
+			&item.Smoking,
+			&item.NoiseLevel,
+			&item.Cleanliness,
+			&item.WorkSchedule,
+			&item.IsCurrentUser,
+		); err != nil {
+			return nil, fmt.Errorf("scan group member: %w", err)
+		}
+		result = append(result, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate group members: %w", err)
+	}
+
+	return result, nil
+}
+
+func (r *Repository) listPendingInvitations(ctx context.Context, groupID string) ([]group.Invitation, error) {
+	const query = `SELECT
+		gi.id::text,
+		gi.group_id::text,
+		gi.invited_by::text,
+		gi.invited_user_id::text,
+		gi.status,
+		TO_CHAR(gi.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE(TO_CHAR(gi.responded_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '') AS responded_at,
+		u.id::text,
+		u.full_name,
+		u.email,
+		COALESCE(u.avatar_url, ''),
+		COALESCE(tp.age, 0),
+		COALESCE(tp.university, ''),
+		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.budget_max, 0),
+		COALESCE(tp.preferred_area, ''),
+		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
+		COALESCE(tp.pets, FALSE),
+		COALESCE(tp.smoking, FALSE),
+		COALESCE(tp.noise_level, ''),
+		COALESCE(tp.cleanliness, ''),
+		COALESCE(tp.work_schedule, '')
+	FROM public.group_invitations gi
+	INNER JOIN public.users u ON u.id = gi.invited_user_id
+	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
+	WHERE gi.group_id = $1
+		AND gi.status = 'PENDING'
+	ORDER BY gi.created_at DESC`
+
+	rows, err := r.db.Query(ctx, query, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending invitations: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]group.Invitation, 0)
+	for rows.Next() {
+		var item group.Invitation
+		if err := rows.Scan(
+			&item.ID,
+			&item.GroupID,
+			&item.InvitedBy,
+			&item.InvitedUserID,
+			&item.Status,
+			&item.CreatedAt,
+			&item.RespondedAt,
+			&item.User.UserID,
+			&item.User.Name,
+			&item.User.Email,
+			&item.User.AvatarURL,
+			&item.User.Age,
+			&item.User.University,
+			&item.User.BudgetMin,
+			&item.User.BudgetMax,
+			&item.User.PreferredArea,
+			&item.User.MoveInDate,
+			&item.User.Pets,
+			&item.User.Smoking,
+			&item.User.NoiseLevel,
+			&item.User.Cleanliness,
+			&item.User.WorkSchedule,
+		); err != nil {
+			return nil, fmt.Errorf("scan pending invitation: %w", err)
+		}
+		result = append(result, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate pending invitations: %w", err)
+	}
+
+	return result, nil
+}
+
+type tenantGroupsQuery struct {
+	query string
+	args  []interface{}
+}
+
+func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) (string, []interface{}) {
+	baseQuery := `SELECT
+		g.id::text,
+		COALESCE(g.name, ''),
+		COALESCE(g.description, ''),
+		g.status,
+		g.created_by::text,
+		TO_CHAR(g.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		CASE
+			WHEN g.created_by = $1 THEN 'creator'
+			WHEN EXISTS (
+				SELECT 1
+				FROM public.group_members gm
+				WHERE gm.group_id = g.id
+					AND gm.user_id = $1
+					AND gm.status = 'ACCEPTED'
+			) THEN 'member'
+			WHEN EXISTS (
+				SELECT 1
+				FROM public.group_invitations gi
+				WHERE gi.group_id = g.id
+					AND gi.invited_user_id = $1
+					AND gi.status = 'PENDING'
+			) THEN 'pending_invitation'
+			ELSE ''
+		END AS user_relation,
+		COALESCE((
+			SELECT gi.id::text
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.invited_user_id = $1
+				AND gi.status = 'PENDING'
+			ORDER BY gi.created_at DESC
+			LIMIT 1
+		), '') AS invitation_id,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS accepted_members_count,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.status = 'PENDING'
+		), 0)::int AS pending_invitations_count,
+		COALESCE((
+			SELECT ROUND(AVG(tp.budget_min))::int
+			FROM public.group_members gm
+			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS average_budget_min,
+		COALESCE((
+			SELECT ROUND(AVG(tp.budget_max))::int
+			FROM public.group_members gm
+			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS average_budget_max,
+		COALESCE(a.id::text, '') AS apartment_id,
+		COALESCE(a.title, '') AS apartment_title,
+		COALESCE(a.address, '') AS apartment_address,
+		COALESCE(a.area, '') AS apartment_area,
+		COALESCE(a.total_spots, 0) AS total_spots,
+		COALESCE(a.occupied_spots, 0) AS occupied_spots,
+		COALESCE(a.available_spots, 0) AS available_spots,
+		COALESCE(a.base_rent, 0) AS base_rent,
+		COALESCE((
+			SELECT ap.url
+			FROM public.apartment_photos ap
+			WHERE ap.apartment_id = a.id
+			ORDER BY ap.position ASC, ap.created_at ASC
+			LIMIT 1
+		), '') AS image_url
+	FROM public.groups g
+	LEFT JOIN public.apartments a ON a.id = g.apartment_id
+	WHERE (
+		g.created_by = $1
+		OR EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.user_id = $1
+				AND gm.status = 'ACCEPTED'
+		)
+		OR EXISTS (
+			SELECT 1
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.invited_user_id = $1
+				AND gi.status = 'PENDING'
+		)
+	)`
+
+	args := []interface{}{userID}
+	whereClauses := make([]string, 0)
+
+	if filters.Search != "" {
+		args = append(args, "%"+filters.Search+"%")
+		arg := fmt.Sprintf("$%d", len(args))
+		whereClauses = append(whereClauses, "(COALESCE(g.name, '') ILIKE "+arg+" OR COALESCE(g.description, '') ILIKE "+arg+" OR COALESCE(a.title, '') ILIKE "+arg+" OR COALESCE(a.address, '') ILIKE "+arg+" OR COALESCE(a.area, '') ILIKE "+arg+")")
+	}
+
+	if filters.Status != "" && filters.Status != "ALL" {
+		args = append(args, filters.Status)
+		whereClauses = append(whereClauses, fmt.Sprintf("g.status = $%d", len(args)))
+	}
+
+	if filters.HasApartment == "true" {
+		whereClauses = append(whereClauses, "g.apartment_id IS NOT NULL")
+	}
+
+	if filters.HasApartment == "false" {
+		whereClauses = append(whereClauses, "g.apartment_id IS NULL")
+	}
+
+	if filters.Members > 0 {
+		args = append(args, filters.Members)
+		whereClauses = append(whereClauses, fmt.Sprintf(`(
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		) = $%d`, len(args)))
+	}
+
+	query := baseQuery
+	if len(whereClauses) > 0 {
+		query += " AND " + strings.Join(whereClauses, " AND ")
+	}
+
+	query += buildTenantGroupsOrderBy(filters.SortBy)
+
+	return query, args
+}
+
+func buildTenantGroupsOrderBy(sortBy string) string {
+	switch strings.ToLower(strings.TrimSpace(sortBy)) {
+	case "members":
+		return ` ORDER BY accepted_members_count DESC, pending_invitations_count DESC, g.created_at DESC`
+	case "name":
+		return ` ORDER BY g.name ASC NULLS LAST, g.created_at DESC`
+	default:
+		return ` ORDER BY g.created_at DESC`
+	}
+}
+
+func buildListGroupCandidatesQuery(currentUserID string, filters group.CandidateFilters) (string, []interface{}) {
+	baseQuery := `SELECT
+		u.id::text,
+		u.full_name,
+		u.email,
+		COALESCE(u.avatar_url, ''),
+		COALESCE(tp.age, 0),
+		COALESCE(tp.university, ''),
+		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.budget_max, 0),
+		COALESCE(tp.preferred_area, ''),
+		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
+		COALESCE(tp.pets, FALSE),
+		COALESCE(tp.smoking, FALSE),
+		COALESCE(tp.noise_level, ''),
+		COALESCE(tp.cleanliness, ''),
+		COALESCE(tp.work_schedule, '')
+	FROM public.users u
+	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
+	WHERE u.role = 'tenant'
+		AND u.id <> $1`
+
+	args := []interface{}{currentUserID}
+	whereClauses := make([]string, 0)
+
+	if filters.Search != "" {
+		args = append(args, "%"+filters.Search+"%")
+		arg := fmt.Sprintf("$%d", len(args))
+		whereClauses = append(whereClauses, "(u.full_name ILIKE "+arg+" OR u.email ILIKE "+arg+" OR COALESCE(tp.university, '') ILIKE "+arg+" OR COALESCE(tp.preferred_area, '') ILIKE "+arg+")")
+	}
+
+	if filters.University != "" && strings.ToLower(filters.University) != "all" {
+		args = append(args, "%"+filters.University+"%")
+		whereClauses = append(whereClauses, fmt.Sprintf("COALESCE(tp.university, '') ILIKE $%d", len(args)))
+	}
+
+	query := baseQuery
+	if len(whereClauses) > 0 {
+		query += " AND " + strings.Join(whereClauses, " AND ")
+	}
+
+	query += " ORDER BY u.full_name ASC"
+
+	return query, args
+}
+
+type groupScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanGroupSummary(row groupScanner) (group.Group, error) {
+	var item group.Group
+	var apartmentID string
+	var apartmentTitle string
+	var apartmentAddress string
+	var apartmentArea string
+	var totalSpots int
+	var occupiedSpots int
+	var availableSpots int
+	var baseRent int
+	var imageURL string
+
+	if err := row.Scan(
+		&item.ID,
+		&item.Name,
+		&item.Description,
+		&item.Status,
+		&item.CreatedBy,
+		&item.CreatedAt,
+		&item.UserRelation,
+		&item.InvitationID,
+		&item.AcceptedMembersCount,
+		&item.PendingInvitationsCount,
+		&item.AverageBudgetMin,
+		&item.AverageBudgetMax,
+		&apartmentID,
+		&apartmentTitle,
+		&apartmentAddress,
+		&apartmentArea,
+		&totalSpots,
+		&occupiedSpots,
+		&availableSpots,
+		&baseRent,
+		&imageURL,
+	); err != nil {
+		return group.Group{}, fmt.Errorf("scan group summary: %w", err)
+	}
+
+	if apartmentID != "" {
+		item.Apartment = &group.Apartment{
+			ID:             apartmentID,
+			Title:          apartmentTitle,
+			Address:        apartmentAddress,
+			Area:           apartmentArea,
+			TotalSpots:     totalSpots,
+			OccupiedSpots:  occupiedSpots,
+			AvailableSpots: availableSpots,
+			BaseRent:       baseRent,
+			ImageURL:       imageURL,
+		}
+	}
+
+	return item, nil
+}
+
+func nullIfEmpty(value string) interface{} {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return value
+}
