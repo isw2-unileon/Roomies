@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardIssue, OwnerIssueStatus } from '@/types/owner'
 
@@ -7,6 +8,8 @@ interface OwnerIssuesListProps {
 }
 
 export default function OwnerIssuesList({ issues, onStatusChange }: OwnerIssuesListProps) {
+  const { t } = useTranslation()
+
   return (
     <div className={styles.ownerIssueList}>
       {issues.map((issue) => (
@@ -22,9 +25,9 @@ export default function OwnerIssuesList({ issues, onStatusChange }: OwnerIssuesL
             onChange={(event) => onStatusChange(issue.id, event.target.value as OwnerIssueStatus)}
             className={styles.ownerIssueSelect}
           >
-            <option value="pending">pending</option>
-            <option value="in_progress">in progress</option>
-            <option value="resolved">resolved</option>
+            <option value="pending">{t('ownerDashboard.issues.status.pending')}</option>
+            <option value="in_progress">{t('ownerDashboard.issues.status.inProgress')}</option>
+            <option value="resolved">{t('ownerDashboard.issues.status.resolved')}</option>
           </select>
         </article>
       ))}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardProperty } from '@/types/owner'
 
@@ -6,8 +7,10 @@ interface OwnerPropertyGridProps {
 }
 
 export default function OwnerPropertyGrid({ properties }: OwnerPropertyGridProps) {
+  const { t } = useTranslation()
+
   if (properties.length === 0) {
-    return <p className={styles.ownerPropertyEmpty}>Todavia no tienes pisos publicados.</p>
+    return <p className={styles.ownerPropertyEmpty}>{t('ownerDashboard.propertyCard.empty')}</p>
   }
 
   return (
@@ -23,24 +26,24 @@ export default function OwnerPropertyGrid({ properties }: OwnerPropertyGridProps
             {property.image ? (
               <img src={property.image} alt={property.title} className={styles.ownerPropertyImage} loading="lazy" />
             ) : (
-              <div className={styles.ownerPropertyImageFallback}>Sin imagen</div>
+              <div className={styles.ownerPropertyImageFallback}>{t('ownerDashboard.propertyCard.noImage')}</div>
             )}
             <div className={styles.ownerPropertyBody}>
               <h3 className={styles.ownerPropertyTitle}>{property.title}</h3>
               <p className={styles.ownerPropertyAddress}>{property.address}</p>
               <div className={styles.ownerPropertyMeta}>
-                <span>{property.totalSpots} plazas totales</span>
-                <span>{property.occupiedSpots} ocupadas</span>
-                <span>{freeSpots} libres</span>
-                {property.area ? <span>Zona: {property.area}</span> : null}
-                {property.rent != null ? <span>Precio base: {property.rent} EUR</span> : null}
-                {statusText ? <span>Estado: {statusText}</span> : null}
+                <span>{t('ownerDashboard.propertyCard.totalSpots', { count: property.totalSpots })}</span>
+                <span>{t('ownerDashboard.propertyCard.occupiedSpots', { count: property.occupiedSpots })}</span>
+                <span>{t('ownerDashboard.propertyCard.freeSpots', { count: freeSpots })}</span>
+                {property.area ? <span>{t('ownerDashboard.propertyCard.area', { area: property.area })}</span> : null}
+                {property.rent != null ? <span>{t('ownerDashboard.propertyCard.basePrice', { price: property.rent })}</span> : null}
+                {statusText ? <span>{t('ownerDashboard.propertyCard.status', { status: statusText })}</span> : null}
               </div>
               <div className={styles.ownerProgressRow}>
                 <div className={styles.ownerProgressTrack}>
                   <div className={styles.ownerProgressBar} style={{ width: `${percent}%` }} />
                 </div>
-                <span className={styles.ownerProgressLabel}>{percent}% ocupado</span>
+                <span className={styles.ownerProgressLabel}>{t('ownerDashboard.propertyCard.percentOccupied', { percent })}</span>
               </div>
             </div>
           </article>

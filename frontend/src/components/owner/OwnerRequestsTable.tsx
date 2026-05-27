@@ -1,4 +1,5 @@
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from 'react-i18next'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardRequest } from '@/types/owner'
 
@@ -7,16 +8,18 @@ interface OwnerRequestsTableProps {
 }
 
 export default function OwnerRequestsTable({ requests }: OwnerRequestsTableProps) {
+  const { t } = useTranslation()
+
   return (
     <div className={styles.ownerTableWrap}>
       <table className={styles.ownerTable}>
         <thead>
           <tr>
-            <th>Inquilino</th>
-            <th>Piso</th>
-            <th>Compatibilidad</th>
-            <th>Estado</th>
-            <th>Acciones</th>
+            <th>{t('ownerDashboard.requests.tenant')}</th>
+            <th>{t('ownerDashboard.requests.property')}</th>
+            <th>{t('ownerDashboard.requests.compatibility')}</th>
+            <th>{t('ownerDashboard.requests.status')}</th>
+            <th>{t('ownerDashboard.requests.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -35,22 +38,22 @@ export default function OwnerRequestsTable({ requests }: OwnerRequestsTableProps
               <td>
                 <strong className={styles.ownerStrongPositive}>{request.compatibility}%</strong>
                 <br />
-                Muy compatible
+                {t('ownerDashboard.requests.veryCompatible')}
               </td>
               <td>
-                <span className={`${styles.ownerStatusBadge} ${styles.ownerStatusPending}`}>Pendiente</span>
+                <span className={`${styles.ownerStatusBadge} ${styles.ownerStatusPending}`}>{t('ownerDashboard.requests.pending')}</span>
                 <br />
-                Solicitado {request.requestedAt}
+                {t('ownerDashboard.requests.requested', { date: request.requestedAt })}
               </td>
               <td>
                 <div className={styles.ownerActionGroup}>
                   <button type="button" className={`${styles.ownerActionButton} ${styles.ownerActionAccept}`}>
-                    Aceptar
+                    {t('ownerDashboard.requests.accept')}
                   </button>
                   <button type="button" className={`${styles.ownerActionButton} ${styles.ownerActionReject}`}>
-                    Rechazar
+                    {t('ownerDashboard.requests.reject')}
                   </button>
-                  <button type="button" className={styles.ownerIconButton} aria-label="Mas acciones">
+                  <button type="button" className={styles.ownerIconButton} aria-label={t('ownerDashboard.requests.moreActions')}>
                     <EllipsisVerticalIcon className={styles.ownerIconSmall} aria-hidden="true" />
                   </button>
                 </div>
