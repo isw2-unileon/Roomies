@@ -178,14 +178,14 @@ func clearSessionCookies(c *gin.Context, secure bool) {
 }
 
 func setCookie(c *gin.Context, name, value string, maxAge int, secure bool) {
-	http.SetCookie(c.Writer, &http.Cookie{
+		http.SetCookie(c.Writer, &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
 		MaxAge:   maxAge,
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 }
 
