@@ -24,7 +24,7 @@ const mockedListOwnerApartments = vi.mocked(listOwnerApartments)
 
 function renderOwnerDashboard() {
   render(
-    <MemoryRouter initialEntries={[paths.ownerDashboard]}>
+    <MemoryRouter initialEntries={[paths.ownerProperties]}>
       <Routes>
         <Route path="/" element={<p>Login page</p>} />
         <Route path="*" element={<OwnerDashboardPage />} />
@@ -48,7 +48,7 @@ describe('OwnerDashboardPage', () => {
     await screen.findByText('apartments are only available for owner users')
 
     expect(screen.queryByRole('img', { name: 'Piso en el centro' })).not.toBeInTheDocument()
-    expect(screen.getByText('Todavia no tienes pisos publicados.')).toBeInTheDocument()
+    expect(screen.getByText('Todavía no tienes pisos publicados.')).toBeInTheDocument()
   })
 
   test('does not request owner apartments when the current session is not owner', async () => {
@@ -56,7 +56,7 @@ describe('OwnerDashboardPage', () => {
 
     renderOwnerDashboard()
 
-    await screen.findByText('Esta seccion solo esta disponible para propietarios. Inicia sesion con una cuenta owner.')
+    await screen.findByText('Esta sección solo está disponible para propietarios. Inicia sesión con una cuenta owner.')
 
     expect(mockedListOwnerApartments).not.toHaveBeenCalled()
     await waitFor(() => {
@@ -72,7 +72,7 @@ describe('OwnerDashboardPage', () => {
 
     renderOwnerDashboard()
 
-    const logoutButtons = await screen.findAllByRole('button', { name: /cerrar sesion/i })
+    const logoutButtons = await screen.findAllByRole('button', { name: /cerrar sesión/i })
     const logoutButton = logoutButtons[0]
 
     if (!logoutButton) {
@@ -83,5 +83,23 @@ describe('OwnerDashboardPage', () => {
 
     expect(mockedLogout).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Login page')).toBeInTheDocument()
+  })
+
+  test('renders the collapsible owner sidebar without the top bar', async () => {
+    const user = userEvent.setup()
+    mockedGetProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+    mockedListOwnerApartments.mockResolvedValue([])
+
+    renderOwnerDashboard()
+
+    await screen.findByRole('heading', { name: /mis pisos/i })
+    expect(screen.queryByRole('textbox', { name: /buscar/i })).not.toBeInTheDocument()
+
+    const toggleButton = screen.getByRole('button', { name: /ocultar menú/i })
+    expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(toggleButton)
+
+    expect(screen.getByRole('button', { name: /mostrar menú/i })).toHaveAttribute('aria-expanded', 'false')
   })
 })

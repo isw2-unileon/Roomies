@@ -8,8 +8,8 @@ describe('resolvePostAuthPath', () => {
     expect(resolvePostAuthPath({ role: 'tenant', needsOnboarding: true })).toBe(paths.tenantOnboarding)
   })
 
-  test('sends owners to the owner dashboard', () => {
-    expect(resolvePostAuthPath({ role: 'owner' })).toBe(paths.ownerDashboard)
+  test('sends owners to the owner properties page', () => {
+    expect(resolvePostAuthPath({ role: 'owner' })).toBe(paths.ownerProperties)
   })
 
   test('uses the tenant dashboard as the default authenticated destination', () => {

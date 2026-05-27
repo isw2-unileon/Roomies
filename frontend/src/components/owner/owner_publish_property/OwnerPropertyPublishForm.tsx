@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNotice } from '@/hooks/useNotice'
 import { createApartment } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
-import LocationPicker from '@/components/owner/LocationPicker'
-import type { Location } from '@/components/owner/LocationPicker'
+import LocationPicker from './LocationPicker'
+import type { Location } from './LocationPicker'
 
 interface PublishValues {
   title: string
@@ -32,6 +33,7 @@ const initialValues: PublishValues = {
 }
 
 export default function OwnerPropertyPublishForm() {
+  const { t } = useTranslation()
   const [values, setValues] = useState<PublishValues>(initialValues)
   const [isLoading, setIsLoading] = useState(false)
   const { notice, showError, showSuccess, clearNotice } = useNotice()
@@ -67,23 +69,23 @@ export default function OwnerPropertyPublishForm() {
     const parsedImageURLs = extractImageURLs(values.imageUrls)
 
     if (values.title.trim().length < 3) {
-      showError('El titulo debe tener al menos 3 caracteres.')
+      showError(t('ownerDashboard.publish.errors.title'))
       return
     }
     if (values.address.trim().length < 5) {
-      showError('La direccion debe tener al menos 5 caracteres.')
+      showError(t('ownerDashboard.publish.errors.address'))
       return
     }
     if (!Number.isFinite(parsedTotalSpots) || parsedTotalSpots <= 0) {
-      showError('El numero de plazas debe ser mayor que 0.')
+      showError(t('ownerDashboard.publish.errors.totalSpots'))
       return
     }
     if (!Number.isFinite(parsedBathrooms) || parsedBathrooms <= 0) {
-      showError('El numero de banos debe ser mayor que 0.')
+      showError(t('ownerDashboard.publish.errors.bathrooms'))
       return
     }
     if (!Number.isFinite(parsedBaseRent) || parsedBaseRent <= 0) {
-      showError('El precio mensual debe ser mayor que 0.')
+      showError(t('ownerDashboard.publish.errors.baseRent'))
       return
     }
 
@@ -103,10 +105,10 @@ export default function OwnerPropertyPublishForm() {
         latitude: values.latitude,
         longitude: values.longitude,
       })
-      showSuccess(result.message ?? 'Piso publicado correctamente.')
+      showSuccess(result.message ?? t('ownerDashboard.publish.success'))
       setValues(initialValues)
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'No se pudo publicar el piso. Intentalo de nuevo.')
+      showError(error instanceof Error ? error.message : t('ownerDashboard.publish.errors.default'))
     } finally {
       setIsLoading(false)
     }
@@ -115,52 +117,52 @@ export default function OwnerPropertyPublishForm() {
   return (
     <section className={styles.pageSection}>
       <header className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Publicar piso</h1>
-        <p className={styles.pageSubtitle}>Crea tu anuncio con la informacion principal para recibir solicitudes.</p>
+        <h1 className={styles.pageTitle}>{t('ownerDashboard.publish.title')}</h1>
+        <p className={styles.pageSubtitle}>{t('ownerDashboard.publish.subtitle')}</p>
       </header>
 
       <form onSubmit={handleSubmit} className={styles.formCard}>
         <div className={styles.grid}>
           <label className={styles.field}>
-            <span className={styles.label}>Titulo</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.title')}</span>
             <input
               className={styles.input}
               value={values.title}
               onChange={(event) => updateField('title', event.target.value)}
-              placeholder="Piso luminoso en el centro"
+              placeholder={t('ownerDashboard.publish.placeholders.title')}
               required
             />
           </label>
 
           <div className={`${styles.field} ${styles.full}`}>
-            <span className={styles.label}>Ubicacion en el mapa</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.mapLocation')}</span>
             <LocationPicker onLocationSelect={handleLocationSelect} />
           </div>
 
           <label className={styles.field}>
-            <span className={styles.label}>Direccion</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.address')}</span>
             <input
               className={styles.input}
               value={values.address}
               onChange={(event) => updateField('address', event.target.value)}
-              placeholder="Calle Ancha, 12"
+              placeholder={t('ownerDashboard.publish.placeholders.address')}
               required
             />
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Zona</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.area')}</span>
             <input
               className={styles.input}
               value={values.area}
               onChange={(event) => updateField('area', event.target.value)}
-              placeholder="Centro"
+              placeholder={t('ownerDashboard.publish.placeholders.area')}
               required
             />
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Plazas totales</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.totalSpots')}</span>
             <input
               type="number"
               min={1}
@@ -172,7 +174,7 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Banos (se guarda en descripcion)</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.bathrooms')}</span>
             <input
               type="number"
               min={1}
@@ -184,7 +186,7 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Precio mensual (EUR)</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.baseRent')}</span>
             <input
               type="number"
               min={0}
@@ -196,7 +198,7 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Disponible desde (se guarda en descripcion)</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.availableFrom')}</span>
             <input
               type="date"
               className={styles.input}
@@ -206,25 +208,25 @@ export default function OwnerPropertyPublishForm() {
           </label>
 
           <label className={`${styles.field} ${styles.full}`}>
-            <span className={styles.label}>URLs de imagenes</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.imageUrls')}</span>
             <textarea
               className={styles.textarea}
               rows={3}
               value={values.imageUrls}
               onChange={(event) => updateField('imageUrls', event.target.value)}
-              placeholder="https://.../foto1.jpg, https://.../foto2.jpg"
+              placeholder={t('ownerDashboard.publish.placeholders.imageUrls')}
             />
-            <span className={styles.hint}>Separa varias URL por comas o por lineas.</span>
+            <span className={styles.hint}>{t('ownerDashboard.publish.hints.imageUrls')}</span>
           </label>
 
           <label className={`${styles.field} ${styles.full}`}>
-            <span className={styles.label}>Descripcion</span>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.description')}</span>
             <textarea
               className={styles.textarea}
               rows={5}
               value={values.description}
               onChange={(event) => updateField('description', event.target.value)}
-              placeholder="Describe el piso, las normas y el perfil de inquilino recomendado..."
+              placeholder={t('ownerDashboard.publish.placeholders.description')}
             />
           </label>
         </div>
@@ -237,7 +239,7 @@ export default function OwnerPropertyPublishForm() {
 
         <div className={styles.actions}>
           <button type="submit" className={styles.primaryButton} disabled={isLoading}>
-            {isLoading ? 'Publicando...' : 'Publicar piso'}
+            {isLoading ? t('ownerDashboard.publish.submitting') : t('ownerDashboard.publish.submit')}
           </button>
         </div>
       </form>

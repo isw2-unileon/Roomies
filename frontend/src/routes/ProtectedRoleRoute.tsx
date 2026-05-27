@@ -50,7 +50,7 @@ export default function ProtectedRoleRoute({ requiredRole, children }: Protected
   }
 
   if (requiredRole === 'tenant' && resolvedRole === 'owner') {
-    return <Navigate to={paths.ownerDashboard} replace />
+    return <Navigate to={paths.ownerProperties} replace />
   }
 
   if (requiredRole === 'owner' && resolvedRole === 'tenant') {
