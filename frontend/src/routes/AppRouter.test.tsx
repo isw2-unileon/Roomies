@@ -24,6 +24,10 @@ vi.mock('@/services/ownerService', () => ({
   listOwnerApartments: vi.fn(async () => []),
 }))
 
+vi.mock('@/components/owner/LocationPicker', () => ({
+  default: () => <div data-testid="location-picker" />,
+}))
+
 function renderAppAt(path: string) {
   window.history.pushState({}, '', path)
   return render(<App />)
@@ -111,6 +115,29 @@ describe('AppRouter', () => {
     await user.click(screen.getByRole('button', { name: /cerrar invitación/i }))
 
     expect(screen.queryByRole('dialog', { name: /invita a un amigo/i })).not.toBeInTheDocument()
+  })
+
+  test('renders owner pages with the shared owner sidebar and no top bar', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt(paths.ownerMessages)
+
+    expect(await screen.findByRole('heading', { name: /mensajes/i })).toBeInTheDocument()
+    const sidebar = await screen.findByRole('complementary', { name: /panel de propietario/i })
+    expect(within(sidebar).getByRole('navigation', { name: /navegación de propietario/i })).toBeInTheDocument()
+    expect(within(sidebar).getByRole('link', { name: /mensajes/i })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('textbox', { name: /buscar/i })).not.toBeInTheDocument()
+  })
+
+  test('owner publish page keeps properties active and links back to properties', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt(paths.ownerPublishProperty)
+
+    expect(await screen.findByRole('link', { name: /volver a mis pisos/i })).toHaveAttribute('href', paths.ownerProperties)
+    const sidebar = screen.getByRole('complementary', { name: /panel de propietario/i })
+    expect(within(sidebar).getByRole('link', { name: /mis pisos/i })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('textbox', { name: /buscar/i })).not.toBeInTheDocument()
   })
 
   test('redirects owners away from tenant onboarding', async () => {
