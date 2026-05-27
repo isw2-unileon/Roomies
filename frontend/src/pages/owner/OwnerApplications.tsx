@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import OwnerDashboardLayout from '@/components/owner/OwnerDashboardLayout'
-import OwnerRequestsTable from '@/components/owner/OwnerRequestsTable'
+import OwnerLayout from '@/components/owner/OwnerLayout'
+import OwnerRequestsTable from '@/components/owner/owner_applications/OwnerRequestsTable'
 import { mockOwnerRequests } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 
@@ -8,7 +8,7 @@ export default function OwnerApplications() {
   const { t } = useTranslation()
 
   return (
-    <OwnerDashboardLayout>
+    <OwnerLayout>
       <section className={styles.ownerSectionCard}>
         <header className={styles.ownerSectionHeader}>
           <div>
@@ -18,6 +18,6 @@ export default function OwnerApplications() {
         </header>
         <OwnerRequestsTable requests={mockOwnerRequests} />
       </section>
-    </OwnerDashboardLayout>
+    </OwnerLayout>
   )
 }

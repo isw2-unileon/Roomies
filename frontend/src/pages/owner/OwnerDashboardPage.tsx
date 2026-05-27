@@ -4,19 +4,17 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useNotice } from '@/hooks/useNotice'
 import AuthNotice from '@/components/auth/AuthNotice'
-import OwnerActivityList from '@/components/owner/OwnerActivityList'
-import OwnerDashboardLayout from '@/components/owner/OwnerDashboardLayout'
-import OwnerHelpCard from '@/components/owner/OwnerHelpCard'
-import OwnerIssuesList from '@/components/owner/OwnerIssuesList'
-import OwnerPaymentsList from '@/components/owner/OwnerPaymentsList'
-import OwnerPropertyGrid from '@/components/owner/OwnerPropertyGrid'
-import OwnerRequestsTable from '@/components/owner/OwnerRequestsTable'
-import OwnerSummaryCard from '@/components/owner/OwnerSummaryCard'
+import OwnerLayout from '@/components/owner/OwnerLayout'
+import OwnerActivityList from '@/components/owner/owner_properties/OwnerActivityList'
+import OwnerHelpCard from '@/components/owner/owner_properties/OwnerHelpCard'
+import OwnerIssuesList from '@/components/owner/owner_properties/OwnerIssuesList'
+import OwnerPaymentsList from '@/components/owner/owner_properties/OwnerPaymentsList'
+import OwnerPropertyGrid from '@/components/owner/owner_properties/OwnerPropertyGrid'
+import OwnerSummaryCard from '@/components/owner/owner_properties/OwnerSummaryCard'
 import {
   mockOwnerActivity,
   mockOwnerIssues,
   mockOwnerPayments,
-  mockOwnerRequests,
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
@@ -86,7 +84,7 @@ export default function OwnerDashboardPage() {
   }
 
   return (
-    <OwnerDashboardLayout>
+    <OwnerLayout>
       <div className={styles.ownerMainGrid}>
         <div className={styles.ownerPrimaryColumn}>
           <section className={styles.ownerSectionCard}>
@@ -109,15 +107,6 @@ export default function OwnerDashboardPage() {
             )}
           </section>
 
-          <section className={styles.ownerSectionCard}>
-            <header className={styles.ownerSectionHeader}>
-              <h2 className={styles.ownerSectionTitle}>{t('ownerDashboard.applications.title')}</h2>
-              <button type="button" className={styles.ownerTextButton} onClick={() => navigate(paths.ownerApplications)}>
-                {t('ownerDashboard.applications.viewAll')}
-              </button>
-            </header>
-            <OwnerRequestsTable requests={mockOwnerRequests} />
-          </section>
 
           <section className={styles.ownerSectionCard}>
             <header className={styles.ownerSectionHeader}>
@@ -145,6 +134,6 @@ export default function OwnerDashboardPage() {
           <OwnerHelpCard />
         </aside>
       </div>
-    </OwnerDashboardLayout>
+    </OwnerLayout>
   )
 }

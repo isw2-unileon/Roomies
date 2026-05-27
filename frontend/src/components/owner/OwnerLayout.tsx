@@ -10,11 +10,11 @@ import styles from '@/styles/OwnerDashboard.module.css'
 const UNREAD_MESSAGES = 1
 const UNREAD_NOTIFICATIONS = 3
 
-interface OwnerDashboardLayoutProps {
+interface OwnerLayoutProps {
   children: ReactNode
 }
 
-export default function OwnerDashboardLayout({ children }: OwnerDashboardLayoutProps) {
+export default function OwnerLayout({ children }: OwnerLayoutProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)

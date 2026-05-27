@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useNotice } from '@/hooks/useNotice'
 import { createApartment } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
-import LocationPicker from '@/components/owner/LocationPicker'
-import type { Location } from '@/components/owner/LocationPicker'
+import LocationPicker from './LocationPicker'
+import type { Location } from './LocationPicker'
 
 interface PublishValues {
   title: string

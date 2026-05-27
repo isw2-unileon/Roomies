@@ -198,6 +198,7 @@ function AppRoutes() {
         )}
       />
 
+      //if no route matches, redirect to login
       <Route path="*" element={<Navigate to={paths.login} replace />} />
     </Routes>
   )

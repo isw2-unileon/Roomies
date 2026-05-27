@@ -24,7 +24,7 @@ vi.mock('@/services/ownerService', () => ({
   listOwnerApartments: vi.fn(async () => []),
 }))
 
-vi.mock('@/components/owner/LocationPicker', () => ({
+vi.mock('@/components/owner/owner_publish_property/LocationPicker', () => ({
   default: () => <div data-testid="location-picker" />,
 }))
 
