@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom'
 
 import { paths } from '@/routes/paths'
 import { getProfileStatus, type UserRole } from '@/services/authService'
-import { clearAuthSession } from '@/session/authSession'
 
 interface ProtectedRoleRouteProps {
   requiredRole: UserRole
@@ -29,7 +28,6 @@ export default function ProtectedRoleRoute({ requiredRole, children }: Protected
         setStatus(role === requiredRole ? 'allowed' : 'blocked')
       } catch {
         if (!ignoreResult) {
-          clearAuthSession()
           setResolvedRole('')
           setStatus('blocked')
         }

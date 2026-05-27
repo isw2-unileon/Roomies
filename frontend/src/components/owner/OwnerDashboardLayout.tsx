@@ -4,7 +4,6 @@ import OwnerSidebar from '@/components/owner/OwnerSidebar'
 import OwnerTopBar from '@/components/owner/OwnerTopBar'
 import { mockOwnerProfile } from '@/mocks/ownerData'
 import { paths } from '@/routes/paths'
-import { clearAuthSession } from '@/session/authSession'
 import { logout } from '@/services/authService'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerNavTab } from '@/types/owner'
@@ -24,7 +23,6 @@ export default function OwnerDashboardLayout({ activeTab, onTabChange, children 
     try {
       await logout()
     } finally {
-      clearAuthSession()
       navigate(paths.login, { replace: true })
     }
   }

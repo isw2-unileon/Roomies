@@ -21,7 +21,6 @@ import {
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
-import { clearAuthSession } from '@/session/authSession'
 import { getProfileStatus, logout } from '@/services/authService'
 import { listOwnerApartments } from '@/services/ownerService'
 import type { OwnerDashboardProperty, OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
@@ -97,7 +96,6 @@ export default function OwnerDashboardPage() {
     try {
       await logout()
     } finally {
-      clearAuthSession()
       navigate(paths.login, { replace: true })
     }
   }
