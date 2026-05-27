@@ -15,6 +15,8 @@ type CreateApartmentInput struct {
 	AvailableFrom string
 	ImageURLs     []string
 	Status        string
+	Latitude      float64
+	Longitude     float64
 }
 
 // CreateApartmentResult returns basic publication metadata.
@@ -38,6 +40,8 @@ type Apartment struct {
 	Status        string
 	CreatedAt     string
 	ImageURL      string
+	Latitude      float64
+	Longitude     float64
 }
 
 // ListApartmentsFilters defines server-side filters for tenant explore listings.

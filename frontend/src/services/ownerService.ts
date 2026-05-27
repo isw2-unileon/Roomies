@@ -37,6 +37,8 @@ export interface CreateApartmentInput {
   baseRent: number
   availableFrom: string
   imageUrls: string[]
+  latitude?: number
+  longitude?: number
 }
 
 export interface CreateApartmentResult {
@@ -88,6 +90,8 @@ export async function createApartment(input: CreateApartmentInput): Promise<Crea
       base_rent: input.baseRent,
       available_from: input.availableFrom,
       image_urls: input.imageUrls,
+      latitude: input.latitude,
+      longitude: input.longitude,
     }),
   })
   const data = (await response.json()) as CreateApartmentResponseDto
