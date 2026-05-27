@@ -59,12 +59,13 @@ func TestReverseGeocodeHandler_Success(t *testing.T) {
 	nomServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"display_name": "Calle Ancha, 12, León, España",
 			"address": {
 				"road": "Calle Ancha",
 				"house_number": "12",
-				"city": "León"
+				"city": "León",
+				"suburb": "Centro"
 			}
 		}`))
 	}))
@@ -88,12 +89,16 @@ func TestReverseGeocodeHandler_Success(t *testing.T) {
 
 	var resp struct {
 		Address string `json:"address"`
+		Zone    string `json:"zone"`
 	}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if resp.Address != "Calle Ancha, 12" {
 		t.Fatalf("address = %q, want %q", resp.Address, "Calle Ancha, 12")
+	}
+	if resp.Zone != "Centro" {
+		t.Fatalf("zone = %q, want %q", resp.Zone, "Centro")
 	}
 }
 

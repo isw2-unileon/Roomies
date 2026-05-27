@@ -45,6 +45,7 @@ export default function OwnerPropertyPublishForm() {
     setValues((prev) => ({
       ...prev,
       address: location.address || prev.address,
+      area: location.zone || prev.area,
       latitude: location.latitude,
       longitude: location.longitude,
     }))

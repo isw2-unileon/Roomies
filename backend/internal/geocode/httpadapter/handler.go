@@ -16,6 +16,7 @@ type handler struct {
 	geocodeService *geocodenominatim.Service
 }
 
+// RegisterRoutes registers the GET /geocode/reverse endpoint on the given router group.
 func RegisterRoutes(api *gin.RouterGroup, geocodeService *geocodenominatim.Service) {
 	h := &handler{geocodeService: geocodeService}
 	api.GET("/geocode/reverse", h.reverseGeocode)

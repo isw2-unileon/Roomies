@@ -7,6 +7,7 @@ export interface Location {
   latitude: number
   longitude: number
   address: string
+  zone: string
 }
 
 interface LocationPickerProps {
@@ -53,12 +54,12 @@ export default function LocationPicker({ initialLocation, onLocationSelect }: Lo
       .then((res) => res.json())
       .then((data) => {
         if (data.address) {
-          onLocationSelect({ latitude: lat, longitude: lng, address: data.address })
+          onLocationSelect({ latitude: lat, longitude: lng, address: data.address, zone: data.zone || "" })
           pendingCoords.current = null
         }
       })
       .catch(() => {
-        onLocationSelect({ latitude: lat, longitude: lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` })
+        onLocationSelect({ latitude: lat, longitude: lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, zone: "" })
         pendingCoords.current = null
       })
   }, [onLocationSelect])
