@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import TenantSidebar from '@/components/tenant/TenantSidebar'
 import { paths } from '@/routes/paths'
-import { clearAuthSession } from '@/session/authSession'
 import { logout } from '@/services/authService'
 import styles from '@/styles/TenantLayout.module.css'
 
@@ -25,7 +24,6 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
     try {
       await logout()
     } finally {
-      clearAuthSession()
       navigate(paths.login, { replace: true })
     }
   }

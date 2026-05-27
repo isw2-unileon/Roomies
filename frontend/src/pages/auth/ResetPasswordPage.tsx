@@ -6,7 +6,6 @@ import AuthNotice from '@/components/auth/AuthNotice'
 import FormField from '@/components/auth/FormField'
 import { paths } from '@/routes/paths'
 import { resetPassword } from '@/services/authService'
-import { clearAuthSession } from '@/session/authSession'
 import styles from '@/styles/auth.module.css'
 
 type NoticeKind = 'idle' | 'error' | 'success'
@@ -78,8 +77,6 @@ export default function ResetPasswordPage({ onNavigateToLogin }: ResetPasswordPa
 
     try {
       const message = await resetPassword(recovery.accessToken, password)
-
-      clearAuthSession()
 
       if (recovery.refreshToken) {
         window.history.replaceState({}, '', paths.resetPassword)
