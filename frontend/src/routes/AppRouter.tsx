@@ -21,7 +21,7 @@ function AppRoutes() {
         onNavigateToRegister: () => navigate(paths.register),
       })}
       {getTenantRoutes({ onTenantOnboardingCompleted: () => navigate(paths.tenantExplore) })}
-      {getOwnerRoutes()}
+      {getOwnerRoutes()}  
       <Route path="*" element={<Navigate to={paths.login} replace />} />
     </Routes>
   )
