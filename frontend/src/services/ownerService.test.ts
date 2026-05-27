@@ -9,7 +9,6 @@ describe('ownerService', () => {
   })
 
   test('maps owner apartment DTOs to frontend owner properties', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -45,13 +44,10 @@ describe('ownerService', () => {
       },
     ])
 
-    expect(fetch).toHaveBeenCalledWith('/api/owner/apartments', {
-      headers: { Authorization: 'Bearer access-token' },
-    })
+    expect(fetch).toHaveBeenCalledWith('/api/owner/apartments', { credentials: 'include' })
   })
 
   test('posts apartment creation payload with backend field names', async () => {
-    localStorage.setItem('roomies.access_token', 'access-token')
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ message: 'created', apartment_id: 'apt-1', images_stored: 2 }),
@@ -73,8 +69,8 @@ describe('ownerService', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer access-token',
       },
+      credentials: 'include',
       body: JSON.stringify({
         title: 'Centro',
         description: 'Nice',

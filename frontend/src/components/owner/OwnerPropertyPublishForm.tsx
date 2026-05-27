@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { useNotice } from '@/hooks/useNotice'
-import { getAccessToken } from '@/session/authSession'
 import { createApartment } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
 import LocationPicker from '@/components/owner/LocationPicker'
@@ -85,12 +84,6 @@ export default function OwnerPropertyPublishForm() {
     }
     if (!Number.isFinite(parsedBaseRent) || parsedBaseRent <= 0) {
       showError('El precio mensual debe ser mayor que 0.')
-      return
-    }
-
-    const token = getAccessToken()
-    if (!token) {
-      showError('Tu sesion ha caducado. Inicia sesion de nuevo.')
       return
     }
 

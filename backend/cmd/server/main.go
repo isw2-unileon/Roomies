@@ -12,10 +12,15 @@ import (
 
 	apartmentpostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/postgres"
 	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
+	applicationpostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/postgres"
+	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
+
 	geocodenominatim "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/nominatim"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpapi"
+
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpserver"
+
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/database"
 	profilepostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/postgres"
@@ -38,6 +43,7 @@ func main() {
 	defer database.Close()
 	profileRepo := profilepostgres.NewRepository(database.DB)
 	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
+	applicationRepo := applicationpostgres.NewRepository(database.DB)
 	profileService := profileservice.NewService(profileRepo)
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
@@ -57,9 +63,12 @@ func main() {
 			apartmentImageSigner = storageClient
 		}
 	}
-	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner)
+
+	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo)
+	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner, profileRepo, applicationService)
 	geocodeService := geocodenominatim.NewService()
-	r := httpapi.NewRouter(cfg, authService, profileService, apartmentService, geocodeService)
+	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, geocodeService)
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,

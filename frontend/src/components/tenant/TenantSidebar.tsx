@@ -1,5 +1,6 @@
 import { useRef, useState, type ComponentType, type SVGProps } from 'react'
 import {
+    ArrowLeftOnRectangleIcon,
     Bars3Icon,
     BellIcon,
     ChatBubbleLeftRightIcon,
@@ -24,6 +25,7 @@ interface TenantSidebarProps {
     isCollapsed: boolean
     onToggleCollapsed?: () => void
     onNavigate?: () => void
+    onLogout?: () => void
     unreadMessages: number
     unreadNotifications: number
     showCollapseToggle?: boolean
@@ -44,6 +46,7 @@ export default function TenantSidebar({
     isCollapsed,
     onToggleCollapsed,
     onNavigate,
+    onLogout,
     unreadMessages,
     unreadNotifications,
     showCollapseToggle = true,
@@ -134,6 +137,16 @@ export default function TenantSidebar({
                             <p className={styles.referSubtitle}>{t('tenantDashboard.sidebar.referSubtitle')}</p>
                         </div>
                     </div>
+                </button>
+                <button
+                    type="button"
+                    className={styles.logoutButton}
+                    title={t('tenantDashboard.sidebar.logout')}
+                    aria-label={t('tenantDashboard.sidebar.logout')}
+                    onClick={onLogout}
+                >
+                    <ArrowLeftOnRectangleIcon className={styles.iconSmall} aria-hidden="true" />
+                    <span className={styles.logoutLabel}>{t('tenantDashboard.sidebar.logout')}</span>
                 </button>
             </div>
 

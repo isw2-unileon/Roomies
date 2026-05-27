@@ -21,8 +21,7 @@ import {
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
-import { getAccessToken } from '@/session/authSession'
-import { getProfileStatus } from '@/services/authService'
+import { getProfileStatus, logout } from '@/services/authService'
 import { listOwnerApartments } from '@/services/ownerService'
 import type { OwnerDashboardProperty, OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
 
@@ -50,17 +49,11 @@ export default function OwnerDashboardPage() {
     let ignoreResult = false
 
     async function loadOwnerProperties() {
-      const accessToken = getAccessToken()
-      if (!accessToken) {
-        setOwnerProperties([])
-        return
-      }
-
       setIsLoadingProperties(true)
       clearNotice()
 
       try {
-        const profileStatus = await getProfileStatus(accessToken)
+        const profileStatus = await getProfileStatus()
         if (ignoreResult) {
           return
         }
@@ -99,6 +92,14 @@ export default function OwnerDashboardPage() {
     setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, status } : issue)))
   }
 
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      navigate(paths.login, { replace: true })
+    }
+  }
+
   return (
     <main className={styles.page}>
       <div className={styles.layout}>
@@ -106,6 +107,7 @@ export default function OwnerDashboardPage() {
           <OwnerSidebar
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onLogout={handleLogout}
             unreadNotifications={unreadNotifications}
           />
         </div>
@@ -122,6 +124,7 @@ export default function OwnerDashboardPage() {
               <OwnerSidebar
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
+                onLogout={handleLogout}
                 unreadNotifications={unreadNotifications}
               />
             </div>

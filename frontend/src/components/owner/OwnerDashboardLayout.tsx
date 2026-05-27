@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import OwnerSidebar from '@/components/owner/OwnerSidebar'
 import OwnerTopBar from '@/components/owner/OwnerTopBar'
 import { mockOwnerProfile } from '@/mocks/ownerData'
+import { paths } from '@/routes/paths'
+import { logout } from '@/services/authService'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerNavTab } from '@/types/owner'
 
@@ -12,8 +15,17 @@ interface OwnerDashboardLayoutProps {
 }
 
 export default function OwnerDashboardLayout({ activeTab, onTabChange, children }: OwnerDashboardLayoutProps) {
+  const navigate = useNavigate()
   const unreadMessages = 1
   const unreadNotifications = 3
+
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      navigate(paths.login, { replace: true })
+    }
+  }
 
   return (
     <main className={styles.page}>
@@ -22,6 +34,7 @@ export default function OwnerDashboardLayout({ activeTab, onTabChange, children 
           <OwnerSidebar
             activeTab={activeTab}
             onTabChange={onTabChange}
+            onLogout={handleLogout}
             unreadNotifications={unreadNotifications}
           />
         </div>
@@ -38,6 +51,7 @@ export default function OwnerDashboardLayout({ activeTab, onTabChange, children 
               <OwnerSidebar
                 activeTab={activeTab}
                 onTabChange={onTabChange}
+                onLogout={handleLogout}
                 unreadNotifications={unreadNotifications}
               />
             </div>

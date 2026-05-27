@@ -1,7 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import TenantSidebar from '@/components/tenant/TenantSidebar'
+import { paths } from '@/routes/paths'
+import { logout } from '@/services/authService'
 import styles from '@/styles/TenantLayout.module.css'
 
 const UNREAD_MESSAGES = 2
@@ -13,8 +16,17 @@ interface TenantLayoutProps {
 
 export default function TenantLayout({ children }: TenantLayoutProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      navigate(paths.login, { replace: true })
+    }
+  }
 
   return (
     <div className={styles.shell}>
@@ -26,6 +38,7 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
         <TenantSidebar
           isCollapsed={isSidebarCollapsed}
           onToggleCollapsed={() => setIsSidebarCollapsed((value) => !value)}
+          onLogout={handleLogout}
           unreadMessages={UNREAD_MESSAGES}
           unreadNotifications={UNREAD_NOTIFICATIONS}
         />
@@ -72,6 +85,7 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
               showCollapseToggle={false}
               onToggleCollapsed={() => undefined}
               onNavigate={() => setIsMobileSidebarOpen(false)}
+              onLogout={handleLogout}
               unreadMessages={UNREAD_MESSAGES}
               unreadNotifications={UNREAD_NOTIFICATIONS}
             />

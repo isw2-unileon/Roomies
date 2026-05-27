@@ -67,21 +67,6 @@ type Rules struct {
 	PreferredSchedule      string
 }
 
-// TenantProfile contains profile data used for compatibility.
-type TenantProfile struct {
-	UserID        string
-	BudgetMin     int
-	BudgetMax     int
-	PreferredArea string
-	Pets          bool
-	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
-	Age           int
-	University    string
-}
-
 // Detail contains tenant-facing apartment detail information.
 type Detail struct {
 	Apartment                Apartment
@@ -92,46 +77,4 @@ type Detail struct {
 	CurrentApplicationStatus string
 	CanApply                 bool
 	CanCancel                bool
-}
-
-// InterestedTenant contains public data for tenants interested in an apartment.
-type InterestedTenant struct {
-	UserID        string
-	Name          string
-	Age           int
-	Studies       string
-	AvatarURL     string
-	Compatibility int
-}
-
-// InterestedTenantCandidate contains interested tenant data plus profile preferences.
-type InterestedTenantCandidate struct {
-	InterestedTenant
-	BudgetMin     int
-	BudgetMax     int
-	PreferredArea string
-	Pets          bool
-	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
-}
-
-// TenantApplication contains tenant-facing application data.
-type TenantApplication struct {
-	ID                 string
-	ApartmentID        string
-	PropertyTitle      string
-	OwnerName          string
-	Address            string
-	ImageURL           string
-	Places             int
-	Size               int
-	Bathrooms          int
-	Status             string
-	CreatedAt          string
-	DateLabel          string
-	CompatibilityScore int
-	RequestType        string
-	StatusMessage      string
 }

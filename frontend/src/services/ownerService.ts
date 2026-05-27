@@ -1,5 +1,4 @@
 import { apiFetch } from '@/api'
-import { getAuthorizationHeader } from '@/session/authSession'
 import type { OwnerDashboardProperty } from '@/types/owner'
 
 interface OwnerApartmentDto {
@@ -63,9 +62,7 @@ function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
 }
 
 export async function listOwnerApartments() {
-  const response = await apiFetch('/api/owner/apartments', {
-    headers: getAuthorizationHeader(),
-  })
+  const response = await apiFetch('/api/owner/apartments')
   const data = (await response.json()) as OwnerApartmentsResponseDto
   if (!response.ok) {
     throw new Error(data.error ?? 'No se pudieron cargar tus pisos publicados.')
@@ -76,10 +73,7 @@ export async function listOwnerApartments() {
 export async function createApartment(input: CreateApartmentInput): Promise<CreateApartmentResult> {
   const response = await apiFetch('/api/apartments', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthorizationHeader(),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       title: input.title,
       description: input.description,

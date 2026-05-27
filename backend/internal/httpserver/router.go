@@ -1,11 +1,14 @@
-package httpapi
+package httpserver
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	apartmenthttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/httpadapter"
 	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
+	applicationhttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/httpadapter"
+	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 	authhttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/httpadapter"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	geocodehttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/httpadapter"
@@ -16,7 +19,9 @@ import (
 )
 
 // NewRouter builds the HTTP API router.
-func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service, geocodeService *geocodenominatim.Service) *gin.Engine {
+
+func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service, applicationService *applicationservice.Service, geocodeService *geocodenominatim.Service) *gin.Engine {
+
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), corsMiddleware(cfg.CORSAllowOrigin))
@@ -33,10 +38,27 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	if authService == nil || profileService == nil {
 		return r
 	}
-	authhttp.RegisterRoutes(api, authService, cfg.FrontendURL)
-	profilehttp.RegisterRoutes(api, authService, profileService)
+	secureCookies := strings.EqualFold(cfg.GinMode, gin.ReleaseMode)
+	authhttp.RegisterPublicRoutes(api, authService, cfg.FrontendURL, secureCookies)
+
+	authenticated := api.Group("")
+	authenticated.Use(requireAuth(authService, profileService))
+	profilehttp.RegisterRoutes(authenticated, profileService)
+
+	tenant := authenticated.Group("")
+	tenant.Use(requireRole("tenant"))
+	owner := authenticated.Group("")
+	owner.Use(requireRole("owner"))
+
 	if apartmentService != nil {
-		apartmenthttp.RegisterRoutes(api, authService, profileService, apartmentService)
+		apartmenthttp.RegisterPublicRoutes(api, apartmentService)
+		apartmenthttp.RegisterTenantRoutes(tenant, apartmentService)
+		apartmenthttp.RegisterOwnerRoutes(owner, apartmentService)
+	}
+	if applicationService != nil {
+		applicationhttp.RegisterSharedRoutes(authenticated, applicationService)
+		applicationhttp.RegisterTenantRoutes(tenant, applicationService)
+		applicationhttp.RegisterOwnerRoutes(owner, applicationService)
 	}
 	geocodehttp.RegisterRoutes(api, geocodeService)
 	return r

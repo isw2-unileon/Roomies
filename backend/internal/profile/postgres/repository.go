@@ -61,6 +61,46 @@ func (r *Repository) NeedsTenantProfile(ctx context.Context, userID, role string
 	return !exists, nil
 }
 
+// GetTenantProfileByUserID returns tenant profile data for compatibility.
+func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error) {
+	const query = `SELECT
+		user_id,
+		COALESCE(budget_min, 0),
+		COALESCE(budget_max, 0),
+		COALESCE(preferred_area, ''),
+		COALESCE(pets, FALSE),
+		COALESCE(smoking, FALSE),
+		COALESCE(noise_level, ''),
+		COALESCE(cleanliness, ''),
+		COALESCE(work_schedule, ''),
+		COALESCE(age, 0),
+		COALESCE(university, '')
+	FROM public.tenant_profiles
+	WHERE user_id = $1`
+
+	var tenantProfile profile.TenantProfile
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&tenantProfile.UserID,
+		&tenantProfile.BudgetMin,
+		&tenantProfile.BudgetMax,
+		&tenantProfile.PreferredArea,
+		&tenantProfile.Pets,
+		&tenantProfile.Smoking,
+		&tenantProfile.NoiseLevel,
+		&tenantProfile.Cleanliness,
+		&tenantProfile.WorkSchedule,
+		&tenantProfile.Age,
+		&tenantProfile.University,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get tenant profile by user id: %w", err)
+	}
+	return &tenantProfile, nil
+}
+
 // UpsertTenantProfile updates or inserts tenant profile.
 func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, input profile.TenantProfileInput) error {
 	result, err := r.db.Exec(
