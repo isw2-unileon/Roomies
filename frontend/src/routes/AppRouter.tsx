@@ -4,7 +4,11 @@ import AuthCallbackPage from '@/pages/auth/AuthCallbackPage'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
+import OwnerApplications from '@/pages/owner/OwnerApplications'
 import OwnerDashboardPage from '@/pages/owner/OwnerDashboardPage'
+import OwnerMessages from '@/pages/owner/OwnerMessages'
+import OwnerNotifications from '@/pages/owner/OwnerNotifications'
+import OwnerProfile from '@/pages/owner/OwnerProfile'
 import OwnerPublishPropertyPage from '@/pages/owner/OwnerPublishPropertyPage'
 import TenantApplicationsPage from '@/pages/tenant/TenantApplicationsPage'
 import TenantExploreDetailPage from '@/pages/tenant/TenantExploreDetailPage'
@@ -158,6 +162,38 @@ function AppRoutes() {
         element={(
           <ProtectedRoleRoute requiredRole="owner">
             <OwnerPublishPropertyPage />
+          </ProtectedRoleRoute>
+        )}
+      />
+      <Route
+        path={paths.ownerApplications}
+        element={(
+          <ProtectedRoleRoute requiredRole="owner">
+            <OwnerApplications />
+          </ProtectedRoleRoute>
+        )}
+      />
+      <Route
+        path={paths.ownerMessages}
+        element={(
+          <ProtectedRoleRoute requiredRole="owner">
+            <OwnerMessages />
+          </ProtectedRoleRoute>
+        )}
+      />
+      <Route
+        path={paths.ownerNotifications}
+        element={(
+          <ProtectedRoleRoute requiredRole="owner">
+            <OwnerNotifications />
+          </ProtectedRoleRoute>
+        )}
+      />
+      <Route
+        path={paths.ownerProfile}
+        element={(
+          <ProtectedRoleRoute requiredRole="owner">
+            <OwnerProfile />
           </ProtectedRoleRoute>
         )}
       />
