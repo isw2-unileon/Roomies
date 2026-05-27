@@ -13,6 +13,10 @@ import (
 type Service struct {
 	client    *http.Client
 	userAgent string
+	baseURL   string
+
+	HTTPClient *http.Client
+	BaseURL    string
 }
 
 type nominatimResponse struct {
@@ -36,9 +40,23 @@ func NewService() *Service {
 }
 
 func (s *Service) ReverseGeocode(ctx context.Context, input geocode.ReverseGeocodeInput) (*geocode.ReverseGeocodeResult, error) {
+	nomBaseURL := s.BaseURL
+	if nomBaseURL == "" {
+		nomBaseURL = s.baseURL
+	}
+	if nomBaseURL == "" {
+		nomBaseURL = "https://nominatim.openstreetmap.org"
+	}
+	httpClient := s.HTTPClient
+	if httpClient == nil {
+		httpClient = s.client
+	}
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
 	url := fmt.Sprintf(
-		"https://nominatim.openstreetmap.org/reverse?lat=%f&lon=%f&format=json&addressdetails=1",
-		input.Latitude, input.Longitude,
+		"%s/reverse?lat=%f&lon=%f&format=json&addressdetails=1",
+		nomBaseURL, input.Latitude, input.Longitude,
 	)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -48,7 +66,7 @@ func (s *Service) ReverseGeocode(ctx context.Context, input geocode.ReverseGeoco
 	req.Header.Set("User-Agent", s.userAgent)
 	req.Header.Set("Accept-Language", "es")
 
-	resp, err := s.client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("nominatim request: %w", err)
 	}
