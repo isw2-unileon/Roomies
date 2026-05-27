@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
@@ -7,6 +7,7 @@ import App from '@/App'
 import { paths } from './paths'
 
 const authServiceMock = vi.hoisted(() => ({
+  getProfileStatus: vi.fn(async () => ({ role: 'tenant', needsOnboarding: false })),
   logout: vi.fn(async () => undefined),
 }))
 
@@ -15,8 +16,12 @@ vi.mock('@/services/tenantService', () => ({
 }))
 
 vi.mock('@/services/authService', () => ({
-  getProfileStatus: vi.fn(async () => ({ role: 'tenant', needsOnboarding: false })),
+  getProfileStatus: authServiceMock.getProfileStatus,
   logout: authServiceMock.logout,
+}))
+
+vi.mock('@/services/ownerService', () => ({
+  listOwnerApartments: vi.fn(async () => []),
 }))
 
 function renderAppAt(path: string) {
@@ -27,6 +32,8 @@ function renderAppAt(path: string) {
 describe('AppRouter', () => {
   beforeEach(() => {
     localStorage.clear()
+    authServiceMock.getProfileStatus.mockReset()
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'tenant', needsOnboarding: false })
     authServiceMock.logout.mockClear()
   })
 
@@ -104,5 +111,23 @@ describe('AppRouter', () => {
     await user.click(screen.getByRole('button', { name: /cerrar invitación/i }))
 
     expect(screen.queryByRole('dialog', { name: /invita a un amigo/i })).not.toBeInTheDocument()
+  })
+
+  test('redirects owners away from tenant onboarding', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt(paths.tenantOnboarding)
+
+    await waitFor(() => expect(authServiceMock.getProfileStatus).toHaveBeenCalled())
+    expect(screen.queryByRole('heading', { name: /perfil de inquilino/i })).not.toBeInTheDocument()
+  })
+
+  test('does not expose the removed owner coming soon route', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt('/owner/coming-soon')
+
+    expect(await screen.findByRole('heading', { name: /bienvenido de nuevo/i })).toBeInTheDocument()
+    expect(window.location.pathname).toBe(paths.login)
   })
 })

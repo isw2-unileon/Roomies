@@ -11,8 +11,13 @@ export function resolvePostAuthPath(payload: AuthSuccessPayload): AppPath {
   }
 
   if (payload.role === 'owner') {
-    return paths.ownerDashboard
+    return paths.ownerProperties
   }
 
-  return paths.tenantExplore
+  if (payload.role === 'tenant') {
+    return paths.tenantExplore
+  }
+
+  return paths.login;
+
 }

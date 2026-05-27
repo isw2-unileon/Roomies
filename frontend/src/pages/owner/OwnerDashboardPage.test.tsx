@@ -24,7 +24,7 @@ const mockedListOwnerApartments = vi.mocked(listOwnerApartments)
 
 function renderOwnerDashboard() {
   render(
-    <MemoryRouter initialEntries={[paths.ownerDashboard]}>
+    <MemoryRouter initialEntries={[paths.ownerProperties]}>
       <Routes>
         <Route path="/" element={<p>Login page</p>} />
         <Route path="*" element={<OwnerDashboardPage />} />
