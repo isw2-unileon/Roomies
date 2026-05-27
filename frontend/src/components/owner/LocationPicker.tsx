@@ -15,6 +15,7 @@ interface LocationPickerProps {
 }
 
 const LEON_CENTER: [number, number] = [-5.567, 42.598]
+const DEBOUNCE_MS = 300
 
 interface MapClickHandlerProps {
   onMapClick: (lat: number, lng: number) => void
@@ -37,35 +38,6 @@ function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
   return null
 }
 
-interface NominatimReverseProps {
-  latitude: number
-  longitude: number
-  onResult: (address: string) => void
-}
-
-function NominatimReverse({ latitude, longitude, onResult }: NominatimReverseProps) {
-  const onResultRef = useRef(onResult)
-  onResultRef.current = onResult
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`
-
-    fetch(url, { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data) => {
-        onResultRef.current(data.display_name ?? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
-      })
-      .catch(() => {
-        onResultRef.current(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
-      })
-
-    return () => controller.abort()
-  }, [latitude, longitude])
-
-  return null
-}
-
 export default function LocationPicker({ initialLocation, onLocationSelect }: LocationPickerProps) {
   const [marker, setMarker] = useState<{ latitude: number; longitude: number } | null>(
     initialLocation?.latitude && initialLocation?.longitude
@@ -73,37 +45,49 @@ export default function LocationPicker({ initialLocation, onLocationSelect }: Lo
       : null,
   )
 
-  const [pendingAddress, setPendingAddress] = useState(false)
   const pendingCoords = useRef<{ latitude: number; longitude: number } | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetchAddress = useCallback((lat: number, lng: number) => {
+    fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.address) {
+          onLocationSelect({ latitude: lat, longitude: lng, address: data.address })
+          pendingCoords.current = null
+        }
+      })
+      .catch(() => {
+        onLocationSelect({ latitude: lat, longitude: lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` })
+        pendingCoords.current = null
+      })
+  }, [onLocationSelect])
+
+  const scheduleAddressFetch = useCallback((lat: number, lng: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    pendingCoords.current = { latitude: lat, longitude: lng }
+    debounceRef.current = setTimeout(() => {
+      fetchAddress(lat, lng)
+    }, DEBOUNCE_MS)
+  }, [fetchAddress])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
     setMarker({ latitude: lat, longitude: lng })
-    pendingCoords.current = { latitude: lat, longitude: lng }
-    setPendingAddress(true)
-  }, [])
-
-  const handleNominatimResult = useCallback(
-    (address: string) => {
-      if (pendingCoords.current) {
-        onLocationSelect({
-          latitude: pendingCoords.current.latitude,
-          longitude: pendingCoords.current.longitude,
-          address,
-        })
-        pendingCoords.current = null
-      }
-      setPendingAddress(false)
-    },
-    [onLocationSelect],
-  )
+    scheduleAddressFetch(lat, lng)
+  }, [scheduleAddressFetch])
 
   const handleMarkerDrag = useCallback(
     (lngLat: { lng: number; lat: number }) => {
       setMarker({ latitude: lngLat.lat, longitude: lngLat.lng })
-      pendingCoords.current = { latitude: lngLat.lat, longitude: lngLat.lng }
-      setPendingAddress(true)
+      scheduleAddressFetch(lngLat.lat, lngLat.lng)
     },
-    [],
+    [scheduleAddressFetch],
   )
 
   const center: [number, number] = marker
@@ -128,14 +112,6 @@ export default function LocationPicker({ initialLocation, onLocationSelect }: Lo
               </div>
             </MarkerContent>
           </MapMarker>
-        )}
-        {marker && pendingAddress && (
-          <NominatimReverse
-            key={`${marker.latitude}-${marker.longitude}`}
-            latitude={marker.latitude}
-            longitude={marker.longitude}
-            onResult={handleNominatimResult}
-          />
         )}
       </Map>
       <p className="text-muted-foreground mt-1.5 text-xs">

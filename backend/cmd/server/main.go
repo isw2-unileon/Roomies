@@ -14,6 +14,7 @@ import (
 	apartmentservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
+	geocodenominatim "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/nominatim"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpapi"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/database"
@@ -57,7 +58,8 @@ func main() {
 		}
 	}
 	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner)
-	r := httpapi.NewRouter(cfg, authService, profileService, apartmentService)
+	geocodeService := geocodenominatim.NewService()
+	r := httpapi.NewRouter(cfg, authService, profileService, apartmentService, geocodeService)
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,
