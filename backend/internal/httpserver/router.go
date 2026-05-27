@@ -19,7 +19,6 @@ import (
 )
 
 // NewRouter builds the HTTP API router.
-
 func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service, applicationService *applicationservice.Service, geocodeService *geocodenominatim.Service) *gin.Engine {
 
 	gin.SetMode(cfg.GinMode)
