@@ -58,7 +58,10 @@ var ErrApartmentFull = errors.New("group exceeds apartment available spots")
 // ErrNoValidInvitedUsers is returned when no invited users are valid tenants.
 var ErrNoValidInvitedUsers = errors.New("no valid invited users found")
 
+// ErrJoinRequestAlreadyPending is returned when the user already has a pending join request for the group.
 var ErrJoinRequestAlreadyPending = errors.New("join request already pending")
+
+// ErrJoinRequestNotFound is returned when the requested join request does not exist.
 var ErrJoinRequestNotFound = errors.New("join request not found")
 
 // Service contains tenant group business logic.
@@ -255,6 +258,7 @@ func (s *Service) AcceptGroup(ctx context.Context, groupID, userID, role string)
 	return s.repo.AcceptGroupForUser(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
 }
 
+// CreateJoinRequest creates a join request from a viewer to a group.
 func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role string) (string, error) {
 	if err := validateTenant(userID, role); err != nil {
 		return "", err
@@ -287,6 +291,7 @@ func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role s
 	return s.repo.CreateJoinRequest(ctx, groupID, userID)
 }
 
+// ListJoinRequests returns pending join requests for a group. Only accepted members can list them.
 func (s *Service) ListJoinRequests(ctx context.Context, groupID, userID, role string) ([]group.JoinRequest, error) {
 	if err := validateTenant(userID, role); err != nil {
 		return nil, err
@@ -308,6 +313,7 @@ func (s *Service) ListJoinRequests(ctx context.Context, groupID, userID, role st
 	return s.repo.ListJoinRequests(ctx, groupID)
 }
 
+// VoteJoinRequest casts a member vote on a pending join request.
 func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, decision string) error {
 	if err := validateTenant(userID, role); err != nil {
 		return err
@@ -334,6 +340,11 @@ func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, 
 		return err
 	}
 
+	return s.finalizeApprovedJoinRequestIfNeeded(ctx, requestID, userID)
+}
+
+// finalizeApprovedJoinRequestIfNeeded resolves the request status and, if approved, adds the requester as member.
+func (s *Service) finalizeApprovedJoinRequestIfNeeded(ctx context.Context, requestID, voterUserID string) error {
 	status, completed, err := s.repo.ResolveJoinRequestStatus(ctx, requestID)
 	if err != nil {
 		return err
@@ -350,23 +361,34 @@ func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, 
 		return ErrJoinRequestNotFound
 	}
 
-	groupDetail, err := s.repo.GetTenantGroupByID(ctx, joinRequest.GroupID, userID)
-	if err != nil {
+	if err := s.ensureGroupHasCapacityForNewMember(ctx, joinRequest.GroupID, voterUserID); err != nil {
 		return err
-	}
-	if groupDetail != nil && groupDetail.Apartment != nil {
-		currentPeople, countErr := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, joinRequest.GroupID)
-		if countErr != nil {
-			return countErr
-		}
-		if currentPeople+1 > groupDetail.Apartment.AvailableSpots {
-			return ErrApartmentFull
-		}
 	}
 
 	return s.repo.AddGroupMember(ctx, joinRequest.GroupID, joinRequest.RequesterUserID, group.MemberRoleMember)
 }
 
+// ensureGroupHasCapacityForNewMember checks apartment capacity before adding a member.
+func (s *Service) ensureGroupHasCapacityForNewMember(ctx context.Context, groupID, callerUserID string) error {
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, callerUserID)
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil || groupDetail.Apartment == nil {
+		return nil
+	}
+
+	currentPeople, err := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, groupID)
+	if err != nil {
+		return err
+	}
+	if currentPeople+1 > groupDetail.Apartment.AvailableSpots {
+		return ErrApartmentFull
+	}
+	return nil
+}
+
+// CancelJoinRequest cancels a pending join request owned by the requester.
 func (s *Service) CancelJoinRequest(ctx context.Context, requestID, userID, role string) error {
 	if err := validateTenant(userID, role); err != nil {
 		return err

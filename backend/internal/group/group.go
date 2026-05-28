@@ -42,13 +42,19 @@ const (
 	// UserRelationViewer indicates that the current user is only viewing the group.
 	UserRelationViewer = "viewer"
 
-	JoinRequestStatusPending   = "PENDING"
-	JoinRequestStatusApproved  = "APPROVED"
-	JoinRequestStatusRejected  = "REJECTED"
+	// JoinRequestStatusPending indicates the join request is awaiting member votes.
+	JoinRequestStatusPending = "PENDING"
+	// JoinRequestStatusApproved indicates all members approved the join request.
+	JoinRequestStatusApproved = "APPROVED"
+	// JoinRequestStatusRejected indicates a member rejected the join request.
+	JoinRequestStatusRejected = "REJECTED"
+	// JoinRequestStatusCancelled indicates the requester cancelled the join request.
 	JoinRequestStatusCancelled = "CANCELLED"
 
+	// JoinRequestVoteApprove represents an approval vote.
 	JoinRequestVoteApprove = "APPROVE"
-	JoinRequestVoteReject  = "REJECT"
+	// JoinRequestVoteReject represents a rejection vote.
+	JoinRequestVoteReject = "REJECT"
 )
 
 // CreateGroupInput contains the data required to create a tenant group.
@@ -167,6 +173,7 @@ type Candidate struct {
 	WorkSchedule  string
 }
 
+// JoinRequest represents a request from a viewer to join a group.
 type JoinRequest struct {
 	ID              string
 	GroupID         string
@@ -178,6 +185,7 @@ type JoinRequest struct {
 	Votes           []JoinRequestVote
 }
 
+// JoinRequestVote represents a member's vote on a join request.
 type JoinRequestVote struct {
 	RequestID   string
 	VoterUserID string
