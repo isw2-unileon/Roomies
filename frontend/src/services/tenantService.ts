@@ -3,6 +3,15 @@ import type {
   InterestedTenant,
   PropertyAvailability,
   TenantApplication,
+  TenantGroupAcceptedMember,
+  TenantGroupApartment,
+  TenantGroupCandidate,
+  TenantGroupDetailItem,
+  TenantGroupInvitation,
+  TenantGroupJoinRequest,
+  TenantGroupJoinVote,
+  TenantGroupListItem,
+  TenantGroupProfile,
   TenantProperty,
   TenantPropertyDetail,
   TenantPropertyRules,
@@ -114,6 +123,128 @@ interface TenantApplicationsResponseDto {
   error?: string
 }
 
+interface TenantGroupApartmentDto {
+  id: string
+  title: string
+  address: string
+  area: string
+  total_spots: number
+  occupied_spots: number
+  available_spots: number
+  base_rent: number
+  image_url: string
+}
+
+interface TenantGroupDto {
+  id: string
+  name: string
+  description: string
+  status: 'FORMING' | 'READY' | 'APPLIED' | 'ACCEPTED' | 'REJECTED' | 'CLOSED'
+  created_by: string
+  created_at: string
+  user_relation: 'creator' | 'member' | 'pending_invitation' | 'viewer'
+  invitation_id: string
+  accepted_members_count: number
+  pending_invitations_count: number
+  is_fully_accepted: boolean
+  average_budget_min: number
+  average_budget_max: number
+  apartment: TenantGroupApartmentDto | null
+  members?: TenantGroupMemberDto[]
+  pending_invitations?: TenantGroupInvitationDto[]
+  join_requests?: TenantGroupJoinRequestDto[]
+}
+
+interface TenantGroupJoinVoteDto {
+  request_id: string
+  voter_user_id: string
+  voter_name: string
+  decision: 'APPROVE' | 'REJECT'
+  created_at: string
+  updated_at: string
+}
+
+interface TenantGroupJoinRequestDto {
+  id: string
+  group_id: string
+  requester_user_id: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  created_at: string
+  updated_at: string
+  requester: TenantGroupCandidateDto
+  votes: TenantGroupJoinVoteDto[]
+}
+
+interface TenantGroupProfileDto {
+  user_id: string
+  name: string
+  email: string
+  avatar_url: string
+  age: number
+  university: string
+  budget_min: number
+  budget_max: number
+  preferred_area: string
+  move_in_date: string
+  pets: boolean
+  smoking: boolean
+  noise_level: string
+  cleanliness: string
+  work_schedule: string
+}
+
+interface TenantGroupMemberDto extends TenantGroupProfileDto {
+  role: 'owner' | 'member'
+  status: 'ACCEPTED' | 'LEFT'
+  has_accepted: boolean
+  is_current_user: boolean
+}
+
+type TenantGroupCandidateDto = TenantGroupProfileDto 
+
+interface TenantGroupInvitationDto {
+  id: string
+  group_id: string
+  invited_by: string
+  invited_user_id: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
+  created_at: string
+  responded_at: string
+  user: TenantGroupCandidateDto
+}
+
+interface TenantGroupsResponseDto {
+  groups?: TenantGroupDto[]
+  error?: string
+}
+
+interface TenantGroupResponseDto {
+  group?: TenantGroupDto
+  error?: string
+}
+
+interface TenantGroupCandidatesResponseDto {
+  candidates?: TenantGroupCandidateDto[]
+  error?: string
+}
+
+interface CreateTenantGroupResponseDto {
+  message?: string
+  group_id?: string
+  error?: string
+}
+
+interface TenantGroupMessageResponseDto {
+  message?: string
+  request_id?: string
+  error?: string
+}
+
+interface TenantGroupJoinRequestsResponseDto {
+  requests?: TenantGroupJoinRequestDto[]
+  error?: string
+}
+
 export interface TenantApartmentListFilters {
   query?: string
   area?: string
@@ -125,6 +256,26 @@ export interface TenantApartmentListFilters {
   availableRoomsMax?: number
   availability?: string
   sortBy?: string
+}
+
+export interface TenantGroupListFilters {
+  search?: string
+  status?: string
+  hasApartment?: string
+  members?: number
+  sort?: string
+}
+
+export interface TenantGroupCandidateFilters {
+  search?: string
+  university?: string
+}
+
+export interface CreateTenantGroupInput {
+  name: string
+  description: string
+  apartmentId: string | null
+  invitedUserIds: string[]
 }
 
 function resolveTenantErrorMessage(response: Response, fallbackMessage: string, apiMessage?: string) {
@@ -231,6 +382,119 @@ function tenantApplicationFromDto(dto: TenantApplicationDto): TenantApplication 
   }
 }
 
+function tenantGroupApartmentFromDto(dto: TenantGroupApartmentDto): TenantGroupApartment {
+  return {
+    id: dto.id,
+    title: dto.title,
+    address: dto.address,
+    area: dto.area,
+    totalSpots: dto.total_spots,
+    occupiedSpots: dto.occupied_spots,
+    availableSpots: dto.available_spots,
+    baseRent: dto.base_rent,
+    imageUrl: dto.image_url,
+  }
+}
+
+function tenantGroupProfileFromDto(dto: TenantGroupProfileDto): TenantGroupProfile {
+  return {
+    userId: dto.user_id,
+    name: dto.name,
+    email: dto.email,
+    avatarUrl: dto.avatar_url,
+    age: dto.age,
+    university: dto.university,
+    budgetMin: dto.budget_min,
+    budgetMax: dto.budget_max,
+    preferredArea: dto.preferred_area,
+    moveInDate: dto.move_in_date,
+    pets: dto.pets,
+    smoking: dto.smoking,
+    noiseLevel: dto.noise_level,
+    cleanliness: dto.cleanliness,
+    workSchedule: dto.work_schedule,
+  }
+}
+
+function tenantGroupMemberFromDto(dto: TenantGroupMemberDto): TenantGroupAcceptedMember {
+  return {
+    ...tenantGroupProfileFromDto(dto),
+    role: dto.role,
+    status: dto.status,
+    hasAccepted: dto.has_accepted,
+    isCurrentUser: dto.is_current_user,
+  }
+}
+
+function tenantGroupCandidateFromDto(dto: TenantGroupCandidateDto): TenantGroupCandidate {
+  return tenantGroupProfileFromDto(dto)
+}
+
+function tenantGroupInvitationFromDto(dto: TenantGroupInvitationDto): TenantGroupInvitation {
+  return {
+    id: dto.id,
+    groupId: dto.group_id,
+    invitedBy: dto.invited_by,
+    invitedUserId: dto.invited_user_id,
+    status: dto.status,
+    createdAt: dto.created_at,
+    respondedAt: dto.responded_at,
+    user: tenantGroupCandidateFromDto(dto.user),
+  }
+}
+
+function tenantGroupFromDto(dto: TenantGroupDto): TenantGroupListItem {
+  return {
+    id: dto.id,
+    name: dto.name,
+    description: dto.description,
+    status: dto.status,
+    createdBy: dto.created_by,
+    createdAt: dto.created_at,
+    userRelation: dto.user_relation,
+    invitationId: dto.invitation_id,
+    acceptedMembersCount: dto.accepted_members_count,
+    pendingInvitationsCount: dto.pending_invitations_count,
+    isFullyAccepted: dto.is_fully_accepted,
+    averageBudgetMin: dto.average_budget_min,
+    averageBudgetMax: dto.average_budget_max,
+    apartment: dto.apartment ? tenantGroupApartmentFromDto(dto.apartment) : null,
+  }
+}
+
+function tenantGroupJoinVoteFromDto(dto: TenantGroupJoinVoteDto): TenantGroupJoinVote {
+  return {
+    requestId: dto.request_id,
+    voterUserId: dto.voter_user_id,
+    voterName: dto.voter_name,
+    decision: dto.decision,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
+  }
+}
+
+function tenantGroupJoinRequestFromDto(dto: TenantGroupJoinRequestDto): TenantGroupJoinRequest {
+  return {
+    id: dto.id,
+    groupId: dto.group_id,
+    requesterUserId: dto.requester_user_id,
+    status: dto.status,
+    createdAt: dto.created_at,
+    updatedAt: dto.updated_at,
+    requester: tenantGroupCandidateFromDto(dto.requester),
+    votes: (dto.votes ?? []).map(tenantGroupJoinVoteFromDto),
+  }
+}
+
+function tenantGroupDetailFromDto(dto: TenantGroupDto): TenantGroupDetailItem {
+  return {
+    ...tenantGroupFromDto(dto),
+    members: (dto.members ?? []).map(tenantGroupMemberFromDto),
+    pendingInvitations: (dto.pending_invitations ?? []).map(tenantGroupInvitationFromDto),
+    joinRequests: (dto.join_requests ?? []).map(tenantGroupJoinRequestFromDto),
+  }
+}
+
 export async function saveTenantProfile(input: SaveTenantProfileInput) {
   const response = await apiFetch('/api/tenant-profile', {
     method: 'POST',
@@ -289,6 +553,49 @@ function buildApartmentsQuery(filters?: TenantApartmentListFilters) {
   }
   if (filters.sortBy?.trim()) {
     params.set('sort_by', filters.sortBy.trim())
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+function buildTenantGroupsQuery(filters?: TenantGroupListFilters) {
+  const params = new URLSearchParams()
+  if (!filters) {
+    return ''
+  }
+
+  if (filters.search?.trim()) {
+    params.set('search', filters.search.trim())
+  }
+  if (filters.status?.trim() && filters.status !== 'all') {
+    params.set('status', filters.status.trim())
+  }
+  if (filters.hasApartment?.trim() && filters.hasApartment !== 'all') {
+    params.set('has_apartment', filters.hasApartment.trim())
+  }
+  if (filters.members !== undefined && filters.members > 0) {
+    params.set('members', String(filters.members))
+  }
+  if (filters.sort?.trim()) {
+    params.set('sort', filters.sort.trim())
+  }
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
+}
+
+function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) {
+  const params = new URLSearchParams()
+  if (!filters) {
+    return ''
+  }
+
+  if (filters.search?.trim()) {
+    params.set('search', filters.search.trim())
+  }
+  if (filters.university?.trim()) {
+    params.set('university', filters.university.trim())
   }
 
   const query = params.toString()
@@ -372,4 +679,177 @@ export async function listTenantApplications() {
     throw new Error(data.error ?? 'No se pudieron cargar tus solicitudes.')
   }
   return (data.applications ?? []).map(tenantApplicationFromDto)
+}
+
+export async function listTenantGroups(filters?: TenantGroupListFilters): Promise<TenantGroupListItem[]> {
+  const query = buildTenantGroupsQuery(filters)
+  const response = await apiFetch(`/api/tenant/groups${query}`)
+  const data = (await response.json()) as TenantGroupsResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar tus grupos.', data.error))
+  }
+
+  return (data.groups ?? []).map(tenantGroupFromDto)
+}
+
+export async function getTenantGroup(groupID: string): Promise<TenantGroupDetailItem> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}`)
+  const data = (await response.json()) as TenantGroupResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo cargar el detalle del grupo.', data.error))
+  }
+
+  if (!data.group) {
+    throw new Error('No se pudo cargar el detalle del grupo.')
+  }
+
+  return tenantGroupDetailFromDto(data.group)
+}
+
+export async function createTenantGroup(input: CreateTenantGroupInput): Promise<string> {
+  const response = await apiFetch('/api/tenant/groups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      apartment_id: input.apartmentId,
+      invited_user_ids: input.invitedUserIds,
+    }),
+  })
+
+  const data = (await response.json()) as CreateTenantGroupResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo crear el grupo.', data.error))
+  }
+
+  if (!data.group_id) {
+    throw new Error('No se pudo crear el grupo.')
+  }
+
+  return data.group_id
+}
+
+export async function listTenantGroupCandidates(
+  filters?: TenantGroupCandidateFilters,
+): Promise<TenantGroupCandidate[]> {
+  const query = buildTenantGroupCandidatesQuery(filters)
+  const response = await apiFetch(`/api/tenant/group-candidates${query}`)
+  const data = (await response.json()) as TenantGroupCandidatesResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los candidatos.', data.error))
+  }
+
+  return (data.candidates ?? []).map(tenantGroupCandidateFromDto)
+}
+
+export async function acceptTenantGroupInvitation(invitationID: string): Promise<string> {
+  const response = await apiFetch(`/api/tenant/group-invitations/${invitationID}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo aceptar la invitacion.', data.error))
+  }
+
+  return data.message ?? 'group invitation accepted'
+}
+
+export async function rejectTenantGroupInvitation(invitationID: string): Promise<string> {
+  const response = await apiFetch(`/api/tenant/group-invitations/${invitationID}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo rechazar la invitacion.', data.error))
+  }
+
+  return data.message ?? 'group invitation rejected'
+}
+
+export async function updateTenantGroupApartment(groupID: string, apartmentID: string | null): Promise<string> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}/apartment`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apartment_id: apartmentID,
+    }),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo actualizar el piso del grupo.', data.error))
+  }
+
+  return data.message ?? 'group apartment updated'
+}
+
+export async function acceptTenantGroup(groupID: string): Promise<string> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo aceptar el grupo.', data.error))
+  }
+
+  return data.message ?? 'group accepted'
+}
+
+export async function createTenantGroupJoinRequest(groupID: string): Promise<string> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}/join-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo crear la solicitud de union.', data.error))
+  }
+
+  return data.request_id ?? ''
+}
+
+export async function listTenantGroupJoinRequests(groupID: string): Promise<TenantGroupJoinRequest[]> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}/join-requests`)
+  const data = (await response.json()) as TenantGroupJoinRequestsResponseDto
+
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar las solicitudes de union.', data.error))
+  }
+
+  return (data.requests ?? []).map(tenantGroupJoinRequestFromDto)
+}
+
+export async function voteTenantGroupJoinRequest(groupID: string, requestID: string, decision: 'APPROVE' | 'REJECT'): Promise<string> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}/join-requests/${requestID}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision }),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo registrar el voto.', data.error))
+  }
+
+  return data.message ?? 'join request voted'
 }

@@ -2,6 +2,79 @@
   width: 100%;
 }
 
+.detailContainer {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.summarySection {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.groupDescription {
+  font-size: 0.875rem;
+  color: var(--tenant-text-soft);
+}
+
+.acceptedText,
+.pendingText {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.acceptedText {
+  color: #067647;
+}
+
+.pendingText {
+  color: #b54708;
+}
+
+.groupMeta p {
+  margin: 0.25rem 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.membersSection,
+.invitationsSection {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.acceptGroupButton {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  color: #fff;
+  font-weight: 800;
+  background: #0f766e;
+  border: 1px solid #0f766e;
+  border-radius: 0.6rem;
+}
+
+.acceptGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.membersList,
+.invitationsList {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .backButton {
   display: inline-flex;
   align-items: center;
@@ -167,13 +240,23 @@
 }
 
 .memberCard {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--tenant-surface);
-  border: 1px solid var(--tenant-border);
-  border-radius: 1rem;
-  box-shadow: var(--tenant-shadow-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
+}
+
+.invitationCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
 }
 
 .memberMain {
@@ -184,13 +267,74 @@
 }
 
 .memberAvatar {
-  display: block;
-  width: 4rem;
-  height: 4rem;
-  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
   object-fit: cover;
-  background: #ede9f7;
   border-radius: 999px;
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.roleOwner {
+  color: #6941c6;
+  font-weight: 900;
+}
+
+.roleMember {
+  color: #067647;
+  font-weight: 900;
+}
+
+.currentUserBadge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e5f6ff;
+  border-radius: 0.5rem;
+}
+
+.memberAccepted,
+.memberPending {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.memberAccepted {
+  color: #067647;
+}
+
+.memberPending {
+  color: #b54708;
+}
+
+.invitationActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.acceptButton {
+  padding: 0.25rem 0.5rem;
+  color: #067647;
+  font-weight: 900;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 0.5rem;
+}
+
+.rejectButton {
+  padding: 0.25rem 0.5rem;
+  color: #b42318;
+  font-weight: 900;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 0.5rem;
 }
 
 .memberData {

@@ -2,70 +2,74 @@ import { ArrowRightIcon, CalendarDaysIcon, ShieldCheckIcon, UserGroupIcon } from
 
 import styles from '@/styles/TenantGroups.module.css'
 
-const memberOptions = ['1', '2', '3', '4', '5+']
+const memberOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: '1', label: '1' },
+    { value: '2', label: '2' },
+    { value: '3', label: '3' },
+    { value: '4', label: '4' },
+    { value: '5+', label: '5+' },
+]
 
 interface TenantGroupFiltersProps {
     selectedMembers: string
     onSelectedMembersChange: (value: string) => void
+    status: string
+    onStatusChange: (value: string) => void
+    hasApartment: string
+    onHasApartmentChange: (value: string) => void
+    onClearFilters: () => void
 }
 
 export default function TenantGroupFilters({
     selectedMembers,
     onSelectedMembersChange,
+    status,
+    onStatusChange,
+    hasApartment,
+    onHasApartmentChange,
+    onClearFilters,
 }: TenantGroupFiltersProps) {
     return (
         <aside className={styles.sidebar} aria-label="Filtros de grupos">
             <section className={styles.sideCard}>
                 <div className={styles.sideHeader}>
                     <h2 className={styles.sideTitle}>Filtros</h2>
-                    <button type="button" className={styles.clearButton}>Limpiar</button>
+                    <button type="button" className={styles.clearButton} onClick={onClearFilters}>
+                        Limpiar
+                    </button>
                 </div>
 
                 <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel} htmlFor="location-filter">Ubicación</label>
-                    <select id="location-filter" className={styles.filterSelect} defaultValue="all">
-                        <option value="all">Todas</option>
-                        <option value="centro">Centro</option>
-                        <option value="universidad">Zona universitaria</option>
-                        <option value="eras">Eras de Renueva</option>
+                    <label className={styles.filterLabel} htmlFor="status-filter">Estado</label>
+                    <select
+                        id="status-filter"
+                        className={styles.filterSelect}
+                        value={status}
+                        onChange={(event) => onStatusChange(event.target.value)}
+                    >
+                        <option value="all">Todos</option>
+                        <option value="FORMING">En formación</option>
+                        <option value="READY">Listo</option>
+                        <option value="APPLIED">Solicitud enviada</option>
+                        <option value="ACCEPTED">Aceptado</option>
+                        <option value="REJECTED">Rechazado</option>
+                        <option value="CLOSED">Cerrado</option>
                     </select>
                 </div>
 
                 <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel} htmlFor="university-filter">Universidad</label>
-                    <select id="university-filter" className={styles.filterSelect} defaultValue="all">
-                        <option value="all">Todas</option>
-                        <option value="ule">Universidad de León</option>
-                        <option value="professionals">Profesionales</option>
+                    <label className={styles.filterLabel} htmlFor="apartment-filter">Piso asignado</label>
+                    <select
+                        id="apartment-filter"
+                        className={styles.filterSelect}
+                        value={hasApartment}
+                        onChange={(event) => onHasApartmentChange(event.target.value)}
+                    >
+                        <option value="all">Todos</option>
+                        <option value="true">Con piso asignado</option>
+                        <option value="false">Sin piso asignado</option>
                     </select>
-                </div>
-
-                <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel} htmlFor="entry-filter">Fecha de entrada</label>
-                    <select id="entry-filter" className={styles.filterSelect} defaultValue="all">
-                        <option value="all">Todas</option>
-                        <option value="now">Inmediata</option>
-                        <option value="august">Agosto</option>
-                        <option value="september">Septiembre</option>
-                    </select>
-                </div>
-
-                <div className={styles.filterGroup}>
-                    <span className={styles.filterLabel}>Presupuesto mensual</span>
-                    <div className={styles.rangeWrap}>
-                        <input
-                            className={styles.range}
-                            type="range"
-                            min="0"
-                            max="800"
-                            defaultValue="800"
-                            aria-label="Presupuesto mensual"
-                        />
-                        <div className={styles.rangeLabels}>
-                            <span>0€</span>
-                            <span>800€+</span>
-                        </div>
-                    </div>
                 </div>
 
                 <div className={styles.filterGroup}>
@@ -73,12 +77,12 @@ export default function TenantGroupFilters({
                     <div className={styles.memberSelector}>
                         {memberOptions.map((option) => (
                             <button
-                                key={option}
+                                key={option.value}
                                 type="button"
-                                className={`${styles.memberOption} ${selectedMembers === option ? styles.memberOptionActive : ''}`}
-                                onClick={() => onSelectedMembersChange(option)}
+                                className={`${styles.memberOption} ${selectedMembers === option.value ? styles.memberOptionActive : ''}`}
+                                onClick={() => onSelectedMembersChange(option.value)}
                             >
-                                {option}
+                                {option.label}
                             </button>
                         ))}
                     </div>
@@ -86,7 +90,7 @@ export default function TenantGroupFilters({
             </section>
 
             <section className={styles.sideCard}>
-                <h2 className={styles.sideTitle}>Consejos para encontrar grupo</h2>
+                <h2 className={styles.sideTitle}>Consejos para crear grupo</h2>
 
                 <div className={styles.tipsList}>
                     <div className={styles.tipItem}>
@@ -94,8 +98,8 @@ export default function TenantGroupFilters({
                             <ShieldCheckIcon className={styles.iconSmall} aria-hidden="true" />
                         </span>
                         <div>
-                            <p className={styles.tipTitle}>Completa tu perfil</p>
-                            <p className={styles.tipText}>Un perfil completo genera más confianza.</p>
+                            <p className={styles.tipTitle}>Revisa las invitaciones</p>
+                            <p className={styles.tipText}>Los usuarios invitados aparecerán como pendientes hasta que acepten.</p>
                         </div>
                     </div>
 
@@ -104,8 +108,8 @@ export default function TenantGroupFilters({
                             <UserGroupIcon className={styles.iconSmall} aria-hidden="true" />
                         </span>
                         <div>
-                            <p className={styles.tipTitle}>Sé claro y honesto</p>
-                            <p className={styles.tipText}>Describe bien lo que buscas y ofreces.</p>
+                            <p className={styles.tipTitle}>Puedes crear varios grupos</p>
+                            <p className={styles.tipText}>Un usuario puede crear o participar en más de un grupo.</p>
                         </div>
                     </div>
 
@@ -114,8 +118,8 @@ export default function TenantGroupFilters({
                             <CalendarDaysIcon className={styles.iconSmall} aria-hidden="true" />
                         </span>
                         <div>
-                            <p className={styles.tipTitle}>Habla con el grupo</p>
-                            <p className={styles.tipText}>Asegúrate de que tenéis expectativas similares.</p>
+                            <p className={styles.tipTitle}>El piso es opcional</p>
+                            <p className={styles.tipText}>Puedes formar primero el grupo y asignar una vivienda más adelante.</p>
                         </div>
                     </div>
                 </div>

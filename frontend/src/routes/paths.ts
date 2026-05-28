@@ -8,6 +8,7 @@ export const paths = {
   tenantExploreDetail: '/tenant/explore/:propertyId',
   tenantApplications: '/tenant/applications',
   tenantGroups: '/tenant/groups',
+  tenantCreateGroup: '/tenant/groups/new',
   tenantMessages: '/tenant/messages',
   tenantNotifications: '/tenant/notifications',
   tenantProfile: '/tenant/profile',

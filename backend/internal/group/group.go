@@ -39,6 +39,16 @@ const (
 	UserRelationMember = "member"
 	// UserRelationPendingInvitation indicates that the current user has a pending invitation.
 	UserRelationPendingInvitation = "pending_invitation"
+	// UserRelationViewer indicates that the current user is only viewing the group.
+	UserRelationViewer = "viewer"
+
+	JoinRequestStatusPending   = "PENDING"
+	JoinRequestStatusApproved  = "APPROVED"
+	JoinRequestStatusRejected  = "REJECTED"
+	JoinRequestStatusCancelled = "CANCELLED"
+
+	JoinRequestVoteApprove = "APPROVE"
+	JoinRequestVoteReject  = "REJECT"
 )
 
 // CreateGroupInput contains the data required to create a tenant group.
@@ -81,11 +91,13 @@ type Group struct {
 	InvitationID            string
 	AcceptedMembersCount    int
 	PendingInvitationsCount int
+	IsFullyAccepted         bool
 	AverageBudgetMin        int
 	AverageBudgetMax        int
 	Apartment               *Apartment
 	Members                 []Member
 	PendingInvitations      []Invitation
+	JoinRequests            []JoinRequest
 }
 
 // Apartment represents the apartment assigned to a group.
@@ -120,6 +132,7 @@ type Member struct {
 	NoiseLevel    string
 	Cleanliness   string
 	WorkSchedule  string
+	HasAccepted   bool
 	IsCurrentUser bool
 }
 
@@ -152,4 +165,24 @@ type Candidate struct {
 	NoiseLevel    string
 	Cleanliness   string
 	WorkSchedule  string
+}
+
+type JoinRequest struct {
+	ID              string
+	GroupID         string
+	RequesterUserID string
+	Status          string
+	CreatedAt       string
+	UpdatedAt       string
+	Requester       Candidate
+	Votes           []JoinRequestVote
+}
+
+type JoinRequestVote struct {
+	RequestID   string
+	VoterUserID string
+	Decision    string
+	CreatedAt   string
+	UpdatedAt   string
+	VoterName   string
 }

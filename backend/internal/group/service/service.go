@@ -21,6 +21,17 @@ type repository interface {
 	AcceptInvitation(ctx context.Context, invitationID, userID string) error
 	RejectInvitation(ctx context.Context, invitationID, userID string) error
 	AddGroupMember(ctx context.Context, groupID, userID, role string) error
+	CanUserAcceptGroup(ctx context.Context, groupID, userID string) (bool, error)
+	AcceptGroupForUser(ctx context.Context, groupID, userID string) error
+	HasPendingJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
+	CreateJoinRequest(ctx context.Context, groupID, requesterUserID string) (string, error)
+	ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error)
+	CanUserReviewJoinRequests(ctx context.Context, groupID, userID string) (bool, error)
+	CanUserVoteJoinRequest(ctx context.Context, requestID, voterUserID string) (bool, error)
+	VoteJoinRequest(ctx context.Context, requestID, voterUserID, decision string) error
+	ResolveJoinRequestStatus(ctx context.Context, requestID string) (string, bool, error)
+	GetJoinRequest(ctx context.Context, requestID string) (*group.JoinRequest, error)
+	CancelJoinRequest(ctx context.Context, requestID, requesterUserID string) error
 	IsGroupCreator(ctx context.Context, groupID, userID string) (bool, error)
 	UpdateGroupApartment(ctx context.Context, groupID string, apartmentID *string) error
 	FilterExistingTenantIDs(ctx context.Context, userIDs []string) ([]string, error)
@@ -46,6 +57,9 @@ var ErrApartmentFull = errors.New("group exceeds apartment available spots")
 
 // ErrNoValidInvitedUsers is returned when no invited users are valid tenants.
 var ErrNoValidInvitedUsers = errors.New("no valid invited users found")
+
+var ErrJoinRequestAlreadyPending = errors.New("join request already pending")
+var ErrJoinRequestNotFound = errors.New("join request not found")
 
 // Service contains tenant group business logic.
 type Service struct {
@@ -219,6 +233,149 @@ func (s *Service) RejectInvitation(ctx context.Context, invitationID, userID, ro
 	}
 
 	return s.repo.RejectInvitation(ctx, strings.TrimSpace(invitationID), strings.TrimSpace(userID))
+}
+
+// AcceptGroup accepts the group as creator or accepted member.
+func (s *Service) AcceptGroup(ctx context.Context, groupID, userID, role string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	if strings.TrimSpace(groupID) == "" {
+		return errors.New("group id is required")
+	}
+
+	allowed, err := s.repo.CanUserAcceptGroup(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrForbidden
+	}
+
+	return s.repo.AcceptGroupForUser(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
+}
+
+func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role string) (string, error) {
+	if err := validateTenant(userID, role); err != nil {
+		return "", err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return "", errors.New("group id is required")
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, userID)
+	if err != nil {
+		return "", err
+	}
+	if groupDetail == nil {
+		return "", ErrGroupNotFound
+	}
+	if groupDetail.UserRelation != group.UserRelationViewer {
+		return "", ErrForbidden
+	}
+
+	hasPending, err := s.repo.HasPendingJoinRequest(ctx, groupID, userID)
+	if err != nil {
+		return "", err
+	}
+	if hasPending {
+		return "", ErrJoinRequestAlreadyPending
+	}
+
+	return s.repo.CreateJoinRequest(ctx, groupID, userID)
+}
+
+func (s *Service) ListJoinRequests(ctx context.Context, groupID, userID, role string) ([]group.JoinRequest, error) {
+	if err := validateTenant(userID, role); err != nil {
+		return nil, err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return nil, errors.New("group id is required")
+	}
+
+	canReview, err := s.repo.CanUserReviewJoinRequests(ctx, groupID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !canReview {
+		return nil, ErrForbidden
+	}
+
+	return s.repo.ListJoinRequests(ctx, groupID)
+}
+
+func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, decision string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	requestID = strings.TrimSpace(requestID)
+	userID = strings.TrimSpace(userID)
+	decision = strings.ToUpper(strings.TrimSpace(decision))
+	if requestID == "" {
+		return errors.New("request id is required")
+	}
+	if decision != group.JoinRequestVoteApprove && decision != group.JoinRequestVoteReject {
+		return errors.New("invalid vote decision")
+	}
+
+	canVote, err := s.repo.CanUserVoteJoinRequest(ctx, requestID, userID)
+	if err != nil {
+		return err
+	}
+	if !canVote {
+		return ErrForbidden
+	}
+
+	if err := s.repo.VoteJoinRequest(ctx, requestID, userID, decision); err != nil {
+		return err
+	}
+
+	status, completed, err := s.repo.ResolveJoinRequestStatus(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if !completed || status != group.JoinRequestStatusApproved {
+		return nil
+	}
+
+	joinRequest, err := s.repo.GetJoinRequest(ctx, requestID)
+	if err != nil {
+		return err
+	}
+	if joinRequest == nil {
+		return ErrJoinRequestNotFound
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, joinRequest.GroupID, userID)
+	if err != nil {
+		return err
+	}
+	if groupDetail != nil && groupDetail.Apartment != nil {
+		currentPeople, countErr := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, joinRequest.GroupID)
+		if countErr != nil {
+			return countErr
+		}
+		if currentPeople+1 > groupDetail.Apartment.AvailableSpots {
+			return ErrApartmentFull
+		}
+	}
+
+	return s.repo.AddGroupMember(ctx, joinRequest.GroupID, joinRequest.RequesterUserID, group.MemberRoleMember)
+}
+
+func (s *Service) CancelJoinRequest(ctx context.Context, requestID, userID, role string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	if strings.TrimSpace(requestID) == "" {
+		return errors.New("request id is required")
+	}
+
+	return s.repo.CancelJoinRequest(ctx, strings.TrimSpace(requestID), strings.TrimSpace(userID))
 }
 
 // UpdateGroupApartment assigns or removes the apartment linked to a group.

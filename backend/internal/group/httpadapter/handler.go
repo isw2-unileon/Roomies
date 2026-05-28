@@ -27,22 +27,48 @@ type updateGroupApartmentRequest struct {
 	ApartmentID *string `json:"apartment_id"`
 }
 
+type voteJoinRequestBody struct {
+	Decision string `json:"decision"`
+}
+
 type groupResponse struct {
-	ID                      string               `json:"id"`
-	Name                    string               `json:"name"`
-	Description             string               `json:"description"`
-	Status                  string               `json:"status"`
-	CreatedBy               string               `json:"created_by"`
-	CreatedAt               string               `json:"created_at"`
-	UserRelation            string               `json:"user_relation"`
-	InvitationID            string               `json:"invitation_id"`
-	AcceptedMembersCount    int                  `json:"accepted_members_count"`
-	PendingInvitationsCount int                  `json:"pending_invitations_count"`
-	AverageBudgetMin        int                  `json:"average_budget_min"`
-	AverageBudgetMax        int                  `json:"average_budget_max"`
-	Apartment               *apartmentResponse   `json:"apartment"`
-	Members                 []memberResponse     `json:"members,omitempty"`
-	PendingInvitations      []invitationResponse `json:"pending_invitations,omitempty"`
+	ID                      string                `json:"id"`
+	Name                    string                `json:"name"`
+	Description             string                `json:"description"`
+	Status                  string                `json:"status"`
+	CreatedBy               string                `json:"created_by"`
+	CreatedAt               string                `json:"created_at"`
+	UserRelation            string                `json:"user_relation"`
+	InvitationID            string                `json:"invitation_id"`
+	AcceptedMembersCount    int                   `json:"accepted_members_count"`
+	PendingInvitationsCount int                   `json:"pending_invitations_count"`
+	IsFullyAccepted         bool                  `json:"is_fully_accepted"`
+	AverageBudgetMin        int                   `json:"average_budget_min"`
+	AverageBudgetMax        int                   `json:"average_budget_max"`
+	Apartment               *apartmentResponse    `json:"apartment"`
+	Members                 []memberResponse      `json:"members,omitempty"`
+	PendingInvitations      []invitationResponse  `json:"pending_invitations,omitempty"`
+	JoinRequests            []joinRequestResponse `json:"join_requests,omitempty"`
+}
+
+type joinRequestResponse struct {
+	ID              string             `json:"id"`
+	GroupID         string             `json:"group_id"`
+	RequesterUserID string             `json:"requester_user_id"`
+	Status          string             `json:"status"`
+	CreatedAt       string             `json:"created_at"`
+	UpdatedAt       string             `json:"updated_at"`
+	Requester       candidateResponse  `json:"requester"`
+	Votes           []joinVoteResponse `json:"votes"`
+}
+
+type joinVoteResponse struct {
+	RequestID   string `json:"request_id"`
+	VoterUserID string `json:"voter_user_id"`
+	VoterName   string `json:"voter_name"`
+	Decision    string `json:"decision"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type apartmentResponse struct {
@@ -75,6 +101,7 @@ type memberResponse struct {
 	NoiseLevel    string `json:"noise_level"`
 	Cleanliness   string `json:"cleanliness"`
 	WorkSchedule  string `json:"work_schedule"`
+	HasAccepted   bool   `json:"has_accepted"`
 	IsCurrentUser bool   `json:"is_current_user"`
 }
 
@@ -114,6 +141,11 @@ func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Servi
 	api.GET("/tenant/groups", h.listTenantGroups)
 	api.GET("/tenant/groups/:id", h.getTenantGroup)
 	api.POST("/tenant/groups", h.createTenantGroup)
+	api.POST("/tenant/groups/:id/accept", h.acceptTenantGroup)
+	api.POST("/tenant/groups/:id/join-request", h.createJoinRequest)
+	api.GET("/tenant/groups/:id/join-requests", h.listJoinRequests)
+	api.POST("/tenant/groups/:id/join-requests/:requestID/vote", h.voteJoinRequest)
+	api.POST("/tenant/groups/:id/join-requests/:requestID/cancel", h.cancelJoinRequest)
 	api.GET("/tenant/group-candidates", h.listGroupCandidates)
 	api.POST("/tenant/group-invitations/:id/accept", h.acceptGroupInvitation)
 	api.POST("/tenant/group-invitations/:id/reject", h.rejectGroupInvitation)
@@ -288,6 +320,94 @@ func (h *handler) updateGroupApartment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "group apartment updated"})
 }
 
+func (h *handler) acceptTenantGroup(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	if err := h.groupService.AcceptGroup(c.Request.Context(), groupID, userID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "group accepted"})
+}
+
+func (h *handler) createJoinRequest(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	requestID, err := h.groupService.CreateJoinRequest(c.Request.Context(), groupID, userID, role)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "join request created", "request_id": requestID})
+}
+
+func (h *handler) listJoinRequests(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	requests, err := h.groupService.ListJoinRequests(c.Request.Context(), groupID, userID, role)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"requests": joinRequestResponses(requests)})
+}
+
+func (h *handler) voteJoinRequest(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	requestID := strings.TrimSpace(c.Param("requestID"))
+	var body voteJoinRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.groupService.VoteJoinRequest(c.Request.Context(), requestID, userID, role, body.Decision); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "join request voted"})
+}
+
+func (h *handler) cancelJoinRequest(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	requestID := strings.TrimSpace(c.Param("requestID"))
+	if err := h.groupService.CancelJoinRequest(c.Request.Context(), requestID, userID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "join request cancelled"})
+}
+
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
 	userID := c.GetString("roomies.user_id")
 	role := c.GetString("roomies.role")
@@ -312,6 +432,10 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{"error": "invitation is not pending"})
 	case errors.Is(err, groupservice.ErrApartmentFull):
 		c.JSON(http.StatusConflict, gin.H{"error": "group exceeds apartment available spots"})
+	case errors.Is(err, groupservice.ErrJoinRequestAlreadyPending):
+		c.JSON(http.StatusConflict, gin.H{"error": "join request already pending"})
+	case errors.Is(err, groupservice.ErrJoinRequestNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "join request not found"})
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
@@ -337,12 +461,46 @@ func groupResponseFromDomain(item group.Group) groupResponse {
 		InvitationID:            item.InvitationID,
 		AcceptedMembersCount:    item.AcceptedMembersCount,
 		PendingInvitationsCount: item.PendingInvitationsCount,
+		IsFullyAccepted:         item.IsFullyAccepted,
 		AverageBudgetMin:        item.AverageBudgetMin,
 		AverageBudgetMax:        item.AverageBudgetMax,
 		Apartment:               apartmentResponseFromDomain(item.Apartment),
 		Members:                 memberResponses(item.Members),
 		PendingInvitations:      invitationResponses(item.PendingInvitations),
+		JoinRequests:            joinRequestResponses(item.JoinRequests),
 	}
+}
+
+func joinRequestResponses(items []group.JoinRequest) []joinRequestResponse {
+	result := make([]joinRequestResponse, 0, len(items))
+	for _, item := range items {
+		result = append(result, joinRequestResponse{
+			ID:              item.ID,
+			GroupID:         item.GroupID,
+			RequesterUserID: item.RequesterUserID,
+			Status:          item.Status,
+			CreatedAt:       item.CreatedAt,
+			UpdatedAt:       item.UpdatedAt,
+			Requester:       candidateResponseFromDomain(item.Requester),
+			Votes:           joinVoteResponses(item.Votes),
+		})
+	}
+	return result
+}
+
+func joinVoteResponses(items []group.JoinRequestVote) []joinVoteResponse {
+	result := make([]joinVoteResponse, 0, len(items))
+	for _, item := range items {
+		result = append(result, joinVoteResponse{
+			RequestID:   item.RequestID,
+			VoterUserID: item.VoterUserID,
+			VoterName:   item.VoterName,
+			Decision:    item.Decision,
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
+		})
+	}
+	return result
 }
 
 func apartmentResponseFromDomain(item *group.Apartment) *apartmentResponse {
@@ -384,6 +542,7 @@ func memberResponses(items []group.Member) []memberResponse {
 			NoiseLevel:    item.NoiseLevel,
 			Cleanliness:   item.Cleanliness,
 			WorkSchedule:  item.WorkSchedule,
+			HasAccepted:   item.HasAccepted,
 			IsCurrentUser: item.IsCurrentUser,
 		})
 	}

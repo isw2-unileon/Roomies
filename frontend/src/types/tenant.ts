@@ -135,3 +135,114 @@ export interface InterestedTenant {
     avatarUrl: string
     compatibility: number
 }
+
+export type TenantGroupApiStatus =
+    | 'FORMING'
+    | 'READY'
+    | 'APPLIED'
+    | 'ACCEPTED'
+    | 'REJECTED'
+    | 'CLOSED'
+
+export type TenantGroupUserRelation = 'creator' | 'member' | 'pending_invitation' | 'viewer'
+
+export type TenantGroupMemberRole = 'owner' | 'member'
+
+export type TenantGroupMemberStatus = 'ACCEPTED' | 'LEFT'
+
+export type TenantGroupInvitationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
+export type TenantGroupJoinRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type TenantGroupJoinVoteDecision = 'APPROVE' | 'REJECT'
+
+export interface TenantGroupApartment {
+    id: string
+    title: string
+    address: string
+    area: string
+    totalSpots: number
+    occupiedSpots: number
+    availableSpots: number
+    baseRent: number
+    imageUrl: string
+}
+
+export interface TenantGroupListItem {
+    id: string
+    name: string
+    description: string
+    status: TenantGroupApiStatus
+    createdBy: string
+    createdAt: string
+    userRelation: TenantGroupUserRelation
+    invitationId: string
+    acceptedMembersCount: number
+    pendingInvitationsCount: number
+    isFullyAccepted: boolean
+    averageBudgetMin: number
+    averageBudgetMax: number
+    apartment: TenantGroupApartment | null
+}
+
+export interface TenantGroupProfile {
+    userId: string
+    name: string
+    email: string
+    avatarUrl: string
+    age: number
+    university: string
+    budgetMin: number
+    budgetMax: number
+    preferredArea: string
+    moveInDate: string
+    pets: boolean
+    smoking: boolean
+    noiseLevel: string
+    cleanliness: string
+    workSchedule: string
+}
+
+export interface TenantGroupAcceptedMember extends TenantGroupProfile {
+    role: TenantGroupMemberRole
+    status: TenantGroupMemberStatus
+    hasAccepted: boolean
+    isCurrentUser: boolean
+}
+
+export type TenantGroupCandidate = TenantGroupProfile 
+
+export interface TenantGroupInvitation {
+    id: string
+    groupId: string
+    invitedBy: string
+    invitedUserId: string
+    status: TenantGroupInvitationStatus
+    createdAt: string
+    respondedAt: string
+    user: TenantGroupCandidate
+}
+
+export interface TenantGroupJoinVote {
+    requestId: string
+    voterUserId: string
+    voterName: string
+    decision: TenantGroupJoinVoteDecision
+    createdAt: string
+    updatedAt: string
+}
+
+export interface TenantGroupJoinRequest {
+    id: string
+    groupId: string
+    requesterUserId: string
+    status: TenantGroupJoinRequestStatus
+    createdAt: string
+    updatedAt: string
+    requester: TenantGroupCandidate
+    votes: TenantGroupJoinVote[]
+}
+
+export interface TenantGroupDetailItem extends TenantGroupListItem {
+    members: TenantGroupAcceptedMember[]
+    pendingInvitations: TenantGroupInvitation[]
+    joinRequests: TenantGroupJoinRequest[]
+}

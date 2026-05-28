@@ -11,6 +11,7 @@ import OwnerNotifications from '@/pages/owner/OwnerNotifications'
 import OwnerProfile from '@/pages/owner/OwnerProfile'
 import OwnerPublishPropertyPage from '@/pages/owner/OwnerPublishPropertyPage'
 import TenantApplicationsPage from '@/pages/tenant/TenantApplicationsPage'
+import TenantCreateGroupPage from '@/pages/tenant/TenantCreateGroupPage'
 import TenantExploreDetailPage from '@/pages/tenant/TenantExploreDetailPage'
 import TenantExplorePage from '@/pages/tenant/TenantExplorePage'
 import TenantGroupsPage from '@/pages/tenant/TenantGroupsPage'
@@ -119,6 +120,14 @@ function AppRoutes() {
         element={(
           <ProtectedRoleRoute requiredRole="tenant">
             <TenantGroupsPage />
+          </ProtectedRoleRoute>
+        )}
+      />
+      <Route
+        path={paths.tenantCreateGroup}
+        element={(
+          <ProtectedRoleRoute requiredRole="tenant">
+            <TenantCreateGroupPage />
           </ProtectedRoleRoute>
         )}
       />

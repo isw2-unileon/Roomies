@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
     FunnelIcon,
     MagnifyingGlassIcon,
@@ -9,109 +10,317 @@ import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantGroupCard from '@/components/tenant/tenant_groups/TenantGroupCard'
 import TenantGroupDetail from '@/components/tenant/tenant_groups/TenantGroupDetail'
 import TenantGroupFilters from '@/components/tenant/tenant_groups/TenantGroupFilters'
-import { mockTenantGroups } from '@/mocks/tenantData'
+import {
+    acceptTenantGroup,
+    acceptTenantGroupInvitation,
+    createTenantGroupJoinRequest,
+    getTenantGroup,
+    listTenantGroupJoinRequests,
+    listTenantGroups,
+    rejectTenantGroupInvitation,
+    voteTenantGroupJoinRequest,
+} from '@/services/tenantService'
 import styles from '@/styles/TenantGroups.module.css'
-import type { TenantGroup } from '@/types/tenant'
+import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupListItem } from '@/types/tenant'
+import { paths } from '@/routes/paths'
+
+function memberFilterToNumber(value: string) {
+    if (value === 'all') {
+        return undefined
+    }
+
+    if (value === '5+') {
+        return 5
+    }
+
+    const parsedValue = Number(value)
+    return Number.isNaN(parsedValue) ? undefined : parsedValue
+}
 
 export default function TenantGroupsPage() {
-    const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+    const navigate = useNavigate()
+    const [groups, setGroups] = useState<TenantGroupListItem[]>([])
     const [search, setSearch] = useState('')
-    const [selectedMembers, setSelectedMembers] = useState('4')
+    const [status, setStatus] = useState('all')
+    const [hasApartment, setHasApartment] = useState('all')
+    const [selectedMembers, setSelectedMembers] = useState('all')
+    const [sort, setSort] = useState('recent')
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+    const [notice, setNotice] = useState('')
+    const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null)
+    const [selectedGroup, setSelectedGroup] = useState<TenantGroupDetailItem | null>(null)
+    const [loadingDetail, setLoadingDetail] = useState(false)
+    const [acceptingGroupId, setAcceptingGroupId] = useState<string | null>(null)
+    const [creatingJoinRequestGroupId, setCreatingJoinRequestGroupId] = useState<string | null>(null)
+    const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
 
-    const selectedGroup = mockTenantGroups.find((group) => group.id === selectedGroupId) ?? null
+    const loadGroups = useCallback(async () => {
+        setLoading(true)
+        setError('')
 
-    const filteredGroups = useMemo(() => {
-        const normalizedSearch = search.trim().toLowerCase()
+        try {
+            const loadedGroups = await listTenantGroups({
+                search,
+                status,
+                hasApartment,
+                members: memberFilterToNumber(selectedMembers),
+                sort,
+            })
 
-        if (!normalizedSearch) {
-            return mockTenantGroups
+            setGroups(loadedGroups)
+        } catch (loadError) {
+            setGroups([])
+            setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar tus grupos.')
+        } finally {
+            setLoading(false)
+        }
+    }, [hasApartment, search, selectedMembers, sort, status])
+
+    useEffect(() => {
+        void loadGroups()
+    }, [loadGroups])
+
+    function handleClearFilters() {
+        setSearch('')
+        setStatus('all')
+        setHasApartment('all')
+        setSelectedMembers('all')
+        setSort('recent')
+        setNotice('')
+    }
+
+    async function handleViewGroup(group: TenantGroupListItem) {
+        setError('')
+        setNotice('')
+        setLoadingDetail(true)
+
+        try {
+            const detail = await getTenantGroup(group.id)
+            setSelectedGroup(detail)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'No se pudo cargar el detalle del grupo.')
+        } finally {
+            setLoadingDetail(false)
+        }
+    }
+
+    async function handleAcceptInvitation(group: TenantGroupListItem) {
+        if (!group.invitationId) {
+            setError('No se ha encontrado la invitación asociada a este grupo.')
+            return
         }
 
-        return mockTenantGroups.filter((group) => (
-            group.title.toLowerCase().includes(normalizedSearch)
-            || group.location.toLowerCase().includes(normalizedSearch)
-            || group.university.toLowerCase().includes(normalizedSearch)
-        ))
-    }, [search])
+        setRespondingInvitationId(group.invitationId)
+        setError('')
+        setNotice('')
 
-    function handleViewGroup(group: TenantGroup) {
-        setSelectedGroupId(group.id)
+        try {
+            await acceptTenantGroupInvitation(group.invitationId)
+            setNotice('Invitación aceptada correctamente.')
+            await loadGroups()
+        } catch (acceptError) {
+            setError(acceptError instanceof Error ? acceptError.message : 'No se pudo aceptar la invitación.')
+        } finally {
+            setRespondingInvitationId(null)
+        }
+    }
+
+    async function handleRejectInvitation(group: TenantGroupListItem) {
+        if (!group.invitationId) {
+            setError('No se ha encontrado la invitación asociada a este grupo.')
+            return
+        }
+
+        setRespondingInvitationId(group.invitationId)
+        setError('')
+        setNotice('')
+
+        try {
+            await rejectTenantGroupInvitation(group.invitationId)
+            setNotice('Invitación rechazada correctamente.')
+            await loadGroups()
+        } catch (rejectError) {
+            setError(rejectError instanceof Error ? rejectError.message : 'No se pudo rechazar la invitación.')
+        } finally {
+            setRespondingInvitationId(null)
+        }
+    }
+
+    function handleAcceptDetailInvitation(invitation: TenantGroupInvitation) {
+        const groupFromList = groups.find((group) => group.invitationId === invitation.id)
+        if (!groupFromList) {
+            setError('No se ha encontrado la invitación asociada a este grupo.')
+            return
+        }
+
+        void handleAcceptInvitation(groupFromList)
+    }
+
+    function handleRejectDetailInvitation(invitation: TenantGroupInvitation) {
+        const groupFromList = groups.find((group) => group.invitationId === invitation.id)
+        if (!groupFromList) {
+            setError('No se ha encontrado la invitación asociada a este grupo.')
+            return
+        }
+
+        void handleRejectInvitation(groupFromList)
+    }
+
+    async function handleAcceptGroup(group: TenantGroupDetailItem) {
+        setAcceptingGroupId(group.id)
+        setError('')
+        setNotice('')
+
+        try {
+            await acceptTenantGroup(group.id)
+            setNotice('Has aceptado el grupo correctamente.')
+            const detail = await getTenantGroup(group.id)
+            setSelectedGroup(detail)
+            await loadGroups()
+        } catch (acceptError) {
+            setError(acceptError instanceof Error ? acceptError.message : 'No se pudo aceptar el grupo.')
+        } finally {
+            setAcceptingGroupId(null)
+        }
+    }
+
+    async function handleCreateJoinRequest(group: TenantGroupDetailItem) {
+        setCreatingJoinRequestGroupId(group.id)
+        setError('')
+        setNotice('')
+
+        try {
+            await createTenantGroupJoinRequest(group.id)
+            setNotice('Solicitud enviada al grupo.')
+            const detail = await getTenantGroup(group.id)
+            setSelectedGroup(detail)
+            await loadGroups()
+        } catch (requestError) {
+            setError(requestError instanceof Error ? requestError.message : 'No se pudo enviar la solicitud.')
+        } finally {
+            setCreatingJoinRequestGroupId(null)
+        }
+    }
+
+    async function handleVoteJoinRequest(groupID: string, requestID: string, decision: 'APPROVE' | 'REJECT') {
+        setVotingJoinRequestKey(`${requestID}:${decision}`)
+        setError('')
+        setNotice('')
+
+        try {
+            await voteTenantGroupJoinRequest(groupID, requestID, decision)
+            const [detail, joinRequests] = await Promise.all([
+                getTenantGroup(groupID),
+                listTenantGroupJoinRequests(groupID),
+            ])
+            setSelectedGroup({ ...detail, joinRequests })
+            await loadGroups()
+        } catch (voteError) {
+            setError(voteError instanceof Error ? voteError.message : 'No se pudo registrar el voto.')
+        } finally {
+            setVotingJoinRequestKey(null)
+        }
     }
 
     return (
         <TenantLayout>
-            {selectedGroup ? (
-                <TenantGroupDetail
-                    group={selectedGroup}
-                    onBack={() => setSelectedGroupId(null)}
-                />
-            ) : (
-                <div className={styles.content}>
-                    <section className={styles.header}>
-                        <div>
-                            <h1 className={styles.title}>Grupos</h1>
-                            <p className={styles.subtitle}>
-                                Descubre grupos de compañeros buscando piso juntos.
-                            </p>
-                        </div>
-                    </section>
+            <div className={styles.content}>
+                <section className={styles.header}>
+                    <div>
+                        <h1 className={styles.title}>Mis grupos</h1>
+                        <p className={styles.subtitle}>
+                            Gestiona los grupos que has creado, aquellos en los que participas y tus invitaciones pendientes.
+                        </p>
+                    </div>
+                </section>
 
-                    <div className={styles.pageGrid}>
-                        <section className={styles.mainColumn}>
-                            <div className={styles.toolbar}>
-                                <label className={styles.searchBox}>
-                                    <MagnifyingGlassIcon
+                <div className={styles.pageGrid}>
+                    <section className={styles.mainColumn}>
+                        <div className={styles.toolbar}>
+                            <label className={styles.searchBox}>
+                                <MagnifyingGlassIcon
+                                    className={styles.iconSmall}
+                                    aria-hidden="true"
+                                />
+                                <input
+                                    type="search"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Buscar grupos por nombre o descripción..."
+                                    aria-label="Buscar grupos"
+                                />
+                            </label>
+
+                            <div className={styles.toolbarActions}>
+                                <button type="button" className={styles.filterButton}>
+                                    <FunnelIcon
                                         className={styles.iconSmall}
                                         aria-hidden="true"
                                     />
-                                    <input
-                                        type="search"
-                                        value={search}
-                                        onChange={(event) => setSearch(event.target.value)}
-                                        placeholder="Buscar grupos por nombre, ubicación o universidad..."
-                                        aria-label="Buscar grupos"
+                                    Filtros
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={styles.createButton}
+                                    onClick={() => navigate(paths.tenantCreateGroup)}
+                                >
+                                    <UserGroupIcon
+                                        className={styles.iconSmall}
+                                        aria-hidden="true"
                                     />
-                                </label>
-
-                                <div className={styles.toolbarActions}>
-                                    <button type="button" className={styles.filterButton}>
-                                        <FunnelIcon
-                                            className={styles.iconSmall}
-                                            aria-hidden="true"
-                                        />
-                                        Filtros
-                                    </button>
-
-                                    <button type="button" className={styles.createButton}>
-                                        <UserGroupIcon
-                                            className={styles.iconSmall}
-                                            aria-hidden="true"
-                                        />
-                                        Crear grupo
-                                    </button>
-                                </div>
+                                    Crear grupo
+                                </button>
                             </div>
+                        </div>
 
-                            <div className={styles.resultsBar}>
-                                <span>{filteredGroups.length} grupos encontrados</span>
+                        <div className={styles.resultsBar}>
+                            <span>
+                                {loading ? 'Cargando grupos...' : `${groups.length} grupos encontrados`}
+                            </span>
 
-                                <label className={styles.sortControl}>
-                                    Ordenar por:
-                                    <select className={styles.sortSelect} defaultValue="recent">
-                                        <option value="recent">Más recientes</option>
-                                        <option value="compatibility">Mayor compatibilidad</option>
-                                        <option value="members">Número de miembros</option>
-                                    </select>
-                                </label>
+                            <label className={styles.sortControl}>
+                                Ordenar por:
+                                <select
+                                    className={styles.sortSelect}
+                                    value={sort}
+                                    onChange={(event) => setSort(event.target.value)}
+                                >
+                                    <option value="recent">Más recientes</option>
+                                    <option value="members">Número de miembros</option>
+                                    <option value="budget">Presupuesto</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        {notice ? (
+                            <div className={styles.statusMessage}>
+                                {notice}
                             </div>
+                        ) : null}
 
+                        {error ? (
+                            <div className={styles.errorState}>
+                                {error}
+                            </div>
+                        ) : null}
+
+                        {loading ? (
+                            <div className={styles.loadingState}>
+                                Cargando tus grupos...
+                            </div>
+                        ) : (
                             <div className={styles.groupList}>
-                                {filteredGroups.length > 0 ? (
-                                    filteredGroups.map((group) => (
+                                {groups.length > 0 ? (
+                                    groups.map((group) => (
                                         <TenantGroupCard
                                             key={group.id}
                                             group={group}
                                             onViewGroup={handleViewGroup}
+                                            onAcceptInvitation={handleAcceptInvitation}
+                                            onRejectInvitation={handleRejectInvitation}
+                                            isRespondingInvitation={respondingInvitationId === group.invitationId}
                                         />
                                     ))
                                 ) : (
@@ -127,54 +336,41 @@ export default function TenantGroupsPage() {
                                     </div>
                                 )}
                             </div>
+                        )}
 
-                            <div className={styles.pagination} aria-label="Paginación de grupos">
-                                <button
-                                    type="button"
-                                    className={styles.pageButton}
-                                    aria-label="Página anterior"
-                                >
-                                    ‹
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className={`${styles.pageButton} ${styles.pageButtonActive}`}
-                                >
-                                    1
-                                </button>
-
-                                <button type="button" className={styles.pageButton}>
-                                    2
-                                </button>
-
-                                <button type="button" className={styles.pageButton}>
-                                    3
-                                </button>
-
-                                <span className={styles.pageDots}>...</span>
-
-                                <button type="button" className={styles.pageButton}>
-                                    7
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className={styles.pageButton}
-                                    aria-label="Página siguiente"
-                                >
-                                    ›
-                                </button>
+                        {selectedGroup && (
+                            <div className={styles.detailWrapper}>
+                                {loadingDetail ? (
+                                    <p>Cargando detalle del grupo...</p>
+                                ) : (
+                                    <TenantGroupDetail
+                                        group={selectedGroup}
+                                        onAcceptGroup={handleAcceptGroup}
+                                        isAcceptingGroup={acceptingGroupId === selectedGroup.id}
+                                        onCreateJoinRequest={handleCreateJoinRequest}
+                                        isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}
+                                        onVoteJoinRequest={(groupID, request, decision) => handleVoteJoinRequest(groupID, request.id, decision)}
+                                        votingJoinRequestKey={votingJoinRequestKey}
+                                        onAcceptInvitation={handleAcceptDetailInvitation}
+                                        onRejectInvitation={handleRejectDetailInvitation}
+                                        isRespondingInvitation={respondingInvitationId}
+                                    />
+                                )}
                             </div>
-                        </section>
+                        )}
+                    </section>
 
-                        <TenantGroupFilters
-                            selectedMembers={selectedMembers}
-                            onSelectedMembersChange={setSelectedMembers}
-                        />
-                    </div>
+                    <TenantGroupFilters
+                        selectedMembers={selectedMembers}
+                        onSelectedMembersChange={setSelectedMembers}
+                        status={status}
+                        onStatusChange={setStatus}
+                        hasApartment={hasApartment}
+                        onHasApartmentChange={setHasApartment}
+                        onClearFilters={handleClearFilters}
+                    />
                 </div>
-            )}
+            </div>
         </TenantLayout>
     )
 }
