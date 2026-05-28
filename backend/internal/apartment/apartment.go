@@ -40,6 +40,7 @@ type Apartment struct {
 	Status        string
 	CreatedAt     string
 	ImageURL      string
+	ImageURLs     []string
 	Latitude      float64
 	Longitude     float64
 }

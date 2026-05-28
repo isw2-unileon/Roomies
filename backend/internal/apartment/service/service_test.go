@@ -12,11 +12,14 @@ import (
 type fakeApartmentRepository struct {
 	createdDescription string
 	createdStatus      string
+	updatedDescription string
+	updatedTotalSpots  int
 
 	applicationForApartmentID     string
 	applicationForApartmentStatus string
 
 	ownerApartments  []apartment.Apartment
+	ownerApartment   *apartment.Apartment
 	tenantApartments []apartment.Apartment
 	apartmentByID    *apartment.Apartment
 	apartmentRules   *apartment.Rules
@@ -34,6 +37,16 @@ func (f *fakeApartmentRepository) ListOwnerApartments(ctx context.Context, owner
 		return f.ownerApartments, nil
 	}
 	return []apartment.Apartment{{ID: "apartment-1", Title: "Flat"}}, nil
+}
+
+func (f *fakeApartmentRepository) GetOwnerApartmentByID(ctx context.Context, ownerID, apartmentID string) (*apartment.Apartment, error) {
+	return f.ownerApartment, nil
+}
+
+func (f *fakeApartmentRepository) UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error) {
+	f.updatedDescription = input.Description
+	f.updatedTotalSpots = input.TotalSpots
+	return &apartment.Apartment{ID: apartmentID, Title: input.Title, Description: input.Description, TotalSpots: input.TotalSpots}, nil
 }
 
 func (f *fakeApartmentRepository) ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
@@ -181,6 +194,96 @@ func TestListOwnerApartmentsSignsImagePaths(t *testing.T) {
 	}
 	if signer.expiresIn != 3600 {
 		t.Fatalf("expiresIn = %d, want 3600", signer.expiresIn)
+	}
+}
+
+func TestGetOwnerApartmentReturnsOwnedApartmentWithSignedImages(t *testing.T) {
+	repo := &fakeApartmentRepository{
+		ownerApartment: &apartment.Apartment{
+			ID:        "apartment-1",
+			Title:     "Flat",
+			ImageURL:  "apartments/apartment-1/front.jpg",
+			ImageURLs: []string{"apartments/apartment-1/front.jpg", "apartments/apartment-1/room.jpg"},
+		},
+	}
+	signer := &fakeImageSigner{}
+	svc := NewService(repo, signer, repo, repo)
+
+	result, err := svc.GetOwnerApartment(context.Background(), "owner-1", "owner", "apartment-1")
+	if err != nil {
+		t.Fatalf("GetOwnerApartment returned error: %v", err)
+	}
+
+	if result == nil || result.ID != "apartment-1" {
+		t.Fatalf("result ID = %#v, want apartment-1", result)
+	}
+	if result.ImageURL != "https://signed.example.test/apartments/apartment-1/front.jpg" {
+		t.Fatalf("ImageURL = %q, want signed front image", result.ImageURL)
+	}
+	if len(result.ImageURLs) != 2 || result.ImageURLs[1] != "https://signed.example.test/apartments/apartment-1/room.jpg" {
+		t.Fatalf("ImageURLs = %#v, want signed image list", result.ImageURLs)
+	}
+}
+
+func TestGetOwnerApartmentReturnsNotFoundWhenRepositoryHasNoOwnedApartment(t *testing.T) {
+	repo := &fakeApartmentRepository{}
+	svc := NewService(repo, nil, repo, repo)
+
+	_, err := svc.GetOwnerApartment(context.Background(), "owner-1", "owner", "missing")
+	if !errors.Is(err, ErrApartmentNotFound) {
+		t.Fatalf("err = %v, want %v", err, ErrApartmentNotFound)
+	}
+}
+
+func TestUpdateOwnerApartmentValidatesOwnershipRoleAndOccupiedSpots(t *testing.T) {
+	repo := &fakeApartmentRepository{
+		ownerApartment: &apartment.Apartment{ID: "apartment-1", OccupiedSpots: 2},
+	}
+	svc := NewService(repo, nil, repo, repo)
+
+	_, err := svc.UpdateOwnerApartment(context.Background(), "owner-1", "owner", "apartment-1", apartment.CreateApartmentInput{
+		Title:      "Updated flat",
+		Address:    "Main Street",
+		TotalSpots: 1,
+		BaseRent:   500,
+	})
+	if err == nil || err.Error() != "total_spots cannot be lower than occupied_spots" {
+		t.Fatalf("err = %v, want occupied spots validation", err)
+	}
+
+	_, err = svc.UpdateOwnerApartment(context.Background(), "owner-1", "tenant", "apartment-1", apartment.CreateApartmentInput{})
+	if !errors.Is(err, ErrOwnerRequired) {
+		t.Fatalf("err = %v, want %v", err, ErrOwnerRequired)
+	}
+}
+
+func TestUpdateOwnerApartmentStoresTrimmedInputWithoutPublishOnlyDescriptionParts(t *testing.T) {
+	repo := &fakeApartmentRepository{
+		ownerApartment: &apartment.Apartment{ID: "apartment-1", OccupiedSpots: 1},
+	}
+	svc := NewService(repo, nil, repo, repo)
+
+	result, err := svc.UpdateOwnerApartment(context.Background(), "owner-1", "owner", "apartment-1", apartment.CreateApartmentInput{
+		Title:         " Updated flat ",
+		Description:   " Better light ",
+		Address:       " Main Street ",
+		Area:          " Center ",
+		TotalSpots:    3,
+		Bathrooms:     9,
+		BaseRent:      500,
+		AvailableFrom: "2026-06-01",
+	})
+	if err != nil {
+		t.Fatalf("UpdateOwnerApartment returned error: %v", err)
+	}
+	if result.Title != "Updated flat" {
+		t.Fatalf("Title = %q, want trimmed title", result.Title)
+	}
+	if repo.updatedDescription != "Better light" {
+		t.Fatalf("updatedDescription = %q, want raw edited description only", repo.updatedDescription)
+	}
+	if repo.updatedTotalSpots != 3 {
+		t.Fatalf("updatedTotalSpots = %d, want 3", repo.updatedTotalSpots)
 	}
 }
 

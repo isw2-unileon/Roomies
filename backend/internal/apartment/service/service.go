@@ -15,6 +15,8 @@ import (
 type repository interface {
 	CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error)
 	ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error)
+	GetOwnerApartmentByID(ctx context.Context, ownerID, apartmentID string) (*apartment.Apartment, error)
+	UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
 	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error)
@@ -135,6 +137,91 @@ func (s *Service) ListOwnerApartments(ctx context.Context, ownerID, role string)
 		return nil, err
 	}
 	return s.signApartmentImages(ctx, apartments)
+}
+
+// GetOwnerApartment returns one apartment owned by the current owner.
+func (s *Service) GetOwnerApartment(ctx context.Context, ownerID, role, apartmentID string) (*apartment.Apartment, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+
+	item, err := s.repo.GetOwnerApartmentByID(ctx, ownerID, apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		return nil, ErrApartmentNotFound
+	}
+
+	signed, err := s.signApartmentImages(ctx, []apartment.Apartment{*item})
+	if err != nil {
+		return nil, err
+	}
+	return &signed[0], nil
+}
+
+// UpdateOwnerApartment validates and updates an existing owner apartment listing.
+func (s *Service) UpdateOwnerApartment(ctx context.Context, ownerID, role, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, errors.New("title is required")
+	}
+	if strings.TrimSpace(input.Address) == "" {
+		return nil, errors.New("address is required")
+	}
+	if input.TotalSpots <= 0 {
+		return nil, errors.New("total_spots must be greater than zero")
+	}
+	if input.BaseRent <= 0 {
+		return nil, errors.New("base_rent must be greater than zero")
+	}
+
+	owned, err := s.repo.GetOwnerApartmentByID(ctx, ownerID, apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	if owned == nil {
+		return nil, ErrApartmentNotFound
+	}
+	if input.TotalSpots < owned.OccupiedSpots {
+		return nil, errors.New("total_spots cannot be lower than occupied_spots")
+	}
+
+	input.Title = strings.TrimSpace(input.Title)
+	input.Description = strings.TrimSpace(input.Description)
+	input.Address = strings.TrimSpace(input.Address)
+	input.Area = strings.TrimSpace(input.Area)
+	input.Status = owned.Status
+
+	updated, err := s.repo.UpdateOwnerApartment(ctx, ownerID, apartmentID, input)
+	if err != nil {
+		return nil, err
+	}
+	if updated == nil {
+		return nil, ErrApartmentNotFound
+	}
+
+	signed, err := s.signApartmentImages(ctx, []apartment.Apartment{*updated})
+	if err != nil {
+		return nil, err
+	}
+	return &signed[0], nil
 }
 
 // ListAvailableApartments returns tenant-visible apartment listings.
@@ -268,8 +355,24 @@ func (s *Service) signApartmentImages(ctx context.Context, apartments []apartmen
 			continue
 		}
 		apartments[idx].ImageURL = signedURL
+		apartments[idx].ImageURLs = s.signedImageURLs(ctx, apartments[idx].ImageURLs)
 	}
 	return apartments, nil
+}
+
+func (s *Service) signedImageURLs(ctx context.Context, imagePaths []string) []string {
+	if len(imagePaths) == 0 {
+		return imagePaths
+	}
+	signedURLs := make([]string, 0, len(imagePaths))
+	for _, imagePath := range imagePaths {
+		signedURL, err := s.signedImageURL(ctx, imagePath)
+		if err != nil || signedURL == "" {
+			continue
+		}
+		signedURLs = append(signedURLs, signedURL)
+	}
+	return signedURLs
 }
 
 func (s *Service) signedImageURL(ctx context.Context, imagePath string) (string, error) {

@@ -31,18 +31,20 @@ type createApartmentRequest struct {
 }
 
 type ownerApartmentResponse struct {
-	ID            string  `json:"id"`
-	Title         string  `json:"title"`
-	Address       string  `json:"address"`
-	Area          string  `json:"area"`
-	TotalSpots    int     `json:"total_spots"`
-	OccupiedSpots int     `json:"occupied_spots"`
-	BaseRent      int     `json:"base_rent"`
-	Status        string  `json:"status"`
-	CreatedAt     string  `json:"created_at"`
-	ImageURL      string  `json:"image_url"`
-	Latitude      float64 `json:"latitude"`
-	Longitude     float64 `json:"longitude"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Address       string   `json:"address"`
+	Area          string   `json:"area"`
+	TotalSpots    int      `json:"total_spots"`
+	OccupiedSpots int      `json:"occupied_spots"`
+	BaseRent      int      `json:"base_rent"`
+	Status        string   `json:"status"`
+	CreatedAt     string   `json:"created_at"`
+	ImageURL      string   `json:"image_url"`
+	ImageURLs     []string `json:"image_urls"`
+	Latitude      float64  `json:"latitude"`
+	Longitude     float64  `json:"longitude"`
 }
 
 type tenantApartmentResponse struct {
@@ -97,6 +99,8 @@ func RegisterTenantRoutes(api *gin.RouterGroup, apartmentService *apartmentservi
 func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/owner/apartments", h.listOwnerApartments)
+	api.GET("/owner/apartments/:id", h.getOwnerApartment)
+	api.PATCH("/owner/apartments/:id", h.updateOwnerApartment)
 	api.POST("/apartments", h.createApartment)
 }
 
@@ -140,7 +144,7 @@ func (h *handler) createApartment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	input, ok := bindAndValidateApartmentInput(c)
+	input, ok := bindAndValidateApartmentInput(c, true)
 	if !ok {
 		return
 	}
@@ -159,6 +163,69 @@ func (h *handler) createApartment(c *gin.Context) {
 		"message":       "apartment published successfully",
 		"apartment_id":  result.ApartmentID,
 		"images_stored": result.ImagesStored,
+	})
+}
+
+func (h *handler) getOwnerApartment(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+
+	item, err := h.apartmentService.GetOwnerApartment(c.Request.Context(), ownerID, role, apartmentID)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrApartmentNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load owner apartment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartment": ownerApartmentResponseFrom(*item)})
+}
+
+func (h *handler) updateOwnerApartment(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+	input, ok := bindAndValidateApartmentInput(c, false)
+	if !ok {
+		return
+	}
+
+	item, err := h.apartmentService.UpdateOwnerApartment(c.Request.Context(), ownerID, role, apartmentID, input)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrApartmentNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "apartment updated successfully",
+		"apartment": ownerApartmentResponseFrom(*item),
 	})
 }
 
@@ -245,7 +312,7 @@ func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
 	return userID, role, true
 }
 
-func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInput, bool) {
+func bindAndValidateApartmentInput(c *gin.Context, requirePublishOnlyFields bool) (apartment.CreateApartmentInput, bool) {
 	var request createApartmentRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -265,7 +332,7 @@ func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInp
 		c.JSON(http.StatusBadRequest, gin.H{"error": "total_spots must be greater than zero"})
 		return apartment.CreateApartmentInput{}, false
 	}
-	if input.Bathrooms <= 0 {
+	if requirePublishOnlyFields && input.Bathrooms <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bathrooms must be greater than zero"})
 		return apartment.CreateApartmentInput{}, false
 	}
@@ -273,7 +340,7 @@ func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInp
 		c.JSON(http.StatusBadRequest, gin.H{"error": "base_rent must be greater than zero"})
 		return apartment.CreateApartmentInput{}, false
 	}
-	if strings.TrimSpace(input.AvailableFrom) != "" {
+	if requirePublishOnlyFields && strings.TrimSpace(input.AvailableFrom) != "" {
 		if _, err := time.Parse("2006-01-02", input.AvailableFrom); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "available_from must have YYYY-MM-DD format"})
 			return apartment.CreateApartmentInput{}, false
@@ -320,22 +387,32 @@ func normalizeApartmentInput(input *apartment.CreateApartmentInput) {
 func ownerApartmentResponses(apartments []apartment.Apartment) []ownerApartmentResponse {
 	responses := make([]ownerApartmentResponse, 0, len(apartments))
 	for _, item := range apartments {
-		responses = append(responses, ownerApartmentResponse{
-			ID:            item.ID,
-			Title:         item.Title,
-			Address:       item.Address,
-			Area:          item.Area,
-			TotalSpots:    item.TotalSpots,
-			OccupiedSpots: item.OccupiedSpots,
-			BaseRent:      item.BaseRent,
-			Status:        item.Status,
-			CreatedAt:     item.CreatedAt,
-			ImageURL:      item.ImageURL,
-			Latitude:      item.Latitude,
-			Longitude:     item.Longitude,
-		})
+		responses = append(responses, ownerApartmentResponseFrom(item))
 	}
 	return responses
+}
+
+func ownerApartmentResponseFrom(item apartment.Apartment) ownerApartmentResponse {
+	imageURLs := item.ImageURLs
+	if imageURLs == nil {
+		imageURLs = []string{}
+	}
+	return ownerApartmentResponse{
+		ID:            item.ID,
+		Title:         item.Title,
+		Description:   item.Description,
+		Address:       item.Address,
+		Area:          item.Area,
+		TotalSpots:    item.TotalSpots,
+		OccupiedSpots: item.OccupiedSpots,
+		BaseRent:      item.BaseRent,
+		Status:        item.Status,
+		CreatedAt:     item.CreatedAt,
+		ImageURL:      item.ImageURL,
+		ImageURLs:     imageURLs,
+		Latitude:      item.Latitude,
+		Longitude:     item.Longitude,
+	}
 }
 
 func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmentResponse {
