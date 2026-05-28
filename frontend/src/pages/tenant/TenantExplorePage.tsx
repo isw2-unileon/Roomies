@@ -88,10 +88,6 @@ export default function TenantExplorePage() {
                     </p>
                 </div>
 
-                <div className={styles.areaInfo} aria-label={t('tenantDashboard.header.preferredArea')}>
-                    <span className={styles.areaLabel}>{t('tenantDashboard.topBar.area')}</span>
-                    <span className={styles.areaValue}>{t(profile.preferredAreaKey)}</span>
-                </div>
             </section>
 
             <TenantSearchBar

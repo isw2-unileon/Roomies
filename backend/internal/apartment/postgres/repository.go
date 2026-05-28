@@ -232,9 +232,9 @@ func appendTextAndAreaFilters(whereClauses []string, args []interface{}, filters
 		whereClauses = append(whereClauses, "(a.title ILIKE "+arg+" OR a.address ILIKE "+arg+" OR COALESCE(a.area, '') ILIKE "+arg+")")
 	}
 
-	if filters.Area != "" && strings.ToLower(filters.Area) != "all" {
-		args = append(args, strings.ToLower(filters.Area))
-		whereClauses = append(whereClauses, fmt.Sprintf("LOWER(COALESCE(a.area, '')) = $%d", len(args)))
+	if filters.Area != "" {
+		args = append(args, "%"+filters.Area+"%")
+		whereClauses = append(whereClauses, fmt.Sprintf("COALESCE(a.area, '') ILIKE $%d", len(args)))
 	}
 	return whereClauses, args
 }
