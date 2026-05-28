@@ -360,6 +360,8 @@ const en = {
       basePrice: 'Base price: {{price}} EUR',
       status: 'Status: {{status}}',
       percentOccupied: '{{percent}}% occupied',
+      edit: 'Edit',
+      editAria: 'Edit {{title}}',
     },
     summary: {
       title: 'Occupancy summary',
@@ -390,10 +392,16 @@ const en = {
     publish: {
       title: 'List flat',
       subtitle: 'Create your listing with the main information to receive applications.',
+      editTitle: 'Edit flat',
+      editSubtitle: 'Update the main information for your published listing.',
       backToProperties: 'Back to my flats',
       submit: 'List flat',
       submitting: 'Publishing...',
       success: 'Flat listed successfully.',
+      editSubmit: 'Save changes',
+      editSubmitting: 'Saving...',
+      editSuccess: 'Flat updated successfully.',
+      loadingEdit: 'Loading flat for editing...',
       fields: {
         title: 'Title',
         mapLocation: 'Map location',
@@ -423,6 +431,8 @@ const en = {
         bathrooms: 'The number of bathrooms must be greater than 0.',
         baseRent: 'The monthly price must be greater than 0.',
         default: 'Could not list the flat. Please try again.',
+        editDefault: 'Could not update the flat. Please try again.',
+        loadEdit: 'Could not load the flat for editing.',
       },
     },
     placeholder: {

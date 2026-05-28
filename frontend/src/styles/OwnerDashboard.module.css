@@ -124,6 +124,7 @@
 .mobileCloseButton:focus-visible,
 .ownerNavButton:focus-visible,
 .ownerLogoutButton:focus-visible,
+.ownerPropertyEditButton:focus-visible,
 .skipLink:focus-visible {
   outline: 3px solid var(--tenant-primary);
   outline-offset: 3px;
@@ -607,6 +608,28 @@
   color: var(--tenant-text-muted);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.ownerPropertyActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+
+.ownerPropertyEditButton {
+  padding: 0.5rem 0.85rem;
+  color: var(--tenant-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: var(--tenant-primary-soft);
+  border: 1px solid rgba(100, 54, 199, 0.18);
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.ownerPropertyEditButton:hover {
+  color: #fff;
+  background: var(--tenant-primary);
 }
 
 .ownerPropertyEmpty {

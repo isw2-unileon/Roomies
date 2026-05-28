@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNotice } from '@/hooks/useNotice'
-import { createApartment } from '@/services/ownerService'
+import { createApartment, updateOwnerApartment } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
+import type { OwnerDashboardProperty } from '@/types/owner'
 import LocationPicker from './LocationPicker'
 import type { Location } from './LocationPicker'
 
@@ -32,11 +33,39 @@ const initialValues: PublishValues = {
   imageUrls: '',
 }
 
-export default function OwnerPropertyPublishForm() {
+interface OwnerPropertyPublishFormProps {
+  propertyId?: string
+  property?: OwnerDashboardProperty
+}
+
+function valuesFromProperty(property: OwnerDashboardProperty): PublishValues {
+  const imageUrls = property.imageUrls?.length ? property.imageUrls : property.image ? [property.image] : []
+
+  return {
+    title: property.title,
+    address: property.address,
+    area: property.area ?? '',
+    totalSpots: String(property.totalSpots),
+    bathrooms: '0',
+    baseRent: String(property.rent ?? ''),
+    description: property.description ?? '',
+    availableFrom: '',
+    imageUrls: imageUrls.join('\n'),
+    latitude: property.latitude,
+    longitude: property.longitude,
+  }
+}
+
+export default function OwnerPropertyPublishForm({ propertyId, property }: OwnerPropertyPublishFormProps) {
   const { t } = useTranslation()
-  const [values, setValues] = useState<PublishValues>(initialValues)
+  const isEditMode = Boolean(propertyId)
+  const [values, setValues] = useState<PublishValues>(() => (property ? valuesFromProperty(property) : initialValues))
   const [isLoading, setIsLoading] = useState(false)
   const { notice, showError, showSuccess, clearNotice } = useNotice()
+
+  useEffect(() => {
+    setValues(property ? valuesFromProperty(property) : initialValues)
+  }, [property])
 
   function updateField<K extends keyof PublishValues>(key: K, value: PublishValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -80,7 +109,7 @@ export default function OwnerPropertyPublishForm() {
       showError(t('ownerDashboard.publish.errors.totalSpots'))
       return
     }
-    if (!Number.isFinite(parsedBathrooms) || parsedBathrooms <= 0) {
+    if (!isEditMode && (!Number.isFinite(parsedBathrooms) || parsedBathrooms <= 0)) {
       showError(t('ownerDashboard.publish.errors.bathrooms'))
       return
     }
@@ -92,23 +121,28 @@ export default function OwnerPropertyPublishForm() {
     setIsLoading(true)
 
     try {
-      const result = await createApartment({
+      const payload = {
         title: values.title.trim(),
         description: values.description.trim(),
         address: values.address.trim(),
         area: values.area.trim(),
         totalSpots: parsedTotalSpots,
-        bathrooms: parsedBathrooms,
+        bathrooms: Number.isFinite(parsedBathrooms) ? parsedBathrooms : 0,
         baseRent: parsedBaseRent,
         availableFrom: values.availableFrom || '',
         imageUrls: parsedImageURLs,
         latitude: values.latitude,
         longitude: values.longitude,
-      })
-      showSuccess(result.message ?? t('ownerDashboard.publish.success'))
-      setValues(initialValues)
+      }
+      const result = isEditMode && propertyId
+        ? await updateOwnerApartment(propertyId, payload)
+        : await createApartment(payload)
+      showSuccess(result.message ?? t(isEditMode ? 'ownerDashboard.publish.editSuccess' : 'ownerDashboard.publish.success'))
+      if (!isEditMode) {
+        setValues(initialValues)
+      }
     } catch (error) {
-      showError(error instanceof Error ? error.message : t('ownerDashboard.publish.errors.default'))
+      showError(error instanceof Error ? error.message : t(isEditMode ? 'ownerDashboard.publish.errors.editDefault' : 'ownerDashboard.publish.errors.default'))
     } finally {
       setIsLoading(false)
     }
@@ -117,8 +151,8 @@ export default function OwnerPropertyPublishForm() {
   return (
     <section className={styles.pageSection}>
       <header className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>{t('ownerDashboard.publish.title')}</h1>
-        <p className={styles.pageSubtitle}>{t('ownerDashboard.publish.subtitle')}</p>
+        <h1 className={styles.pageTitle}>{t(isEditMode ? 'ownerDashboard.publish.editTitle' : 'ownerDashboard.publish.title')}</h1>
+        <p className={styles.pageSubtitle}>{t(isEditMode ? 'ownerDashboard.publish.editSubtitle' : 'ownerDashboard.publish.subtitle')}</p>
       </header>
 
       <form onSubmit={handleSubmit} className={styles.formCard}>
@@ -173,17 +207,19 @@ export default function OwnerPropertyPublishForm() {
             />
           </label>
 
-          <label className={styles.field}>
-            <span className={styles.label}>{t('ownerDashboard.publish.fields.bathrooms')}</span>
-            <input
-              type="number"
-              min={1}
-              className={styles.input}
-              value={values.bathrooms}
-              onChange={(event) => updateField('bathrooms', event.target.value)}
-              required
-            />
-          </label>
+          {!isEditMode ? (
+            <label className={styles.field}>
+              <span className={styles.label}>{t('ownerDashboard.publish.fields.bathrooms')}</span>
+              <input
+                type="number"
+                min={1}
+                className={styles.input}
+                value={values.bathrooms}
+                onChange={(event) => updateField('bathrooms', event.target.value)}
+                required
+              />
+            </label>
+          ) : null}
 
           <label className={styles.field}>
             <span className={styles.label}>{t('ownerDashboard.publish.fields.baseRent')}</span>
@@ -197,15 +233,17 @@ export default function OwnerPropertyPublishForm() {
             />
           </label>
 
-          <label className={styles.field}>
-            <span className={styles.label}>{t('ownerDashboard.publish.fields.availableFrom')}</span>
-            <input
-              type="date"
-              className={styles.input}
-              value={values.availableFrom}
-              onChange={(event) => updateField('availableFrom', event.target.value)}
-            />
-          </label>
+          {!isEditMode ? (
+            <label className={styles.field}>
+              <span className={styles.label}>{t('ownerDashboard.publish.fields.availableFrom')}</span>
+              <input
+                type="date"
+                className={styles.input}
+                value={values.availableFrom}
+                onChange={(event) => updateField('availableFrom', event.target.value)}
+              />
+            </label>
+          ) : null}
 
           <label className={`${styles.field} ${styles.full}`}>
             <span className={styles.label}>{t('ownerDashboard.publish.fields.imageUrls')}</span>
@@ -239,7 +277,9 @@ export default function OwnerPropertyPublishForm() {
 
         <div className={styles.actions}>
           <button type="submit" className={styles.primaryButton} disabled={isLoading}>
-            {isLoading ? t('ownerDashboard.publish.submitting') : t('ownerDashboard.publish.submit')}
+            {isLoading
+              ? t(isEditMode ? 'ownerDashboard.publish.editSubmitting' : 'ownerDashboard.publish.submitting')
+              : t(isEditMode ? 'ownerDashboard.publish.editSubmit' : 'ownerDashboard.publish.submit')}
           </button>
         </div>
       </form>

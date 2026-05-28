@@ -83,6 +83,10 @@ export default function OwnerDashboardPage() {
     setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, status } : issue)))
   }
 
+  function handleEditProperty(property: OwnerDashboardProperty) {
+    navigate(paths.ownerPublishProperty, { state: { propertyId: property.id } })
+  }
+
   return (
     <OwnerLayout>
       <div className={styles.ownerMainGrid}>
@@ -103,7 +107,7 @@ export default function OwnerDashboardPage() {
             {isLoadingProperties ? (
               <p className={styles.ownerPropertyEmpty}>{t('ownerDashboard.properties.loading')}</p>
             ) : (
-              <OwnerPropertyGrid properties={ownerProperties} />
+              <OwnerPropertyGrid properties={ownerProperties} onEdit={handleEditProperty} />
             )}
           </section>
 

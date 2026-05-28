@@ -360,6 +360,8 @@ const de = {
       basePrice: 'Grundpreis: {{price}} EUR',
       status: 'Status: {{status}}',
       percentOccupied: '{{percent}} % belegt',
+      edit: 'Bearbeiten',
+      editAria: '{{title}} bearbeiten',
     },
     summary: {
       title: 'Belegungsübersicht',
@@ -390,10 +392,16 @@ const de = {
     publish: {
       title: 'Wohnung inserieren',
       subtitle: 'Erstelle dein Inserat mit den wichtigsten Informationen, um Anfragen zu erhalten.',
+      editTitle: 'Wohnung bearbeiten',
+      editSubtitle: 'Aktualisiere die wichtigsten Informationen deines veröffentlichten Inserats.',
       backToProperties: 'Zurück zu meinen Wohnungen',
       submit: 'Wohnung inserieren',
       submitting: 'Wird veröffentlicht...',
       success: 'Wohnung erfolgreich inseriert.',
+      editSubmit: 'Änderungen speichern',
+      editSubmitting: 'Wird gespeichert...',
+      editSuccess: 'Wohnung erfolgreich aktualisiert.',
+      loadingEdit: 'Wohnung zum Bearbeiten wird geladen...',
       fields: {
         title: 'Titel',
         mapLocation: 'Standort auf der Karte',
@@ -423,6 +431,8 @@ const de = {
         bathrooms: 'Die Anzahl der Bäder muss größer als 0 sein.',
         baseRent: 'Der Monatspreis muss größer als 0 sein.',
         default: 'Die Wohnung konnte nicht inseriert werden. Bitte versuche es erneut.',
+        editDefault: 'Die Wohnung konnte nicht aktualisiert werden. Bitte versuche es erneut.',
+        loadEdit: 'Die Wohnung zum Bearbeiten konnte nicht geladen werden.',
       },
     },
     placeholder: {

@@ -32,6 +32,7 @@ export interface OwnerProfile {
 export interface OwnerDashboardProperty {
     id: string
     title: string
+    description?: string
     address: string
     area?: string
     totalSpots: number
@@ -44,6 +45,9 @@ export interface OwnerDashboardProperty {
     nextDueDate?: string
     requests?: number
     image: string
+    imageUrls?: string[]
+    latitude?: number
+    longitude?: number
 }
 
 export interface OwnerDashboardRequest {

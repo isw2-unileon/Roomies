@@ -4,9 +4,10 @@ import type { OwnerDashboardProperty } from '@/types/owner'
 
 interface OwnerPropertyGridProps {
   properties: OwnerDashboardProperty[]
+  onEdit?: (property: OwnerDashboardProperty) => void
 }
 
-export default function OwnerPropertyGrid({ properties }: OwnerPropertyGridProps) {
+export default function OwnerPropertyGrid({ properties, onEdit }: OwnerPropertyGridProps) {
   const { t } = useTranslation()
 
   if (properties.length === 0) {
@@ -45,6 +46,18 @@ export default function OwnerPropertyGrid({ properties }: OwnerPropertyGridProps
                 </div>
                 <span className={styles.ownerProgressLabel}>{t('ownerDashboard.propertyCard.percentOccupied', { percent })}</span>
               </div>
+              {onEdit ? (
+                <div className={styles.ownerPropertyActions}>
+                  <button
+                    type="button"
+                    className={styles.ownerPropertyEditButton}
+                    onClick={() => onEdit(property)}
+                    aria-label={t('ownerDashboard.propertyCard.editAria', { title: property.title })}
+                  >
+                    {t('ownerDashboard.propertyCard.edit')}
+                  </button>
+                </div>
+              ) : null}
             </div>
           </article>
         )
