@@ -4,6 +4,7 @@ import type { OwnerDashboardProperty } from '@/types/owner'
 interface OwnerApartmentDto {
   id: string
   title: string
+  description?: string
   address: string
   area: string
   total_spots: number
@@ -11,11 +12,16 @@ interface OwnerApartmentDto {
   base_rent: number
   status: string
   created_at: string
-  image_url: string
+  image_url?: string | null
+  image_urls?: string[] | null
+  image_paths?: string[] | null
+  latitude?: number
+  longitude?: number
 }
 
 interface OwnerApartmentsResponseDto {
   apartments?: OwnerApartmentDto[]
+  apartment?: OwnerApartmentDto
   error?: string
 }
 
@@ -35,7 +41,7 @@ export interface CreateApartmentInput {
   bathrooms: number
   baseRent: number
   availableFrom: string
-  imageUrls: string[]
+  imagePaths: string[]
   latitude?: number
   longitude?: number
 }
@@ -47,7 +53,8 @@ export interface CreateApartmentResult {
 }
 
 function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
-  return {
+  const imageUrls = dto.image_urls?.length ? dto.image_urls : dto.image_url ? [dto.image_url] : []
+  const property: OwnerDashboardProperty = {
     id: dto.id,
     title: dto.title,
     address: dto.address,
@@ -57,7 +64,39 @@ function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
     rent: dto.base_rent,
     status: dto.status,
     createdAt: dto.created_at,
-    image: dto.image_url,
+    image: imageUrls[0] ?? '',
+  }
+  if (dto.description !== undefined) {
+    property.description = dto.description
+  }
+  if (imageUrls.length > 0) {
+    property.imageUrls = imageUrls
+  }
+  if (dto.image_paths != null) {
+    property.imagePaths = dto.image_paths
+  }
+  if (dto.latitude !== undefined) {
+    property.latitude = dto.latitude
+  }
+  if (dto.longitude !== undefined) {
+    property.longitude = dto.longitude
+  }
+  return property
+}
+
+function apartmentPayload(input: CreateApartmentInput) {
+  return {
+    title: input.title,
+    description: input.description,
+    address: input.address,
+    area: input.area,
+    total_spots: input.totalSpots,
+    bathrooms: input.bathrooms,
+    base_rent: input.baseRent,
+    available_from: input.availableFrom,
+    image_paths: input.imagePaths,
+    latitude: input.latitude,
+    longitude: input.longitude,
   }
 }
 
@@ -70,23 +109,23 @@ export async function listOwnerApartments() {
   return (data.apartments ?? []).map(ownerApartmentFromDto)
 }
 
+export async function getOwnerApartment(propertyId: string) {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(propertyId)}`)
+  const data = (await response.json()) as OwnerApartmentsResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo cargar el piso publicado.')
+  }
+  if (!data.apartment) {
+    throw new Error('No se pudo cargar el piso publicado.')
+  }
+  return ownerApartmentFromDto(data.apartment)
+}
+
 export async function createApartment(input: CreateApartmentInput): Promise<CreateApartmentResult> {
   const response = await apiFetch('/api/apartments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: input.title,
-      description: input.description,
-      address: input.address,
-      area: input.area,
-      total_spots: input.totalSpots,
-      bathrooms: input.bathrooms,
-      base_rent: input.baseRent,
-      available_from: input.availableFrom,
-      image_urls: input.imageUrls,
-      latitude: input.latitude,
-      longitude: input.longitude,
-    }),
+    body: JSON.stringify(apartmentPayload(input)),
   })
   const data = (await response.json()) as CreateApartmentResponseDto
   if (!response.ok) {
@@ -97,4 +136,48 @@ export async function createApartment(input: CreateApartmentInput): Promise<Crea
     apartmentId: data.apartment_id,
     imagesStored: data.images_stored,
   }
+}
+
+export async function updateOwnerApartment(propertyId: string, input: CreateApartmentInput): Promise<CreateApartmentResult> {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(propertyId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(apartmentPayload(input)),
+  })
+  const data = (await response.json()) as CreateApartmentResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo actualizar el piso. Intentalo de nuevo.')
+  }
+  return {
+    message: data.message,
+    apartmentId: data.apartment_id,
+    imagesStored: data.images_stored,
+  }
+}
+
+export interface UploadedPhoto {
+  path: string
+  signed_url: string
+}
+
+export async function uploadApartmentPhotos(files: File[], apartmentId?: string, apartmentName?: string): Promise<UploadedPhoto[]> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('photos', file)
+  }
+  if (apartmentId) {
+    formData.append('apartment_id', apartmentId)
+  }
+  if (apartmentName) {
+    formData.append('apartment_name', apartmentName)
+  }
+  const response = await apiFetch('/api/owner/apartment-photos', {
+    method: 'POST',
+    body: formData,
+  })
+  const data = (await response.json()) as { photos?: UploadedPhoto[]; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudieron subir las fotos.')
+  }
+  return data.photos ?? []
 }

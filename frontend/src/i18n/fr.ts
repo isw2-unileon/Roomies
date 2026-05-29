@@ -360,6 +360,8 @@ const fr = {
       basePrice: 'Prix de base : {{price}} EUR',
       status: 'État : {{status}}',
       percentOccupied: '{{percent}} % occupé',
+      edit: 'Modifier',
+      editAria: 'Modifier {{title}}',
     },
     summary: {
       title: 'Résumé d\'occupation',
@@ -390,10 +392,16 @@ const fr = {
     publish: {
       title: 'Publier un logement',
       subtitle: 'Créez votre annonce avec les informations principales pour recevoir des demandes.',
+      editTitle: 'Modifier le logement',
+      editSubtitle: 'Mettez à jour les informations principales de votre annonce publiée.',
       backToProperties: 'Retour à mes logements',
       submit: 'Publier un logement',
       submitting: 'Publication...',
       success: 'Logement publié correctement.',
+      editSubmit: 'Enregistrer',
+      editSubmitting: 'Enregistrement...',
+      editSuccess: 'Logement mis à jour correctement.',
+      loadingEdit: 'Chargement du logement à modifier...',
       fields: {
         title: 'Titre',
         mapLocation: 'Emplacement sur la carte',
@@ -403,18 +411,17 @@ const fr = {
         bathrooms: 'Salles de bain (enregistré dans la description)',
         baseRent: 'Prix mensuel (EUR)',
         availableFrom: 'Disponible à partir de (enregistré dans la description)',
-        imageUrls: 'URLs des images',
+        photos: 'Photos du logement',
         description: 'Description',
       },
       placeholders: {
         title: 'Logement lumineux au centre-ville',
         address: 'Calle Ancha, 12',
         area: 'Centre-ville',
-        imageUrls: 'https://.../photo1.jpg, https://.../photo2.jpg',
         description: 'Décrivez le logement, les règles et le profil de locataire recommandé...',
       },
       hints: {
-        imageUrls: 'Séparez plusieurs URLs par des virgules ou des lignes.',
+        photos: 'Téléchargez jusqu\'à {{max}} photos du logement.',
       },
       errors: {
         title: 'Le titre doit contenir au moins 3 caractères.',
@@ -423,6 +430,12 @@ const fr = {
         bathrooms: 'Le nombre de salles de bain doit être supérieur à 0.',
         baseRent: 'Le prix mensuel doit être supérieur à 0.',
         default: 'Impossible de publier le logement. Réessayez.',
+        editDefault: 'Impossible de mettre à jour le logement. Réessayez.',
+        loadEdit: 'Impossible de charger le logement à modifier.',
+      },
+      photos: {
+        tooLarge: 'Le fichier dépasse la taille maximale de 5Mo.',
+        invalidType: 'Seuls les fichiers image sont acceptés.',
       },
     },
     placeholder: {

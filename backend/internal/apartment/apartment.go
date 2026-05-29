@@ -13,7 +13,7 @@ type CreateApartmentInput struct {
 	Bathrooms     int
 	BaseRent      int
 	AvailableFrom string
-	ImageURLs     []string
+	ImagePaths    []string
 	Status        string
 	Latitude      float64
 	Longitude     float64
@@ -31,7 +31,6 @@ type Apartment struct {
 	Title         string
 	Description   string
 	OwnerID       string
-	OwnerName     string
 	Address       string
 	Area          string
 	TotalSpots    int
@@ -39,7 +38,8 @@ type Apartment struct {
 	BaseRent      int
 	Status        string
 	CreatedAt     string
-	ImageURL      string
+	ImagePaths    []string
+	ImageURLs     []string
 	Latitude      float64
 	Longitude     float64
 }

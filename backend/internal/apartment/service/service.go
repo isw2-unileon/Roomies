@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"mime"
+	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
@@ -15,6 +19,8 @@ import (
 type repository interface {
 	CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error)
 	ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error)
+	GetOwnerApartmentByID(ctx context.Context, ownerID, apartmentID string) (*apartment.Apartment, error)
+	UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
 	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error)
@@ -28,8 +34,22 @@ type applicationReader interface {
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
 }
 
-type imageURLSigner interface {
+type imageStorage interface {
 	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
+	UploadObject(ctx context.Context, bucket, objectPath, contentType string, fileData []byte) error
+}
+
+// UploadFile represents a photo file to upload.
+type UploadFile struct {
+	Filename    string
+	ContentType string
+	Data        []byte
+}
+
+// UploadResult represents an uploaded photo.
+type UploadResult struct {
+	Path      string `json:"path"`
+	SignedURL string `json:"signed_url"`
 }
 
 const (
@@ -60,12 +80,12 @@ type Service struct {
 	repo              repository
 	profileReader     profileReader
 	applicationReader applicationReader
-	imageSigner       imageURLSigner
+	imageStorage      imageStorage
 }
 
 // NewService creates the apartment service.
-func NewService(repo repository, imageSigner imageURLSigner, profileReader profileReader, applicationReader applicationReader) *Service {
-	return &Service{repo: repo, imageSigner: imageSigner, profileReader: profileReader, applicationReader: applicationReader}
+func NewService(repo repository, imageStorage imageStorage, profileReader profileReader, applicationReader applicationReader) *Service {
+	return &Service{repo: repo, imageStorage: imageStorage, profileReader: profileReader, applicationReader: applicationReader}
 }
 
 // CreateApartment validates and stores a new owner apartment listing.
@@ -135,6 +155,89 @@ func (s *Service) ListOwnerApartments(ctx context.Context, ownerID, role string)
 		return nil, err
 	}
 	return s.signApartmentImages(ctx, apartments)
+}
+
+// GetOwnerApartment returns one apartment owned by the current owner.
+func (s *Service) GetOwnerApartment(ctx context.Context, ownerID, role, apartmentID string) (*apartment.Apartment, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+
+	item, err := s.repo.GetOwnerApartmentByID(ctx, ownerID, apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		return nil, ErrApartmentNotFound
+	}
+	signed, err := s.signApartmentImages(ctx, []apartment.Apartment{*item})
+	if err != nil {
+		return nil, err
+	}
+	return &signed[0], nil
+}
+
+// UpdateOwnerApartment validates and updates an existing owner apartment listing.
+func (s *Service) UpdateOwnerApartment(ctx context.Context, ownerID, role, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(input.Title) == "" {
+		return nil, errors.New("title is required")
+	}
+	if strings.TrimSpace(input.Address) == "" {
+		return nil, errors.New("address is required")
+	}
+	if input.TotalSpots <= 0 {
+		return nil, errors.New("total_spots must be greater than zero")
+	}
+	if input.BaseRent <= 0 {
+		return nil, errors.New("base_rent must be greater than zero")
+	}
+
+	owned, err := s.repo.GetOwnerApartmentByID(ctx, ownerID, apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	if owned == nil {
+		return nil, ErrApartmentNotFound
+	}
+	if input.TotalSpots < owned.OccupiedSpots {
+		return nil, errors.New("total_spots cannot be lower than occupied_spots")
+	}
+
+	input.Title = strings.TrimSpace(input.Title)
+	input.Description = strings.TrimSpace(input.Description)
+	input.Address = strings.TrimSpace(input.Address)
+	input.Area = strings.TrimSpace(input.Area)
+	input.Status = owned.Status
+
+	updated, err := s.repo.UpdateOwnerApartment(ctx, ownerID, apartmentID, input)
+	if err != nil {
+		return nil, err
+	}
+	if updated == nil {
+		return nil, ErrApartmentNotFound
+	}
+	signed, err := s.signApartmentImages(ctx, []apartment.Apartment{*updated})
+	if err != nil {
+		return nil, err
+	}
+	return &signed[0], nil
 }
 
 // ListAvailableApartments returns tenant-visible apartment listings.
@@ -258,16 +361,28 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 }
 
 func (s *Service) signApartmentImages(ctx context.Context, apartments []apartment.Apartment) ([]apartment.Apartment, error) {
-	if s.imageSigner == nil {
-		return apartments, nil
-	}
 	for idx := range apartments {
-		signedURL, err := s.signedImageURL(ctx, apartments[idx].ImageURL)
-		if err != nil {
-			apartments[idx].ImageURL = ""
-			continue
+		if apartments[idx].ImagePaths == nil {
+			apartments[idx].ImagePaths = []string{}
 		}
-		apartments[idx].ImageURL = signedURL
+
+		imageURLs := make([]string, 0, len(apartments[idx].ImagePaths))
+		for _, imagePath := range apartments[idx].ImagePaths {
+			trimmed := strings.TrimSpace(imagePath)
+			if trimmed == "" {
+				continue
+			}
+			if s.imageStorage == nil && !isAbsoluteHTTPURL(trimmed) {
+				continue
+			}
+
+			signedURL, err := s.signedImageURL(ctx, trimmed)
+			if err != nil || signedURL == "" {
+				continue
+			}
+			imageURLs = append(imageURLs, signedURL)
+		}
+		apartments[idx].ImageURLs = imageURLs
 	}
 	return apartments, nil
 }
@@ -277,11 +392,21 @@ func (s *Service) signedImageURL(ctx context.Context, imagePath string) (string,
 	if imagePath == "" {
 		return "", nil
 	}
-	signedURL, err := s.imageSigner.CreateSignedURL(ctx, apartmentPhotosBucket, imagePath, signedImageURLTTLSeconds)
+	if isAbsoluteHTTPURL(imagePath) {
+		return imagePath, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, apartmentPhotosBucket, imagePath, signedImageURLTTLSeconds)
 	if err != nil {
 		return "", fmt.Errorf("sign apartment image: %w", err)
 	}
 	return signedURL, nil
+}
+
+func isAbsoluteHTTPURL(value string) bool {
+	return strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://")
 }
 
 func derefRules(rules *apartment.Rules) apartment.Rules {
@@ -289,4 +414,86 @@ func derefRules(rules *apartment.Rules) apartment.Rules {
 		return apartment.Rules{}
 	}
 	return *rules
+}
+
+const (
+	maxPhotosPerApartment = 8
+	maxPhotoSizeBytes     = 5 * 1024 * 1024
+)
+
+// UploadApartmentPhotos uploads photo files to Supabase Storage.
+func (s *Service) UploadApartmentPhotos(ctx context.Context, ownerID, role, apartmentID, apartmentName string, files []UploadFile) ([]UploadResult, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	if s.imageStorage == nil {
+		return nil, errors.New("image upload is not configured")
+	}
+	if len(files) == 0 {
+		return nil, errors.New("at least one photo is required")
+	}
+	if len(files) > maxPhotosPerApartment {
+		return nil, fmt.Errorf("too many photos, maximum %d allowed", maxPhotosPerApartment)
+	}
+
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		b := make([]byte, 16)
+		_, _ = rand.Read(b)
+		apartmentID = fmt.Sprintf("%x", b)
+	}
+	folderName := storageFolderName(apartmentName, apartmentID)
+
+	results := make([]UploadResult, 0, len(files))
+	for i, file := range files {
+		if len(file.Data) > maxPhotoSizeBytes {
+			return nil, fmt.Errorf("file %q exceeds maximum size of 5MB", file.Filename)
+		}
+		ext := filepath.Ext(strings.TrimSpace(file.Filename))
+		if ext == "" {
+			ext = ".jpg"
+		}
+		objectPath := fmt.Sprintf("%s/%d%s", folderName, i, ext)
+		contentType := file.ContentType
+		if contentType == "" {
+			contentType = mime.TypeByExtension(ext)
+			if contentType == "" {
+				contentType = "application/octet-stream"
+			}
+		}
+
+		if err := s.imageStorage.UploadObject(ctx, apartmentPhotosBucket, objectPath, contentType, file.Data); err != nil {
+			return nil, fmt.Errorf("upload photo %q: %w", file.Filename, err)
+		}
+
+		signedURL, err := s.signedImageURL(ctx, objectPath)
+		if err != nil {
+			return nil, fmt.Errorf("sign uploaded photo %q: %w", file.Filename, err)
+		}
+
+		results = append(results, UploadResult{Path: objectPath, SignedURL: signedURL})
+	}
+	return results, nil
+}
+
+func storageFolderName(apartmentName, apartmentID string) string {
+	name := strings.Trim(strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return r
+		}
+		if unicode.IsSpace(r) || r == '-' || r == '_' {
+			return '-'
+		}
+		return -1
+	}, strings.TrimSpace(apartmentName)), "-")
+	if name == "" {
+		name = "apartment"
+	}
+	if len(name) > 50 {
+		name = strings.TrimRight(name[:50], "-")
+	}
+	return name + "-" + apartmentID
 }

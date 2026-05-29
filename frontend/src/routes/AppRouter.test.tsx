@@ -22,6 +22,9 @@ vi.mock('@/services/authService', () => ({
 
 vi.mock('@/services/ownerService', () => ({
   listOwnerApartments: vi.fn(async () => []),
+  getOwnerApartment: vi.fn(async () => undefined),
+  createApartment: vi.fn(async () => ({})),
+  updateOwnerApartment: vi.fn(async () => ({})),
 }))
 
 vi.mock('@/components/owner/owner_publish_property/LocationPicker', () => ({

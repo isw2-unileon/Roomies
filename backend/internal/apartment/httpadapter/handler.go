@@ -2,6 +2,8 @@ package httpadapter
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,42 +27,46 @@ type createApartmentRequest struct {
 	Bathrooms     int      `json:"bathrooms"`
 	BaseRent      int      `json:"base_rent"`
 	AvailableFrom string   `json:"available_from"`
-	ImageURLs     []string `json:"image_urls"`
+	ImagePaths    []string `json:"image_paths"`
 	Latitude      float64  `json:"latitude"`
 	Longitude     float64  `json:"longitude"`
 }
 
 type ownerApartmentResponse struct {
-	ID            string  `json:"id"`
-	Title         string  `json:"title"`
-	Address       string  `json:"address"`
-	Area          string  `json:"area"`
-	TotalSpots    int     `json:"total_spots"`
-	OccupiedSpots int     `json:"occupied_spots"`
-	BaseRent      int     `json:"base_rent"`
-	Status        string  `json:"status"`
-	CreatedAt     string  `json:"created_at"`
-	ImageURL      string  `json:"image_url"`
-	Latitude      float64 `json:"latitude"`
-	Longitude     float64 `json:"longitude"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Address       string   `json:"address"`
+	Area          string   `json:"area"`
+	TotalSpots    int      `json:"total_spots"`
+	OccupiedSpots int      `json:"occupied_spots"`
+	BaseRent      int      `json:"base_rent"`
+	Status        string   `json:"status"`
+	CreatedAt     string   `json:"created_at"`
+	ImageURL      string   `json:"image_url"`
+	ImageURLs     []string `json:"image_urls"`
+	ImagePaths    []string `json:"image_paths"`
+	Latitude      float64  `json:"latitude"`
+	Longitude     float64  `json:"longitude"`
 }
 
 type tenantApartmentResponse struct {
-	ID             string  `json:"id"`
-	Title          string  `json:"title"`
-	Description    string  `json:"description"`
-	Address        string  `json:"address"`
-	Area           string  `json:"area"`
-	TotalSpots     int     `json:"total_spots"`
-	AvailableSpots int     `json:"available_spots"`
-	BaseRent       int     `json:"base_rent"`
-	Status         string  `json:"status"`
-	CreatedAt      string  `json:"created_at"`
-	ImageURL       string  `json:"image_url"`
-	OwnerName      string  `json:"owner_name"`
-	Compatibility  int     `json:"compatibility_score"`
-	Latitude       float64 `json:"latitude"`
-	Longitude      float64 `json:"longitude"`
+	ID             string   `json:"id"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Address        string   `json:"address"`
+	Area           string   `json:"area"`
+	TotalSpots     int      `json:"total_spots"`
+	AvailableSpots int      `json:"available_spots"`
+	BaseRent       int      `json:"base_rent"`
+	Status         string   `json:"status"`
+	CreatedAt      string   `json:"created_at"`
+	ImageURL       string   `json:"image_url"`
+	ImageURLs      []string `json:"image_urls"`
+	ImagePaths     []string `json:"image_paths"`
+	Compatibility  int      `json:"compatibility_score"`
+	Latitude       float64  `json:"latitude"`
+	Longitude      float64  `json:"longitude"`
 }
 
 type tenantApartmentDetailResponse struct {
@@ -97,6 +103,9 @@ func RegisterTenantRoutes(api *gin.RouterGroup, apartmentService *apartmentservi
 func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/owner/apartments", h.listOwnerApartments)
+	api.GET("/owner/apartments/:id", h.getOwnerApartment)
+	api.PATCH("/owner/apartments/:id", h.updateOwnerApartment)
+	api.POST("/owner/apartment-photos", h.uploadApartmentPhotos)
 	api.POST("/apartments", h.createApartment)
 }
 
@@ -140,7 +149,7 @@ func (h *handler) createApartment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	input, ok := bindAndValidateApartmentInput(c)
+	input, ok := bindAndValidateApartmentInput(c, true)
 	if !ok {
 		return
 	}
@@ -160,6 +169,132 @@ func (h *handler) createApartment(c *gin.Context) {
 		"apartment_id":  result.ApartmentID,
 		"images_stored": result.ImagesStored,
 	})
+}
+
+func (h *handler) getOwnerApartment(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+
+	item, err := h.apartmentService.GetOwnerApartment(c.Request.Context(), ownerID, role, apartmentID)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrApartmentNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load owner apartment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartment": ownerApartmentResponseFrom(*item)})
+}
+
+func (h *handler) updateOwnerApartment(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+	input, ok := bindAndValidateApartmentInput(c, false)
+	if !ok {
+		return
+	}
+
+	item, err := h.apartmentService.UpdateOwnerApartment(c.Request.Context(), ownerID, role, apartmentID, input)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrApartmentNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "apartment updated successfully",
+		"apartment": ownerApartmentResponseFrom(*item),
+	})
+}
+
+func (h *handler) uploadApartmentPhotos(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	if err := c.Request.ParseMultipartForm(50 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
+		return
+	}
+
+	apartmentID := strings.TrimSpace(c.PostForm("apartment_id"))
+	apartmentName := strings.TrimSpace(c.PostForm("apartment_name"))
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
+		return
+	}
+	formFiles := form.File["photos"]
+	if len(formFiles) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one photo is required"})
+		return
+	}
+
+	files := make([]apartmentservice.UploadFile, 0, len(formFiles))
+    for _, fh := range formFiles {
+        data, err := fh.Open()
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+            return
+        }
+        fileData, readErr := io.ReadAll(data)
+        closeErr := data.Close()
+        if readErr != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+            return
+        }
+        if closeErr != nil {
+            // Closing the uploaded file failed — treat as internal error.
+            c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fh.Filename)})
+            return
+        }
+        files = append(files, apartmentservice.UploadFile{
+            Filename:    fh.Filename,
+            ContentType: fh.Header.Get("Content-Type"),
+            Data:        fileData,
+        })
+    }
+
+	results, err := h.apartmentService.UploadApartmentPhotos(c.Request.Context(), ownerID, role, apartmentID, apartmentName, files)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartment photos are only available for owner users"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"photos": results})
 }
 
 func (h *handler) getApartmentDetail(c *gin.Context) {
@@ -198,8 +333,9 @@ func (h *handler) getApartmentDetail(c *gin.Context) {
 			BaseRent:       detail.Apartment.BaseRent,
 			Status:         detail.Apartment.Status,
 			CreatedAt:      detail.Apartment.CreatedAt,
-			ImageURL:       detail.Apartment.ImageURL,
-			OwnerName:      detail.Apartment.OwnerName,
+			ImageURL:       firstImageURL(detail.Apartment.ImageURLs),
+			ImageURLs:      nonNilStrings(detail.Apartment.ImageURLs),
+			ImagePaths:     nonNilStrings(detail.Apartment.ImagePaths),
 			Compatibility:  detail.CompatibilityScore,
 		},
 		CompatibilityReasons: detail.CompatibilityReason,
@@ -245,7 +381,7 @@ func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
 	return userID, role, true
 }
 
-func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInput, bool) {
+func bindAndValidateApartmentInput(c *gin.Context, requirePublishOnlyFields bool) (apartment.CreateApartmentInput, bool) {
 	var request createApartmentRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -265,7 +401,7 @@ func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInp
 		c.JSON(http.StatusBadRequest, gin.H{"error": "total_spots must be greater than zero"})
 		return apartment.CreateApartmentInput{}, false
 	}
-	if input.Bathrooms <= 0 {
+	if requirePublishOnlyFields && input.Bathrooms <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bathrooms must be greater than zero"})
 		return apartment.CreateApartmentInput{}, false
 	}
@@ -273,7 +409,7 @@ func bindAndValidateApartmentInput(c *gin.Context) (apartment.CreateApartmentInp
 		c.JSON(http.StatusBadRequest, gin.H{"error": "base_rent must be greater than zero"})
 		return apartment.CreateApartmentInput{}, false
 	}
-	if strings.TrimSpace(input.AvailableFrom) != "" {
+	if requirePublishOnlyFields && strings.TrimSpace(input.AvailableFrom) != "" {
 		if _, err := time.Parse("2006-01-02", input.AvailableFrom); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "available_from must have YYYY-MM-DD format"})
 			return apartment.CreateApartmentInput{}, false
@@ -294,7 +430,7 @@ func apartmentInputFromRequest(request createApartmentRequest) apartment.CreateA
 		Bathrooms:     request.Bathrooms,
 		BaseRent:      request.BaseRent,
 		AvailableFrom: request.AvailableFrom,
-		ImageURLs:     request.ImageURLs,
+		ImagePaths:    request.ImagePaths,
 		Latitude:      request.Latitude,
 		Longitude:     request.Longitude,
 	}
@@ -306,41 +442,51 @@ func normalizeApartmentInput(input *apartment.CreateApartmentInput) {
 	input.Address = strings.TrimSpace(input.Address)
 	input.Area = strings.TrimSpace(input.Area)
 	input.AvailableFrom = strings.TrimSpace(input.AvailableFrom)
-	cleanURLs := make([]string, 0, len(input.ImageURLs))
-	for _, imageURL := range input.ImageURLs {
-		trimmed := strings.TrimSpace(imageURL)
+	cleanPaths := make([]string, 0, len(input.ImagePaths))
+	for _, imagePath := range input.ImagePaths {
+		trimmed := strings.TrimSpace(imagePath)
 		if trimmed == "" {
 			continue
 		}
-		cleanURLs = append(cleanURLs, trimmed)
+		cleanPaths = append(cleanPaths, trimmed)
 	}
-	input.ImageURLs = cleanURLs
+	input.ImagePaths = cleanPaths
 }
 
 func ownerApartmentResponses(apartments []apartment.Apartment) []ownerApartmentResponse {
 	responses := make([]ownerApartmentResponse, 0, len(apartments))
 	for _, item := range apartments {
-		responses = append(responses, ownerApartmentResponse{
-			ID:            item.ID,
-			Title:         item.Title,
-			Address:       item.Address,
-			Area:          item.Area,
-			TotalSpots:    item.TotalSpots,
-			OccupiedSpots: item.OccupiedSpots,
-			BaseRent:      item.BaseRent,
-			Status:        item.Status,
-			CreatedAt:     item.CreatedAt,
-			ImageURL:      item.ImageURL,
-			Latitude:      item.Latitude,
-			Longitude:     item.Longitude,
-		})
+		responses = append(responses, ownerApartmentResponseFrom(item))
 	}
 	return responses
+}
+
+func ownerApartmentResponseFrom(item apartment.Apartment) ownerApartmentResponse {
+	imagePaths := nonNilStrings(item.ImagePaths)
+	imageURLs := nonNilStrings(item.ImageURLs)
+	return ownerApartmentResponse{
+		ID:            item.ID,
+		Title:         item.Title,
+		Description:   item.Description,
+		Address:       item.Address,
+		Area:          item.Area,
+		TotalSpots:    item.TotalSpots,
+		OccupiedSpots: item.OccupiedSpots,
+		BaseRent:      item.BaseRent,
+		Status:        item.Status,
+		CreatedAt:     item.CreatedAt,
+		ImageURL:      firstImageURL(imageURLs),
+		ImageURLs:     imageURLs,
+		ImagePaths:    imagePaths,
+		Latitude:      item.Latitude,
+		Longitude:     item.Longitude,
+	}
 }
 
 func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmentResponse {
 	responses := make([]tenantApartmentResponse, 0, len(apartments))
 	for _, item := range apartments {
+		imageURLs := nonNilStrings(item.ImageURLs)
 		responses = append(responses, tenantApartmentResponse{
 			ID:             item.ID,
 			Title:          item.Title,
@@ -352,12 +498,27 @@ func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmen
 			BaseRent:       item.BaseRent,
 			Status:         item.Status,
 			CreatedAt:      item.CreatedAt,
-			ImageURL:       item.ImageURL,
-			OwnerName:      item.OwnerName,
+			ImageURL:       firstImageURL(imageURLs),
+			ImageURLs:      imageURLs,
+			ImagePaths:     nonNilStrings(item.ImagePaths),
 			Compatibility:  0,
 			Latitude:       item.Latitude,
 			Longitude:      item.Longitude,
 		})
 	}
 	return responses
+}
+
+func firstImageURL(imageURLs []string) string {
+	if len(imageURLs) == 0 {
+		return ""
+	}
+	return imageURLs[0]
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
