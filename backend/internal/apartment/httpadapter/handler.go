@@ -260,24 +260,29 @@ func (h *handler) uploadApartmentPhotos(c *gin.Context) {
 	}
 
 	files := make([]apartmentservice.UploadFile, 0, len(formFiles))
-	for _, fh := range formFiles {
-		data, err := fh.Open()
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
-			return
-		}
-		fileData, err := io.ReadAll(data)
-		data.Close()
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
-			return
-		}
-		files = append(files, apartmentservice.UploadFile{
-			Filename:    fh.Filename,
-			ContentType: fh.Header.Get("Content-Type"),
-			Data:        fileData,
-		})
-	}
+    for _, fh := range formFiles {
+        data, err := fh.Open()
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+            return
+        }
+        fileData, readErr := io.ReadAll(data)
+        closeErr := data.Close()
+        if readErr != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+            return
+        }
+        if closeErr != nil {
+            // Closing the uploaded file failed — treat as internal error.
+            c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fh.Filename)})
+            return
+        }
+        files = append(files, apartmentservice.UploadFile{
+            Filename:    fh.Filename,
+            ContentType: fh.Header.Get("Content-Type"),
+            Data:        fileData,
+        })
+    }
 
 	results, err := h.apartmentService.UploadApartmentPhotos(c.Request.Context(), ownerID, role, apartmentID, apartmentName, files)
 	if err != nil {
