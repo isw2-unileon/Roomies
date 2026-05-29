@@ -1,11 +1,20 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNotice } from '@/hooks/useNotice'
-import { createApartment, updateOwnerApartment } from '@/services/ownerService'
+import { createApartment, updateOwnerApartment, uploadApartmentPhotos } from '@/services/ownerService'
 import styles from '@/styles/OwnerPublishProperty.module.css'
 import type { OwnerDashboardProperty } from '@/types/owner'
 import LocationPicker from './LocationPicker'
 import type { Location } from './LocationPicker'
+
+const MAX_PHOTOS = 8
+const MAX_SIZE_MB = 5
+
+interface PhotoItem {
+  file?: File
+  preview: string
+  existingPath?: string
+}
 
 interface PublishValues {
   title: string
@@ -16,7 +25,6 @@ interface PublishValues {
   baseRent: string
   description: string
   availableFrom: string
-  imageUrls: string
   latitude?: number
   longitude?: number
 }
@@ -30,7 +38,6 @@ const initialValues: PublishValues = {
   baseRent: '350',
   description: '',
   availableFrom: '',
-  imageUrls: '',
 }
 
 interface OwnerPropertyPublishFormProps {
@@ -39,8 +46,6 @@ interface OwnerPropertyPublishFormProps {
 }
 
 function valuesFromProperty(property: OwnerDashboardProperty): PublishValues {
-  const imageUrls = property.imageUrls?.length ? property.imageUrls : property.image ? [property.image] : []
-
   return {
     title: property.title,
     address: property.address,
@@ -50,21 +55,28 @@ function valuesFromProperty(property: OwnerDashboardProperty): PublishValues {
     baseRent: String(property.rent ?? ''),
     description: property.description ?? '',
     availableFrom: '',
-    imageUrls: imageUrls.join('\n'),
     latitude: property.latitude,
     longitude: property.longitude,
   }
 }
 
+function photosFromProperty(property: OwnerDashboardProperty): PhotoItem[] {
+  const urls = property.imageUrls?.length ? property.imageUrls : property.image ? [property.image] : []
+  return urls.map((url, index) => ({ preview: url, existingPath: property.imagePaths?.[index] }))
+}
+
 export default function OwnerPropertyPublishForm({ propertyId, property }: OwnerPropertyPublishFormProps) {
   const { t } = useTranslation()
   const isEditMode = Boolean(propertyId)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [values, setValues] = useState<PublishValues>(() => (property ? valuesFromProperty(property) : initialValues))
+  const [photos, setPhotos] = useState<PhotoItem[]>(() => (property ? photosFromProperty(property) : []))
   const [isLoading, setIsLoading] = useState(false)
   const { notice, showError, showSuccess, clearNotice } = useNotice()
 
   useEffect(() => {
     setValues(property ? valuesFromProperty(property) : initialValues)
+    setPhotos(property ? photosFromProperty(property) : [])
   }, [property])
 
   function updateField<K extends keyof PublishValues>(key: K, value: PublishValues[K]) {
@@ -81,11 +93,40 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
     }))
   }
 
-  function extractImageURLs(raw: string) {
-    return raw
-      .split(/\r?\n|,/)
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? [])
+    const remaining = MAX_PHOTOS - photos.length
+    const toAdd = selected.slice(0, remaining)
+
+    const valid: PhotoItem[] = []
+    for (const file of toAdd) {
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        showError(t('ownerDashboard.publish.photos.tooLarge'))
+        continue
+      }
+      if (!file.type.startsWith('image/')) {
+        showError(t('ownerDashboard.publish.photos.invalidType'))
+        continue
+      }
+      valid.push({ file, preview: URL.createObjectURL(file) })
+    }
+    if (valid.length > 0) {
+      setPhotos((prev) => [...prev, ...valid])
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => {
+      const next = [...prev]
+      const removed = next.splice(index, 1)[0]
+      if (removed?.file) {
+        URL.revokeObjectURL(removed.preview)
+      }
+      return next
+    })
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -95,7 +136,6 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
     const parsedTotalSpots = Number.parseInt(values.totalSpots, 10)
     const parsedBathrooms = Number.parseInt(values.bathrooms, 10)
     const parsedBaseRent = Number.parseInt(values.baseRent, 10)
-    const parsedImageURLs = extractImageURLs(values.imageUrls)
 
     if (values.title.trim().length < 3) {
       showError(t('ownerDashboard.publish.errors.title'))
@@ -121,6 +161,14 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
     setIsLoading(true)
 
     try {
+      const newFiles = photos.filter((p) => p.file).map((p) => p.file!)
+      let uploadedPaths: string[] = photos.filter((p) => p.existingPath && !p.file).map((p) => p.existingPath!)
+
+      if (newFiles.length > 0) {
+        const results = await uploadApartmentPhotos(newFiles, propertyId, values.title.trim())
+        uploadedPaths = [...uploadedPaths, ...results.map((r) => r.path)]
+      }
+
       const payload = {
         title: values.title.trim(),
         description: values.description.trim(),
@@ -130,7 +178,7 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
         bathrooms: Number.isFinite(parsedBathrooms) ? parsedBathrooms : 0,
         baseRent: parsedBaseRent,
         availableFrom: values.availableFrom || '',
-        imageUrls: parsedImageURLs,
+        imagePaths: uploadedPaths,
         latitude: values.latitude,
         longitude: values.longitude,
       }
@@ -140,6 +188,7 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
       showSuccess(result.message ?? t(isEditMode ? 'ownerDashboard.publish.editSuccess' : 'ownerDashboard.publish.success'))
       if (!isEditMode) {
         setValues(initialValues)
+        setPhotos([])
       }
     } catch (error) {
       showError(error instanceof Error ? error.message : t(isEditMode ? 'ownerDashboard.publish.errors.editDefault' : 'ownerDashboard.publish.errors.default'))
@@ -245,17 +294,33 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
             </label>
           ) : null}
 
-          <label className={`${styles.field} ${styles.full}`}>
-            <span className={styles.label}>{t('ownerDashboard.publish.fields.imageUrls')}</span>
-            <textarea
-              className={styles.textarea}
-              rows={3}
-              value={values.imageUrls}
-              onChange={(event) => updateField('imageUrls', event.target.value)}
-              placeholder={t('ownerDashboard.publish.placeholders.imageUrls')}
-            />
-            <span className={styles.hint}>{t('ownerDashboard.publish.hints.imageUrls')}</span>
-          </label>
+          <div className={`${styles.field} ${styles.full}`}>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.photos')}</span>
+            <div className={styles.photoGrid}>
+              {photos.map((photo, index) => (
+                <div key={`${photo.existingPath ?? photo.preview}-${index}`} className={styles.photoPreview}>
+                  <img src={photo.preview} alt="" className={styles.photoPreviewImage} />
+                  <button type="button" className={styles.photoRemoveButton} onClick={() => removePhoto(index)}>
+                    ×
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <label className={styles.photoAddButton}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className={styles.photoFileInput}
+                    onChange={handleFileChange}
+                  />
+                  <span className={styles.photoAddLabel}>+</span>
+                </label>
+              )}
+            </div>
+            <span className={styles.hint}>{t('ownerDashboard.publish.hints.photos', { max: MAX_PHOTOS })}</span>
+          </div>
 
           <label className={`${styles.field} ${styles.full}`}>
             <span className={styles.label}>{t('ownerDashboard.publish.fields.description')}</span>

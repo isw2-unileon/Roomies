@@ -12,8 +12,9 @@ interface OwnerApartmentDto {
   base_rent: number
   status: string
   created_at: string
-  image_url: string
+  image_url?: string | null
   image_urls?: string[] | null
+  image_paths?: string[] | null
   latitude?: number
   longitude?: number
 }
@@ -40,7 +41,7 @@ export interface CreateApartmentInput {
   bathrooms: number
   baseRent: number
   availableFrom: string
-  imageUrls: string[]
+  imagePaths: string[]
   latitude?: number
   longitude?: number
 }
@@ -52,6 +53,7 @@ export interface CreateApartmentResult {
 }
 
 function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
+  const imageUrls = dto.image_urls?.length ? dto.image_urls : dto.image_url ? [dto.image_url] : []
   const property: OwnerDashboardProperty = {
     id: dto.id,
     title: dto.title,
@@ -62,13 +64,16 @@ function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
     rent: dto.base_rent,
     status: dto.status,
     createdAt: dto.created_at,
-    image: dto.image_url,
+    image: imageUrls[0] ?? '',
   }
   if (dto.description !== undefined) {
     property.description = dto.description
   }
-  if (dto.image_urls != null) {
-    property.imageUrls = dto.image_urls
+  if (imageUrls.length > 0) {
+    property.imageUrls = imageUrls
+  }
+  if (dto.image_paths != null) {
+    property.imagePaths = dto.image_paths
   }
   if (dto.latitude !== undefined) {
     property.latitude = dto.latitude
@@ -89,7 +94,7 @@ function apartmentPayload(input: CreateApartmentInput) {
     bathrooms: input.bathrooms,
     base_rent: input.baseRent,
     available_from: input.availableFrom,
-    image_urls: input.imageUrls,
+    image_paths: input.imagePaths,
     latitude: input.latitude,
     longitude: input.longitude,
   }
@@ -148,4 +153,31 @@ export async function updateOwnerApartment(propertyId: string, input: CreateApar
     apartmentId: data.apartment_id,
     imagesStored: data.images_stored,
   }
+}
+
+export interface UploadedPhoto {
+  path: string
+  signed_url: string
+}
+
+export async function uploadApartmentPhotos(files: File[], apartmentId?: string, apartmentName?: string): Promise<UploadedPhoto[]> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('photos', file)
+  }
+  if (apartmentId) {
+    formData.append('apartment_id', apartmentId)
+  }
+  if (apartmentName) {
+    formData.append('apartment_name', apartmentName)
+  }
+  const response = await apiFetch('/api/owner/apartment-photos', {
+    method: 'POST',
+    body: formData,
+  })
+  const data = (await response.json()) as { photos?: UploadedPhoto[]; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudieron subir las fotos.')
+  }
+  return data.photos ?? []
 }

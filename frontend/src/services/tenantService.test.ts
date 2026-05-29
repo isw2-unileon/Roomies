@@ -24,6 +24,7 @@ describe('tenantService', () => {
             status: 'AVAILABLE',
             created_at: '2026-05-21T10:00:00Z',
             image_url: 'https://example.test/apt.jpg',
+            image_urls: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
           },
         ],
       }),
@@ -42,7 +43,7 @@ describe('tenantService', () => {
         rent: 420,
         compatibilityScore: 0,
         status: 'available',
-        images: ['https://example.test/apt.jpg'],
+        images: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
         createdAt: '2026-05-21T10:00:00Z',
       },
     ])

@@ -411,18 +411,17 @@ const es = {
         bathrooms: 'Baños (se guarda en descripción)',
         baseRent: 'Precio mensual (EUR)',
         availableFrom: 'Disponible desde (se guarda en descripción)',
-        imageUrls: 'URLs de imágenes',
+        photos: 'Fotos del piso',
         description: 'Descripción',
       },
       placeholders: {
         title: 'Piso luminoso en el centro',
         address: 'Calle Ancha, 12',
         area: 'Centro',
-        imageUrls: 'https://.../foto1.jpg, https://.../foto2.jpg',
         description: 'Describe el piso, las normas y el perfil de inquilino recomendado...',
       },
       hints: {
-        imageUrls: 'Separa varias URL por comas o por líneas.',
+        photos: 'Sube hasta {{max}} fotos del piso.',
       },
       errors: {
         title: 'El título debe tener al menos 3 caracteres.',
@@ -433,6 +432,10 @@ const es = {
         default: 'No se pudo publicar el piso. Inténtalo de nuevo.',
         editDefault: 'No se pudo actualizar el piso. Inténtalo de nuevo.',
         loadEdit: 'No se pudo cargar el piso para editar.',
+      },
+      photos: {
+        tooLarge: 'El archivo supera el tamaño máximo de 5MB.',
+        invalidType: 'Solo se aceptan archivos de imagen.',
       },
     },
     placeholder: {

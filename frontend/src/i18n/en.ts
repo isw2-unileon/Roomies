@@ -411,18 +411,17 @@ const en = {
         bathrooms: 'Bathrooms (saved in description)',
         baseRent: 'Monthly price (EUR)',
         availableFrom: 'Available from (saved in description)',
-        imageUrls: 'Image URLs',
+        photos: 'Flat photos',
         description: 'Description',
       },
       placeholders: {
         title: 'Bright flat in the city center',
         address: 'Calle Ancha, 12',
         area: 'City center',
-        imageUrls: 'https://.../photo1.jpg, https://.../photo2.jpg',
         description: 'Describe the flat, rules, and recommended tenant profile...',
       },
       hints: {
-        imageUrls: 'Separate multiple URLs with commas or new lines.',
+        photos: 'Upload up to {{max}} photos of the flat.',
       },
       errors: {
         title: 'Title must be at least 3 characters.',
@@ -433,6 +432,10 @@ const en = {
         default: 'Could not list the flat. Please try again.',
         editDefault: 'Could not update the flat. Please try again.',
         loadEdit: 'Could not load the flat for editing.',
+      },
+      photos: {
+        tooLarge: 'File exceeds the maximum size of 5MB.',
+        invalidType: 'Only image files are accepted.',
       },
     },
     placeholder: {

@@ -411,18 +411,17 @@ const fr = {
         bathrooms: 'Salles de bain (enregistré dans la description)',
         baseRent: 'Prix mensuel (EUR)',
         availableFrom: 'Disponible à partir de (enregistré dans la description)',
-        imageUrls: 'URLs des images',
+        photos: 'Photos du logement',
         description: 'Description',
       },
       placeholders: {
         title: 'Logement lumineux au centre-ville',
         address: 'Calle Ancha, 12',
         area: 'Centre-ville',
-        imageUrls: 'https://.../photo1.jpg, https://.../photo2.jpg',
         description: 'Décrivez le logement, les règles et le profil de locataire recommandé...',
       },
       hints: {
-        imageUrls: 'Séparez plusieurs URLs par des virgules ou des lignes.',
+        photos: 'Téléchargez jusqu\'à {{max}} photos du logement.',
       },
       errors: {
         title: 'Le titre doit contenir au moins 3 caractères.',
@@ -433,6 +432,10 @@ const fr = {
         default: 'Impossible de publier le logement. Réessayez.',
         editDefault: 'Impossible de mettre à jour le logement. Réessayez.',
         loadEdit: 'Impossible de charger le logement à modifier.',
+      },
+      photos: {
+        tooLarge: 'Le fichier dépasse la taille maximale de 5Mo.',
+        invalidType: 'Seuls les fichiers image sont acceptés.',
       },
     },
     placeholder: {

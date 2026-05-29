@@ -46,6 +46,7 @@ export interface OwnerDashboardProperty {
     requests?: number
     image: string
     imageUrls?: string[]
+    imagePaths?: string[]
     latitude?: number
     longitude?: number
 }

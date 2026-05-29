@@ -411,18 +411,17 @@ const de = {
         bathrooms: 'Bäder (wird in Beschreibung gespeichert)',
         baseRent: 'Monatspreis (EUR)',
         availableFrom: 'Verfügbar ab (wird in Beschreibung gespeichert)',
-        imageUrls: 'Bild-URLs',
+        photos: 'Wohnungsfotos',
         description: 'Beschreibung',
       },
       placeholders: {
         title: 'Helle Wohnung im Zentrum',
         address: 'Calle Ancha, 12',
         area: 'Zentrum',
-        imageUrls: 'https://.../foto1.jpg, https://.../foto2.jpg',
         description: 'Beschreibe die Wohnung, Regeln und das empfohlene Mieterprofil...',
       },
       hints: {
-        imageUrls: 'Trenne mehrere URLs mit Kommas oder Zeilenumbrüchen.',
+        photos: 'Lade bis zu {{max}} Fotos der Wohnung hoch.',
       },
       errors: {
         title: 'Der Titel muss mindestens 3 Zeichen haben.',
@@ -433,6 +432,10 @@ const de = {
         default: 'Die Wohnung konnte nicht inseriert werden. Bitte versuche es erneut.',
         editDefault: 'Die Wohnung konnte nicht aktualisiert werden. Bitte versuche es erneut.',
         loadEdit: 'Die Wohnung zum Bearbeiten konnte nicht geladen werden.',
+      },
+      photos: {
+        tooLarge: 'Die Datei überschreitet die maximale Größe von 5MB.',
+        invalidType: 'Es werden nur Bilddateien akzeptiert.',
       },
     },
     placeholder: {
