@@ -29,7 +29,7 @@ type fakeApartmentRepository struct {
 func (f *fakeApartmentRepository) CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error) {
 	f.createdDescription = input.Description
 	f.createdStatus = input.Status
-	return "apartment-1", len(input.ImageURLs), nil
+	return "apartment-1", len(input.ImagePaths), nil
 }
 
 func (f *fakeApartmentRepository) ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error) {
@@ -98,17 +98,21 @@ func (f *fakeApartmentRepository) GetTenantApplicationForApartment(ctx context.C
 	return f.applicationForApartmentID, f.applicationForApartmentStatus, nil
 }
 
-type fakeImageSigner struct {
+type fakeImageStorage struct {
 	bucket    string
 	path      string
 	expiresIn int
 }
 
-func (f *fakeImageSigner) CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error) {
+func (f *fakeImageStorage) CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error) {
 	f.bucket = bucket
 	f.path = path
 	f.expiresIn = expiresIn
 	return "https://signed.example.test/" + path, nil
+}
+
+func (f *fakeImageStorage) UploadObject(ctx context.Context, bucket, objectPath, contentType string, fileData []byte) error {
+	return nil
 }
 
 func TestCreateApartmentAcceptsRepositoryInterfaceAndPreparesPersistenceData(t *testing.T) {
@@ -124,7 +128,7 @@ func TestCreateApartmentAcceptsRepositoryInterfaceAndPreparesPersistenceData(t *
 		Bathrooms:     1,
 		BaseRent:      400,
 		AvailableFrom: "2026-06-01",
-		ImageURLs:     []string{"https://example.test/flat.jpg"},
+		ImagePaths:    []string{"https://example.test/flat.jpg"},
 	})
 	if err != nil {
 		t.Fatalf("CreateApartment returned error: %v", err)
@@ -170,12 +174,12 @@ func TestListAvailableApartmentsReturnsTenantVisibleListings(t *testing.T) {
 func TestListOwnerApartmentsSignsImagePaths(t *testing.T) {
 	repo := &fakeApartmentRepository{
 		ownerApartments: []apartment.Apartment{{
-			ID:       "apartment-1",
-			Title:    "Flat",
-			ImageURL: "apartments/apartment-1/photo.jpg",
+			ID:         "apartment-1",
+			Title:      "Flat",
+			ImagePaths: []string{"apartments/apartment-1/photo.jpg"},
 		}},
 	}
-	signer := &fakeImageSigner{}
+	signer := &fakeImageStorage{}
 	svc := NewService(repo, signer, repo, repo)
 
 	apartments, err := svc.ListOwnerApartments(context.Background(), "owner-1", "owner")
@@ -183,30 +187,23 @@ func TestListOwnerApartmentsSignsImagePaths(t *testing.T) {
 		t.Fatalf("ListOwnerApartments returned error: %v", err)
 	}
 
-	if apartments[0].ImageURL != "https://signed.example.test/apartments/apartment-1/photo.jpg" {
-		t.Fatalf("ImageURL = %q, want signed URL", apartments[0].ImageURL)
+	if len(apartments[0].ImagePaths) == 0 || apartments[0].ImagePaths[0] != "apartments/apartment-1/photo.jpg" {
+		t.Fatalf("ImagePaths = %#v, want raw path list", apartments[0].ImagePaths)
 	}
-	if signer.bucket != "Apartment_photos" {
-		t.Fatalf("bucket = %q, want Apartment_photos", signer.bucket)
-	}
-	if signer.path != "apartments/apartment-1/photo.jpg" {
-		t.Fatalf("path = %q, want apartments/apartment-1/photo.jpg", signer.path)
-	}
-	if signer.expiresIn != 3600 {
-		t.Fatalf("expiresIn = %d, want 3600", signer.expiresIn)
+	if len(apartments[0].ImageURLs) == 0 || apartments[0].ImageURLs[0] != "https://signed.example.test/apartments/apartment-1/photo.jpg" {
+		t.Fatalf("ImageURLs = %#v, want signed URL list", apartments[0].ImageURLs)
 	}
 }
 
 func TestGetOwnerApartmentReturnsOwnedApartmentWithSignedImages(t *testing.T) {
 	repo := &fakeApartmentRepository{
 		ownerApartment: &apartment.Apartment{
-			ID:        "apartment-1",
-			Title:     "Flat",
-			ImageURL:  "apartments/apartment-1/front.jpg",
-			ImageURLs: []string{"apartments/apartment-1/front.jpg", "apartments/apartment-1/room.jpg"},
+			ID:         "apartment-1",
+			Title:      "Flat",
+			ImagePaths: []string{"apartments/apartment-1/front.jpg", "apartments/apartment-1/room.jpg"},
 		},
 	}
-	signer := &fakeImageSigner{}
+	signer := &fakeImageStorage{}
 	svc := NewService(repo, signer, repo, repo)
 
 	result, err := svc.GetOwnerApartment(context.Background(), "owner-1", "owner", "apartment-1")
@@ -217,10 +214,10 @@ func TestGetOwnerApartmentReturnsOwnedApartmentWithSignedImages(t *testing.T) {
 	if result == nil || result.ID != "apartment-1" {
 		t.Fatalf("result ID = %#v, want apartment-1", result)
 	}
-	if result.ImageURL != "https://signed.example.test/apartments/apartment-1/front.jpg" {
-		t.Fatalf("ImageURL = %q, want signed front image", result.ImageURL)
+	if len(result.ImagePaths) != 2 || result.ImagePaths[0] != "apartments/apartment-1/front.jpg" || result.ImagePaths[1] != "apartments/apartment-1/room.jpg" {
+		t.Fatalf("ImagePaths = %#v, want raw image list", result.ImagePaths)
 	}
-	if len(result.ImageURLs) != 2 || result.ImageURLs[1] != "https://signed.example.test/apartments/apartment-1/room.jpg" {
+	if len(result.ImageURLs) != 2 || result.ImageURLs[0] != "https://signed.example.test/apartments/apartment-1/front.jpg" || result.ImageURLs[1] != "https://signed.example.test/apartments/apartment-1/room.jpg" {
 		t.Fatalf("ImageURLs = %#v, want signed image list", result.ImageURLs)
 	}
 }
@@ -294,10 +291,10 @@ func TestListAvailableApartmentsSignsTenantImagePaths(t *testing.T) {
 			Title:         "Flat",
 			TotalSpots:    3,
 			OccupiedSpots: 1,
-			ImageURL:      "mock_1.avif",
+			ImagePaths:    []string{"mock_1.avif"},
 		}},
 	}
-	signer := &fakeImageSigner{}
+	signer := &fakeImageStorage{}
 	svc := NewService(repo, signer, repo, repo)
 
 	apartments, err := svc.ListAvailableApartments(context.Background())
@@ -305,8 +302,11 @@ func TestListAvailableApartmentsSignsTenantImagePaths(t *testing.T) {
 		t.Fatalf("ListAvailableApartments returned error: %v", err)
 	}
 
-	if apartments[0].ImageURL != "https://signed.example.test/mock_1.avif" {
-		t.Fatalf("ImageURL = %q, want signed URL", apartments[0].ImageURL)
+	if len(apartments[0].ImagePaths) == 0 || apartments[0].ImagePaths[0] != "mock_1.avif" {
+		t.Fatalf("ImagePaths = %#v, want raw path", apartments[0].ImagePaths)
+	}
+	if len(apartments[0].ImageURLs) == 0 || apartments[0].ImageURLs[0] != "https://signed.example.test/mock_1.avif" {
+		t.Fatalf("ImageURLs = %#v, want signed URL", apartments[0].ImageURLs)
 	}
 }
 

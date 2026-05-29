@@ -2,6 +2,8 @@ package httpadapter
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,7 +27,7 @@ type createApartmentRequest struct {
 	Bathrooms     int      `json:"bathrooms"`
 	BaseRent      int      `json:"base_rent"`
 	AvailableFrom string   `json:"available_from"`
-	ImageURLs     []string `json:"image_urls"`
+	ImagePaths    []string `json:"image_paths"`
 	Latitude      float64  `json:"latitude"`
 	Longitude     float64  `json:"longitude"`
 }
@@ -43,26 +45,28 @@ type ownerApartmentResponse struct {
 	CreatedAt     string   `json:"created_at"`
 	ImageURL      string   `json:"image_url"`
 	ImageURLs     []string `json:"image_urls"`
+	ImagePaths    []string `json:"image_paths"`
 	Latitude      float64  `json:"latitude"`
 	Longitude     float64  `json:"longitude"`
 }
 
 type tenantApartmentResponse struct {
-	ID             string  `json:"id"`
-	Title          string  `json:"title"`
-	Description    string  `json:"description"`
-	Address        string  `json:"address"`
-	Area           string  `json:"area"`
-	TotalSpots     int     `json:"total_spots"`
-	AvailableSpots int     `json:"available_spots"`
-	BaseRent       int     `json:"base_rent"`
-	Status         string  `json:"status"`
-	CreatedAt      string  `json:"created_at"`
-	ImageURL       string  `json:"image_url"`
-	OwnerName      string  `json:"owner_name"`
-	Compatibility  int     `json:"compatibility_score"`
-	Latitude       float64 `json:"latitude"`
-	Longitude      float64 `json:"longitude"`
+	ID             string   `json:"id"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Address        string   `json:"address"`
+	Area           string   `json:"area"`
+	TotalSpots     int      `json:"total_spots"`
+	AvailableSpots int      `json:"available_spots"`
+	BaseRent       int      `json:"base_rent"`
+	Status         string   `json:"status"`
+	CreatedAt      string   `json:"created_at"`
+	ImageURL       string   `json:"image_url"`
+	ImageURLs      []string `json:"image_urls"`
+	ImagePaths     []string `json:"image_paths"`
+	Compatibility  int      `json:"compatibility_score"`
+	Latitude       float64  `json:"latitude"`
+	Longitude      float64  `json:"longitude"`
 }
 
 type tenantApartmentDetailResponse struct {
@@ -101,6 +105,7 @@ func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservic
 	api.GET("/owner/apartments", h.listOwnerApartments)
 	api.GET("/owner/apartments/:id", h.getOwnerApartment)
 	api.PATCH("/owner/apartments/:id", h.updateOwnerApartment)
+	api.POST("/owner/apartment-photos", h.uploadApartmentPhotos)
 	api.POST("/apartments", h.createApartment)
 }
 
@@ -229,6 +234,64 @@ func (h *handler) updateOwnerApartment(c *gin.Context) {
 	})
 }
 
+func (h *handler) uploadApartmentPhotos(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	if err := c.Request.ParseMultipartForm(50 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
+		return
+	}
+
+	apartmentID := strings.TrimSpace(c.PostForm("apartment_id"))
+	apartmentName := strings.TrimSpace(c.PostForm("apartment_name"))
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid multipart form"})
+		return
+	}
+	formFiles := form.File["photos"]
+	if len(formFiles) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one photo is required"})
+		return
+	}
+
+	files := make([]apartmentservice.UploadFile, 0, len(formFiles))
+	for _, fh := range formFiles {
+		data, err := fh.Open()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+			return
+		}
+		fileData, err := io.ReadAll(data)
+		data.Close()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+			return
+		}
+		files = append(files, apartmentservice.UploadFile{
+			Filename:    fh.Filename,
+			ContentType: fh.Header.Get("Content-Type"),
+			Data:        fileData,
+		})
+	}
+
+	results, err := h.apartmentService.UploadApartmentPhotos(c.Request.Context(), ownerID, role, apartmentID, apartmentName, files)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartment photos are only available for owner users"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"photos": results})
+}
+
 func (h *handler) getApartmentDetail(c *gin.Context) {
 	tenantID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
@@ -265,8 +328,9 @@ func (h *handler) getApartmentDetail(c *gin.Context) {
 			BaseRent:       detail.Apartment.BaseRent,
 			Status:         detail.Apartment.Status,
 			CreatedAt:      detail.Apartment.CreatedAt,
-			ImageURL:       detail.Apartment.ImageURL,
-			OwnerName:      detail.Apartment.OwnerName,
+			ImageURL:       firstImageURL(detail.Apartment.ImageURLs),
+			ImageURLs:      nonNilStrings(detail.Apartment.ImageURLs),
+			ImagePaths:     nonNilStrings(detail.Apartment.ImagePaths),
 			Compatibility:  detail.CompatibilityScore,
 		},
 		CompatibilityReasons: detail.CompatibilityReason,
@@ -361,7 +425,7 @@ func apartmentInputFromRequest(request createApartmentRequest) apartment.CreateA
 		Bathrooms:     request.Bathrooms,
 		BaseRent:      request.BaseRent,
 		AvailableFrom: request.AvailableFrom,
-		ImageURLs:     request.ImageURLs,
+		ImagePaths:    request.ImagePaths,
 		Latitude:      request.Latitude,
 		Longitude:     request.Longitude,
 	}
@@ -373,15 +437,15 @@ func normalizeApartmentInput(input *apartment.CreateApartmentInput) {
 	input.Address = strings.TrimSpace(input.Address)
 	input.Area = strings.TrimSpace(input.Area)
 	input.AvailableFrom = strings.TrimSpace(input.AvailableFrom)
-	cleanURLs := make([]string, 0, len(input.ImageURLs))
-	for _, imageURL := range input.ImageURLs {
-		trimmed := strings.TrimSpace(imageURL)
+	cleanPaths := make([]string, 0, len(input.ImagePaths))
+	for _, imagePath := range input.ImagePaths {
+		trimmed := strings.TrimSpace(imagePath)
 		if trimmed == "" {
 			continue
 		}
-		cleanURLs = append(cleanURLs, trimmed)
+		cleanPaths = append(cleanPaths, trimmed)
 	}
-	input.ImageURLs = cleanURLs
+	input.ImagePaths = cleanPaths
 }
 
 func ownerApartmentResponses(apartments []apartment.Apartment) []ownerApartmentResponse {
@@ -393,10 +457,8 @@ func ownerApartmentResponses(apartments []apartment.Apartment) []ownerApartmentR
 }
 
 func ownerApartmentResponseFrom(item apartment.Apartment) ownerApartmentResponse {
-	imageURLs := item.ImageURLs
-	if imageURLs == nil {
-		imageURLs = []string{}
-	}
+	imagePaths := nonNilStrings(item.ImagePaths)
+	imageURLs := nonNilStrings(item.ImageURLs)
 	return ownerApartmentResponse{
 		ID:            item.ID,
 		Title:         item.Title,
@@ -408,8 +470,9 @@ func ownerApartmentResponseFrom(item apartment.Apartment) ownerApartmentResponse
 		BaseRent:      item.BaseRent,
 		Status:        item.Status,
 		CreatedAt:     item.CreatedAt,
-		ImageURL:      item.ImageURL,
+		ImageURL:      firstImageURL(imageURLs),
 		ImageURLs:     imageURLs,
+		ImagePaths:    imagePaths,
 		Latitude:      item.Latitude,
 		Longitude:     item.Longitude,
 	}
@@ -418,6 +481,7 @@ func ownerApartmentResponseFrom(item apartment.Apartment) ownerApartmentResponse
 func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmentResponse {
 	responses := make([]tenantApartmentResponse, 0, len(apartments))
 	for _, item := range apartments {
+		imageURLs := nonNilStrings(item.ImageURLs)
 		responses = append(responses, tenantApartmentResponse{
 			ID:             item.ID,
 			Title:          item.Title,
@@ -429,12 +493,27 @@ func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmen
 			BaseRent:       item.BaseRent,
 			Status:         item.Status,
 			CreatedAt:      item.CreatedAt,
-			ImageURL:       item.ImageURL,
-			OwnerName:      item.OwnerName,
+			ImageURL:       firstImageURL(imageURLs),
+			ImageURLs:      imageURLs,
+			ImagePaths:     nonNilStrings(item.ImagePaths),
 			Compatibility:  0,
 			Latitude:       item.Latitude,
 			Longitude:      item.Longitude,
 		})
 	}
 	return responses
+}
+
+func firstImageURL(imageURLs []string) string {
+	if len(imageURLs) == 0 {
+		return ""
+	}
+	return imageURLs[0]
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }

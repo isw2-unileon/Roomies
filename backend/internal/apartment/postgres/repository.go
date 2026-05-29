@@ -63,20 +63,20 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID string, input 
 		return "", 0, fmt.Errorf("insert apartment: %w", err)
 	}
 
-	stored := 0
-	if len(input.ImageURLs) > 0 {
-		const insertPhotoSQL = `INSERT INTO public.apartment_photos (apartment_id, url, position) VALUES ($1, $2, $3)`
-		for idx, imageURL := range input.ImageURLs {
-			trimmedURL := strings.TrimSpace(imageURL)
-			if trimmedURL == "" {
-				continue
-			}
-			if _, err := tx.Exec(ctx, insertPhotoSQL, apartmentID, trimmedURL, idx); err != nil {
-				return "", 0, fmt.Errorf("insert apartment photo: %w", err)
-			}
-			stored++
-		}
-	}
+    stored := 0
+    if len(input.ImagePaths) > 0 {
+        const insertPhotoSQL = `INSERT INTO public.apartment_photos (apartment_id, url, position) VALUES ($1, $2, $3)`
+        for idx, imagePath := range input.ImagePaths {
+            trimmedPath := strings.TrimSpace(imagePath)
+            if trimmedPath == "" {
+                continue
+            }
+            if _, err := tx.Exec(ctx, insertPhotoSQL, apartmentID, trimmedPath, idx); err != nil {
+                return "", 0, fmt.Errorf("insert apartment photo: %w", err)
+            }
+            stored++
+        }
+    }
 
 	if err := tx.Commit(ctx); err != nil {
 		return "", 0, fmt.Errorf("commit create apartment tx: %w", err)
@@ -87,28 +87,27 @@ func (r *Repository) CreateApartment(ctx context.Context, ownerID string, input 
 
 // ListOwnerApartments returns apartments published by an owner.
 func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([]apartment.Apartment, error) {
-	const query = `SELECT
-		a.id,
-		a.title,
-		a.address,
-		COALESCE(a.area, ''),
-		a.total_spots,
-		a.occupied_spots,
-		a.base_rent,
-		a.status,
-		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-		COALESCE((
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-			LIMIT 1
-		), '') AS image_url,
-		COALESCE(a.latitude, 0),
-		COALESCE(a.longitude, 0)
-	FROM public.apartments a
-	WHERE a.owner_id = $1
-	ORDER BY a.created_at DESC`
+    const query = `SELECT
+        a.id,
+        a.title,
+        a.address,
+        COALESCE(a.area, ''),
+        a.total_spots,
+        a.occupied_spots,
+        a.base_rent,
+        a.status,
+        TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+        ARRAY(
+            SELECT ap.url
+            FROM public.apartment_photos ap
+            WHERE ap.apartment_id = a.id
+            ORDER BY ap.position ASC, ap.created_at ASC
+        ) AS image_paths,
+        COALESCE(a.latitude, 0),
+        COALESCE(a.longitude, 0)
+    FROM public.apartments a
+    WHERE a.owner_id = $1
+    ORDER BY a.created_at DESC`
 
 	rows, err := r.db.Query(ctx, query, ownerID)
 	if err != nil {
@@ -119,22 +118,22 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 	result := make([]apartment.Apartment, 0)
 	for rows.Next() {
 		var item apartment.Apartment
-		if err := rows.Scan(
-			&item.ID,
-			&item.Title,
-			&item.Address,
-			&item.Area,
-			&item.TotalSpots,
-			&item.OccupiedSpots,
-			&item.BaseRent,
-			&item.Status,
-			&item.CreatedAt,
-			&item.ImageURL,
-			&item.Latitude,
-			&item.Longitude,
-		); err != nil {
-			return nil, fmt.Errorf("scan owner apartments: %w", err)
-		}
+        if err := rows.Scan(
+            &item.ID,
+            &item.Title,
+            &item.Address,
+            &item.Area,
+            &item.TotalSpots,
+            &item.OccupiedSpots,
+            &item.BaseRent,
+            &item.Status,
+            &item.CreatedAt,
+            &item.ImagePaths,
+            &item.Latitude,
+            &item.Longitude,
+        ); err != nil {
+            return nil, fmt.Errorf("scan owner apartments: %w", err)
+        }
 		result = append(result, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -156,24 +155,24 @@ func (r *Repository) ListAvailableApartments(ctx context.Context, filters apartm
 	result := make([]apartment.Apartment, 0)
 	for rows.Next() {
 		var item apartment.Apartment
-		if err := rows.Scan(
-			&item.ID,
-			&item.Title,
-			&item.Address,
-			&item.Area,
-			&item.TotalSpots,
-			&item.OccupiedSpots,
-			&item.BaseRent,
-			&item.Status,
-			&item.CreatedAt,
-			&item.ImageURL,
-			&item.Latitude,
-			&item.Longitude,
-		); err != nil {
-			return nil, fmt.Errorf("scan available apartments: %w", err)
-		}
-		result = append(result, item)
-	}
+        if err := rows.Scan(
+            &item.ID,
+            &item.Title,
+            &item.Address,
+            &item.Area,
+            &item.TotalSpots,
+            &item.OccupiedSpots,
+            &item.BaseRent,
+            &item.Status,
+            &item.CreatedAt,
+            &item.ImagePaths,
+            &item.Latitude,
+            &item.Longitude,
+        ); err != nil {
+            return nil, fmt.Errorf("scan available apartments: %w", err)
+        }
+        result = append(result, item)
+    }
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate available apartments: %w", err)
 	}
@@ -187,27 +186,26 @@ type availableApartmentsQuery struct {
 }
 
 func buildListAvailableApartmentsQuery(filters apartment.ListApartmentsFilters) availableApartmentsQuery {
-	baseQuery := `SELECT
-		a.id,
-		a.title,
-		a.address,
-		COALESCE(a.area, ''),
-		a.total_spots,
-		a.occupied_spots,
-		a.base_rent,
-		a.status,
-		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-		COALESCE((
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-			LIMIT 1
-		), '') AS image_url,
-		COALESCE(a.latitude, 0),
-		COALESCE(a.longitude, 0)
-	FROM public.apartments a
-	WHERE 1=1`
+    baseQuery := `SELECT
+        a.id,
+        a.title,
+        a.address,
+        COALESCE(a.area, ''),
+        a.total_spots,
+        a.occupied_spots,
+        a.base_rent,
+        a.status,
+        TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+        ARRAY(
+            SELECT ap.url
+            FROM public.apartment_photos ap
+            WHERE ap.apartment_id = a.id
+            ORDER BY ap.position ASC, ap.created_at ASC
+        ) AS image_paths,
+        COALESCE(a.latitude, 0),
+        COALESCE(a.longitude, 0)
+    FROM public.apartments a
+    WHERE 1=1`
 
 	whereClauses := make([]string, 0, 8)
 	args := make([]interface{}, 0, 12)
@@ -289,54 +287,46 @@ func buildAvailableApartmentsOrderBy(sortBy string) string {
 
 // GetOwnerApartmentByID returns one apartment when it belongs to the owner.
 func (r *Repository) GetOwnerApartmentByID(ctx context.Context, ownerID, apartmentID string) (*apartment.Apartment, error) {
-	const query = `SELECT
-		a.id,
-		a.title,
-		COALESCE(a.description, ''),
-		a.owner_id,
-		a.address,
-		COALESCE(a.area, ''),
-		a.total_spots,
-		a.occupied_spots,
-		a.base_rent,
-		a.status,
-		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-		COALESCE((
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-			LIMIT 1
-		), '') AS image_url,
-		ARRAY(
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-		) AS image_urls,
-		COALESCE(a.latitude, 0),
-		COALESCE(a.longitude, 0)
-	FROM public.apartments a
-	WHERE a.id = $1 AND a.owner_id = $2`
+    const query = `SELECT
+        a.id,
+        a.title,
+        COALESCE(a.description, ''),
+        a.owner_id,
+        a.address,
+        COALESCE(a.area, ''),
+        a.total_spots,
+        a.occupied_spots,
+        a.base_rent,
+        a.status,
+        TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+        ARRAY(
+            SELECT ap.url
+            FROM public.apartment_photos ap
+            WHERE ap.apartment_id = a.id
+            ORDER BY ap.position ASC, ap.created_at ASC
+        ) AS image_paths,
+        COALESCE(a.latitude, 0),
+        COALESCE(a.longitude, 0)
+    FROM public.apartments a
+    WHERE a.id = $1 AND a.owner_id = $2`
 
 	var item apartment.Apartment
-	err := r.db.QueryRow(ctx, query, apartmentID, ownerID).Scan(
-		&item.ID,
-		&item.Title,
-		&item.Description,
-		&item.OwnerID,
-		&item.Address,
-		&item.Area,
-		&item.TotalSpots,
-		&item.OccupiedSpots,
-		&item.BaseRent,
-		&item.Status,
-		&item.CreatedAt,
-		&item.ImageURL,
-		&item.ImageURLs,
-		&item.Latitude,
-		&item.Longitude,
-	)
+    err := r.db.QueryRow(ctx, query, apartmentID, ownerID).Scan(
+        &item.ID,
+        &item.Title,
+        &item.Description,
+        &item.OwnerID,
+        &item.Address,
+        &item.Area,
+        &item.TotalSpots,
+        &item.OccupiedSpots,
+        &item.BaseRent,
+        &item.Status,
+        &item.CreatedAt,
+        &item.ImagePaths,
+        &item.Latitude,
+        &item.Longitude,
+    )
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -394,16 +384,16 @@ func (r *Repository) UpdateOwnerApartment(ctx context.Context, ownerID, apartmen
 	if _, err := tx.Exec(ctx, `DELETE FROM public.apartment_photos WHERE apartment_id = $1`, apartmentID); err != nil {
 		return nil, fmt.Errorf("delete apartment photos: %w", err)
 	}
-	const insertPhotoSQL = `INSERT INTO public.apartment_photos (apartment_id, url, position) VALUES ($1, $2, $3)`
-	for idx, imageURL := range input.ImageURLs {
-		trimmedURL := strings.TrimSpace(imageURL)
-		if trimmedURL == "" {
-			continue
-		}
-		if _, err := tx.Exec(ctx, insertPhotoSQL, apartmentID, trimmedURL, idx); err != nil {
-			return nil, fmt.Errorf("insert apartment photo: %w", err)
-		}
-	}
+    const insertPhotoSQL = `INSERT INTO public.apartment_photos (apartment_id, url, position) VALUES ($1, $2, $3)`
+    for idx, imagePath := range input.ImagePaths {
+        trimmedPath := strings.TrimSpace(imagePath)
+        if trimmedPath == "" {
+            continue
+        }
+        if _, err := tx.Exec(ctx, insertPhotoSQL, apartmentID, trimmedPath, idx); err != nil {
+            return nil, fmt.Errorf("insert apartment photo: %w", err)
+        }
+    }
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit update apartment tx: %w", err)
@@ -414,50 +404,46 @@ func (r *Repository) UpdateOwnerApartment(ctx context.Context, ownerID, apartmen
 
 // GetApartmentByID returns one apartment by id.
 func (r *Repository) GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error) {
-	const query = `SELECT
-		a.id,
-		a.title,
-		COALESCE(a.description, ''),
-		a.owner_id,
-		COALESCE(u.full_name, ''),
-		a.address,
-		COALESCE(a.area, ''),
-		a.total_spots,
-		a.occupied_spots,
-		a.base_rent,
-		a.status,
-		TO_CHAR(a.created_at, 'YYYY-MM-DD') AS created_at,
-		COALESCE((
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-			LIMIT 1
-		), '') AS image_url,
-		COALESCE(a.latitude, 0),
-		COALESCE(a.longitude, 0)
-	FROM public.apartments a
-	LEFT JOIN public.users u ON u.id = a.owner_id
-	WHERE a.id = $1`
+    const query = `SELECT
+        a.id,
+        a.title,
+        COALESCE(a.description, ''),
+        a.owner_id,
+        a.address,
+        COALESCE(a.area, ''),
+        a.total_spots,
+        a.occupied_spots,
+        a.base_rent,
+        a.status,
+        TO_CHAR(a.created_at, 'YYYY-MM-DD') AS created_at,
+        ARRAY(
+            SELECT ap.url
+            FROM public.apartment_photos ap
+            WHERE ap.apartment_id = a.id
+            ORDER BY ap.position ASC, ap.created_at ASC
+        ) AS image_paths,
+        COALESCE(a.latitude, 0),
+        COALESCE(a.longitude, 0)
+    FROM public.apartments a
+    WHERE a.id = $1`
 
-	var item apartment.Apartment
-	err := r.db.QueryRow(ctx, query, apartmentID).Scan(
-		&item.ID,
-		&item.Title,
-		&item.Description,
-		&item.OwnerID,
-		&item.OwnerName,
-		&item.Address,
-		&item.Area,
-		&item.TotalSpots,
-		&item.OccupiedSpots,
-		&item.BaseRent,
-		&item.Status,
-		&item.CreatedAt,
-		&item.ImageURL,
-		&item.Latitude,
-		&item.Longitude,
-	)
+    var item apartment.Apartment
+    err := r.db.QueryRow(ctx, query, apartmentID).Scan(
+        &item.ID,
+        &item.Title,
+        &item.Description,
+        &item.OwnerID,
+        &item.Address,
+        &item.Area,
+        &item.TotalSpots,
+        &item.OccupiedSpots,
+        &item.BaseRent,
+        &item.Status,
+        &item.CreatedAt,
+        &item.ImagePaths,
+        &item.Latitude,
+        &item.Longitude,
+    )
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
