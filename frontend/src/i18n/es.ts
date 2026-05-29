@@ -360,6 +360,8 @@ const es = {
       basePrice: 'Precio base: {{price}} EUR',
       status: 'Estado: {{status}}',
       percentOccupied: '{{percent}}% ocupado',
+      edit: 'Editar',
+      editAria: 'Editar {{title}}',
     },
     summary: {
       title: 'Resumen de ocupación',
@@ -390,10 +392,16 @@ const es = {
     publish: {
       title: 'Publicar piso',
       subtitle: 'Crea tu anuncio con la información principal para recibir solicitudes.',
+      editTitle: 'Editar piso',
+      editSubtitle: 'Actualiza la información principal de tu anuncio publicado.',
       backToProperties: 'Volver a mis pisos',
       submit: 'Publicar piso',
       submitting: 'Publicando...',
       success: 'Piso publicado correctamente.',
+      editSubmit: 'Guardar cambios',
+      editSubmitting: 'Guardando...',
+      editSuccess: 'Piso actualizado correctamente.',
+      loadingEdit: 'Cargando piso para editar...',
       fields: {
         title: 'Título',
         mapLocation: 'Ubicación en el mapa',
@@ -403,18 +411,17 @@ const es = {
         bathrooms: 'Baños (se guarda en descripción)',
         baseRent: 'Precio mensual (EUR)',
         availableFrom: 'Disponible desde (se guarda en descripción)',
-        imageUrls: 'URLs de imágenes',
+        photos: 'Fotos del piso',
         description: 'Descripción',
       },
       placeholders: {
         title: 'Piso luminoso en el centro',
         address: 'Calle Ancha, 12',
         area: 'Centro',
-        imageUrls: 'https://.../foto1.jpg, https://.../foto2.jpg',
         description: 'Describe el piso, las normas y el perfil de inquilino recomendado...',
       },
       hints: {
-        imageUrls: 'Separa varias URL por comas o por líneas.',
+        photos: 'Sube hasta {{max}} fotos del piso.',
       },
       errors: {
         title: 'El título debe tener al menos 3 caracteres.',
@@ -423,6 +430,12 @@ const es = {
         bathrooms: 'El número de baños debe ser mayor que 0.',
         baseRent: 'El precio mensual debe ser mayor que 0.',
         default: 'No se pudo publicar el piso. Inténtalo de nuevo.',
+        editDefault: 'No se pudo actualizar el piso. Inténtalo de nuevo.',
+        loadEdit: 'No se pudo cargar el piso para editar.',
+      },
+      photos: {
+        tooLarge: 'El archivo supera el tamaño máximo de 5MB.',
+        invalidType: 'Solo se aceptan archivos de imagen.',
       },
     },
     placeholder: {

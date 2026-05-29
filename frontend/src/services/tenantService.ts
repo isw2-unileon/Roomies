@@ -36,7 +36,9 @@ interface TenantApartmentDto {
   base_rent: number
   status: string
   created_at: string
-  image_url: string
+  image_url?: string | null
+  image_urls?: string[] | null
+  image_paths?: string[] | null
   description?: string
   owner_name?: string
   compatibility_score?: number
@@ -173,6 +175,7 @@ function tenantApartmentStatusFromDto(dto: TenantApartmentDto): PropertyAvailabi
 }
 
 function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
+  const imageUrls = dto.image_urls?.length ? dto.image_urls : dto.image_url ? [dto.image_url] : []
   return {
     id: dto.id,
     titleKey: dto.title,
@@ -185,7 +188,7 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     rent: dto.base_rent,
     compatibilityScore: dto.compatibility_score ?? 0,
     status: tenantApartmentStatusFromDto(dto),
-    images: dto.image_url ? [dto.image_url] : [],
+    images: imageUrls,
     createdAt: dto.created_at,
   }
 }

@@ -3,6 +3,7 @@ package supabase
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -80,5 +81,54 @@ func TestCreateSignedURLDoesNotDuplicateStoragePrefix(t *testing.T) {
 	wantSignedURL := server.URL + "/storage/v1/object/sign/apartment-photos/photo.jpg?token=abc"
 	if signedURL != wantSignedURL {
 		t.Fatalf("signedURL = %q, want %q", signedURL, wantSignedURL)
+	}
+}
+
+func TestUploadObjectPostsMultipartToStorageEndpoint(t *testing.T) {
+	var gotPath string
+	var gotAPIKey string
+	var gotAuthorization string
+	var gotFileData []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.EscapedPath()
+		gotAPIKey = r.Header.Get("apikey")
+		gotAuthorization = r.Header.Get("Authorization")
+
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Fatalf("parse multipart: %v", err)
+		}
+		file, _, err := r.FormFile("file")
+		if err != nil {
+			t.Fatalf("form file: %v", err)
+		}
+		defer file.Close()
+		gotFileData, _ = io.ReadAll(file)
+
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := NewClient(server.URL, "secret-key")
+	if err != nil {
+		t.Fatalf("NewClient returned error: %v", err)
+	}
+
+	err = client.UploadObject(context.Background(), "Apartment_photos", "apt-1/photo.jpg", "image/jpeg", []byte("fake-image-data"))
+	if err != nil {
+		t.Fatalf("UploadObject returned error: %v", err)
+	}
+
+	if gotPath != "/storage/v1/object/Apartment_photos/apt-1/photo.jpg" {
+		t.Fatalf("path = %q, want /storage/v1/object/Apartment_photos/apt-1/photo.jpg", gotPath)
+	}
+	if gotAPIKey != "secret-key" {
+		t.Fatalf("apikey = %q, want secret-key", gotAPIKey)
+	}
+	if gotAuthorization != "Bearer secret-key" {
+		t.Fatalf("Authorization = %q, want Bearer secret-key", gotAuthorization)
+	}
+	if string(gotFileData) != "fake-image-data" {
+		t.Fatalf("file data = %q, want fake-image-data", string(gotFileData))
 	}
 }
