@@ -47,7 +47,7 @@ func main() {
 	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
 	applicationRepo := applicationpostgres.NewRepository(database.DB)
 	groupRepo := grouppostgres.NewRepository(database.DB)
-	profileService := profileservice.NewService(profileRepo)
+	var storageClient *authsupabase.Client
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
 	if err != nil {
@@ -59,13 +59,14 @@ func main() {
 	if strings.TrimSpace(cfg.SupabaseSecretKey) == "" {
 		logger.Warn("apartment image signing disabled", "reason", "SUPABASE_SECRET_KEY is missing")
 	} else {
-		storageClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseSecretKey)
+		storageClient, err = authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseSecretKey)
 		if err != nil {
 			logger.Warn("apartment image signing disabled", "error", err)
 		} else {
 			apartmentImageSigner = storageClient
 		}
 	}
+	profileService := profileservice.NewService(profileRepo, storageClient)
 
 	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo)
 	groupService := groupservice.NewService(groupRepo)

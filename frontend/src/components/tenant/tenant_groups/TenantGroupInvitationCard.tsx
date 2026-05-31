@@ -1,3 +1,4 @@
+import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import type { TenantGroupInvitation } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
 
@@ -17,7 +18,7 @@ export default function TenantGroupInvitationCard({
   return (
     <div className={styles.invitationCard}>
       <img
-        src={invitation.user.avatarUrl || '/placeholder-avatar.png'}
+        src={invitation.user.avatarUrl || placeholderAvatar}
         alt={invitation.user.name}
         className={styles.memberAvatar}
       />

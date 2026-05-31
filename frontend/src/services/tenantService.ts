@@ -2,6 +2,7 @@ import { apiFetch } from '@/api'
 import type {
   InterestedTenant,
   PropertyAvailability,
+  TenantPersonalProfile,
   TenantApplication,
   TenantGroupAcceptedMember,
   TenantGroupApartment,
@@ -29,9 +30,30 @@ export interface SaveTenantProfileInput {
   cleanliness: string
 }
 
+export interface SaveTenantPersonalProfileInput {
+  fullName: string
+  avatarUrl: string
+}
+
 interface TenantProfileResponseDto {
   message?: string
   onboarding_complete?: boolean
+  error?: string
+}
+
+interface TenantPersonalProfileDto {
+  user_id: string
+  full_name: string
+  email: string
+  avatar_url: string
+  error?: string
+}
+
+interface TenantPersonalProfileResponseDto extends TenantPersonalProfileDto {}
+
+interface TenantAvatarUploadResponseDto {
+  message?: string
+  avatar_url?: string
   error?: string
 }
 
@@ -419,6 +441,15 @@ function tenantGroupProfileFromDto(dto: TenantGroupProfileDto): TenantGroupProfi
   }
 }
 
+function tenantPersonalProfileFromDto(dto: TenantPersonalProfileDto): TenantPersonalProfile {
+	return {
+		userId: dto.user_id,
+		fullName: dto.full_name,
+		email: dto.email,
+		avatarUrl: dto.avatar_url,
+	}
+}
+
 function tenantGroupMemberFromDto(dto: TenantGroupMemberDto): TenantGroupAcceptedMember {
   return {
     ...tenantGroupProfileFromDto(dto),
@@ -519,6 +550,46 @@ export async function saveTenantProfile(input: SaveTenantProfileInput) {
     throw new Error(data.error ?? 'No se pudo guardar el perfil.')
   }
   return data.message
+}
+
+export async function getTenantPersonalProfile() {
+	const response = await apiFetch('/api/tenant-profile/personal')
+	const data = (await response.json()) as TenantPersonalProfileResponseDto
+	if (!response.ok) {
+		throw new Error(data.error ?? 'No se pudo cargar tu perfil.')
+	}
+	return tenantPersonalProfileFromDto(data)
+}
+
+export async function saveTenantPersonalProfile(input: SaveTenantPersonalProfileInput) {
+	const response = await apiFetch('/api/tenant-profile/personal', {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			full_name: input.fullName,
+			avatar_url: input.avatarUrl,
+		}),
+	})
+	const data = (await response.json()) as TenantProfileResponseDto
+	if (!response.ok) {
+		throw new Error(data.error ?? 'No se pudo guardar tu perfil.')
+	}
+	return data.message
+}
+
+export async function uploadTenantAvatar(file: File) {
+	const formData = new FormData()
+	formData.append('avatar', file)
+
+	const response = await apiFetch('/api/tenant-profile/avatar', {
+		method: 'POST',
+		body: formData,
+	})
+	const data = (await response.json()) as TenantAvatarUploadResponseDto
+	if (!response.ok || !data.avatar_url) {
+		throw new Error(data.error ?? 'No se pudo subir la foto de perfil.')
+	}
+	return data.avatar_url
 }
 
 function buildApartmentsQuery(filters?: TenantApartmentListFilters) {

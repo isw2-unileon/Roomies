@@ -1,3 +1,4 @@
+import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import type { TenantGroupAcceptedMember } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
 
@@ -12,7 +13,7 @@ export default function TenantGroupMemberCard({ member }: TenantGroupMemberCardP
   return (
     <div className={styles.memberCard}>
       <img
-        src={member.avatarUrl || '/placeholder-avatar.png'}
+        src={member.avatarUrl || placeholderAvatar}
         alt={member.name}
         className={styles.memberAvatar}
       />

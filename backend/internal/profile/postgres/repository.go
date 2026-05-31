@@ -101,6 +101,28 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 	return &tenantProfile, nil
 }
 
+// GetTenantPersonalProfile returns editable account data from users table.
+func (r *Repository) GetTenantPersonalProfile(ctx context.Context, userID string) (*profile.TenantPersonalProfile, error) {
+	const query = `SELECT id, COALESCE(full_name, ''), COALESCE(email, ''), COALESCE(avatar_url, '')
+	FROM public.users
+	WHERE id = $1`
+
+	var personalProfile profile.TenantPersonalProfile
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&personalProfile.UserID,
+		&personalProfile.FullName,
+		&personalProfile.Email,
+		&personalProfile.AvatarURL,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get tenant personal profile: %w", err)
+	}
+	return &personalProfile, nil
+}
+
 // UpsertTenantProfile updates or inserts tenant profile.
 func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, input profile.TenantProfileInput) error {
 	result, err := r.db.Exec(
@@ -176,6 +198,48 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 		nullIfEmpty(input.PartyFrequency),
 	)
 	return err
+}
+
+// UpdateTenantPersonalProfile updates editable fields from users table.
+func (r *Repository) UpdateTenantPersonalProfile(ctx context.Context, userID string, input profile.TenantPersonalProfileInput) error {
+	result, err := r.db.Exec(
+		ctx,
+		`UPDATE public.users SET
+			full_name = $2,
+			avatar_url = $3,
+			updated_at = NOW()
+		WHERE id = $1`,
+		userID,
+		strings.TrimSpace(input.FullName),
+		nullIfEmpty(input.AvatarURL),
+	)
+	if err != nil {
+		return fmt.Errorf("update tenant personal profile: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("user profile not found")
+	}
+	return nil
+}
+
+// UpdateTenantAvatarURL persists the current avatar URL for a user.
+func (r *Repository) UpdateTenantAvatarURL(ctx context.Context, userID, avatarURL string) error {
+	result, err := r.db.Exec(
+		ctx,
+		`UPDATE public.users SET
+			avatar_url = $2,
+			updated_at = NOW()
+		WHERE id = $1`,
+		userID,
+		nullIfEmpty(avatarURL),
+	)
+	if err != nil {
+		return fmt.Errorf("update tenant avatar url: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("user profile not found")
+	}
+	return nil
 }
 
 // UpsertUserProfile inserts/updates app user profile.

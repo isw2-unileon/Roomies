@@ -39,6 +39,7 @@
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
 
 .card {
@@ -51,6 +52,19 @@
   border: 1px solid var(--tenant-border-light);
   border-radius: 1.5rem;
   box-shadow: var(--tenant-shadow-soft);
+}
+
+.cardToggle {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .cardTitle {
@@ -70,6 +84,107 @@
   line-height: 1.55;
 }
 
+.toggleText,
+.readOnlyHint,
+.avatarHint {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.personalPanel,
+.form,
+.formGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.avatarSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1rem;
+}
+
+.avatar {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid var(--tenant-border-light);
+  background: var(--tenant-surface);
+}
+
+.avatarCopy {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.avatarTitle,
+.preferenceTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.avatarButton,
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.avatarButton,
+.secondaryButton {
+  border: 1px solid var(--tenant-border-strong);
+  background: var(--tenant-surface);
+  color: var(--tenant-text);
+}
+
+.primaryButton {
+  border: 1px solid var(--tenant-primary);
+  background: var(--tenant-primary);
+  color: #fff;
+}
+
+.avatarButton:hover,
+.secondaryButton:hover {
+  background: var(--tenant-bg-soft);
+}
+
+.primaryButton:hover {
+  background: var(--tenant-primary-strong);
+}
+
+.avatarButton:disabled,
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.fileInput {
+  display: none;
+}
+
+.readOnlyHint {
+  margin-top: 0.5rem;
+}
+
 .preferenceRow {
   display: flex;
   align-items: center;
@@ -82,19 +197,12 @@
   border-radius: 1rem;
 }
 
-.preferenceTitle {
-  margin: 0 0 0.25rem;
-  color: var(--tenant-text);
-  font-size: 1rem;
-  font-weight: 800;
-}
-
 @media (min-width: 900px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .card:nth-child(2) {
-    grid-row: span 2;
+  .formGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

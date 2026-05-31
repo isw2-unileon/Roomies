@@ -13,11 +13,20 @@ const authServiceMock = vi.hoisted(() => ({
 
 vi.mock('@/services/tenantService', () => ({
   listTenantApartments: vi.fn(async () => []),
+  getTenantPersonalProfile: vi.fn(async () => ({
+    userId: 'tenant-1',
+    fullName: 'Jairo Test',
+    email: 'jairo@example.test',
+    avatarUrl: '',
+  })),
+  saveTenantPersonalProfile: vi.fn(async () => 'tenant personal profile saved'),
+  uploadTenantAvatar: vi.fn(async () => 'https://example.test/avatar.png'),
 }))
 
 vi.mock('@/services/authService', () => ({
   getProfileStatus: authServiceMock.getProfileStatus,
   logout: authServiceMock.logout,
+  forgotPassword: vi.fn(async () => 'recovery email sent'),
 }))
 
 vi.mock('@/services/ownerService', () => ({
@@ -76,12 +85,14 @@ describe('AppRouter', () => {
     expect(screen.queryByRole('combobox', { name: /idioma de la interfaz/i })).not.toBeInTheDocument()
   })
 
-  test('renders language preferences inside the tenant profile page', async () => {
+  test('renders personal data and configuration inside the tenant profile page', async () => {
     renderAppAt(paths.tenantProfile)
 
     expect(await screen.findByRole('heading', { name: /perfil/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /datos personales/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^preferencias$/i })).toBeInTheDocument()
     expect(screen.getByText(/elige el idioma de la interfaz/i)).toBeInTheDocument()
+    expect(screen.queryByText(/preferencias de búsqueda/i)).not.toBeInTheDocument()
     const languageSelect = screen.getByRole('combobox', { name: /idioma de la interfaz/i })
     expect(languageSelect).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Español' })).toBeInTheDocument()
