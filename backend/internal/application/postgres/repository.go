@@ -6,14 +6,22 @@ import (
 	"fmt"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
-	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const ownerApplicationConflictMessage = "owner application conflicts with the current apartment assignment"
+
 // Repository stores application data in PostgreSQL.
 type Repository struct {
 	db *pgxpool.Pool
+}
+
+type ownerApplicationUpdateContext struct {
+	apartmentID     string
+	groupID         string
+	applicationType string
+	currentStatus   string
 }
 
 // NewRepository creates a PostgreSQL application repository.
@@ -313,7 +321,7 @@ func (r *Repository) CreateGroupApplication(ctx context.Context, apartmentID, gr
 	if err != nil {
 		return "", fmt.Errorf("begin create group application: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer rollbackTx(ctx, tx)
 
 	const insertQuery = `INSERT INTO public.applications (apartment_id, group_id, type, status)
 	VALUES ($1, $2, 'group', 'PENDING_OWNER')
@@ -509,36 +517,67 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 	if err != nil {
 		return false, fmt.Errorf("begin update owner application: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer rollbackTx(ctx, tx)
 
-	var apartmentID string
-	var groupID string
-	var applicationType string
-	var currentStatus string
+	updateContext, err := r.loadOwnerApplicationUpdateContextTx(ctx, tx, applicationID, ownerID)
+	if err != nil {
+		return false, err
+	}
+	if updateContext.currentStatus != "PENDING_OWNER" {
+		return false, nil
+	}
+	if err := r.ensureOwnerApplicationApprovalAllowedTx(ctx, tx, applicationID, updateContext, approve); err != nil {
+		return false, err
+	}
+
+	updatedGroupID, err := r.applyOwnerApplicationStatusTx(ctx, tx, applicationID, ownerID, nextStatus, approve)
+	if err != nil {
+		return false, err
+	}
+	if err := r.updateGroupStatusAfterOwnerDecisionTx(ctx, tx, updateContext.apartmentID, updatedGroupID, nextGroupStatus, applicationID, approve); err != nil {
+		return false, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit update owner application: %w", err)
+	}
+
+	return true, nil
+}
+
+func (r *Repository) loadOwnerApplicationUpdateContextTx(ctx context.Context, tx pgx.Tx, applicationID, ownerID string) (*ownerApplicationUpdateContext, error) {
 	lookupQuery := `SELECT app.apartment_id::text, COALESCE(app.group_id::text, ''), app.type, app.status
 	FROM public.applications app
 	INNER JOIN public.apartments a ON a.id = app.apartment_id
 	WHERE app.id = $1
 		AND a.owner_id = $2`
-	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&apartmentID, &groupID, &applicationType, &currentStatus); err != nil {
+
+	var item ownerApplicationUpdateContext
+	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&item.apartmentID, &item.groupID, &item.applicationType, &item.currentStatus); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return false, pgx.ErrNoRows
+			return nil, pgx.ErrNoRows
 		}
-		return false, fmt.Errorf("load owner application before status update: %w", err)
-	}
-	if currentStatus != "PENDING_OWNER" {
-		return false, nil
-	}
-	if approve && applicationType == "group" {
-		conflictExists, conflictErr := r.hasAcceptedGroupApplicationForApartmentTx(ctx, tx, apartmentID, applicationID)
-		if conflictErr != nil {
-			return false, conflictErr
-		}
-		if conflictExists {
-			return false, applicationservice.ErrOwnerApplicationConflict
-		}
+		return nil, fmt.Errorf("load owner application before status update: %w", err)
 	}
 
+	return &item, nil
+}
+
+func (r *Repository) ensureOwnerApplicationApprovalAllowedTx(ctx context.Context, tx pgx.Tx, applicationID string, updateContext *ownerApplicationUpdateContext, approve bool) error {
+	if !approve || updateContext.applicationType != "group" {
+		return nil
+	}
+	conflictExists, err := r.hasAcceptedGroupApplicationForApartmentTx(ctx, tx, updateContext.apartmentID, applicationID)
+	if err != nil {
+		return err
+	}
+	if conflictExists {
+		return errors.New(ownerApplicationConflictMessage)
+	}
+	return nil
+}
+
+func (r *Repository) applyOwnerApplicationStatusTx(ctx context.Context, tx pgx.Tx, applicationID, ownerID, nextStatus string, approve bool) (string, error) {
 	query := `UPDATE public.applications app
 	SET status = $3,
 		updated_at = NOW(),
@@ -552,37 +591,42 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 	RETURNING COALESCE(app.group_id::text, '')`
 
 	var updatedGroupID string
-	if err := tx.QueryRow(ctx, query, applicationID, ownerID, nextStatus, approve).Scan(&groupID); err != nil {
+	if err := tx.QueryRow(ctx, query, applicationID, ownerID, nextStatus, approve).Scan(&updatedGroupID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			exists, existsErr := r.ownerApplicationExists(ctx, applicationID, ownerID)
-			if existsErr != nil {
-				return false, existsErr
-			}
-			if !exists {
-				return false, pgx.ErrNoRows
-			}
-			return false, nil
+			return "", r.resolveOwnerApplicationStatusUpdateNoRows(ctx, applicationID, ownerID)
 		}
-		return false, fmt.Errorf("update owner application status: %w", err)
-	}
-	updatedGroupID = groupID
-
-	if updatedGroupID != "" {
-		if _, err := tx.Exec(ctx, `UPDATE public.groups SET status = $2, updated_at = NOW() WHERE id = $1`, updatedGroupID, nextGroupStatus); err != nil {
-			return false, fmt.Errorf("update group status after owner decision: %w", err)
-		}
-		if approve {
-			if err := r.rejectOtherPendingGroupApplicationsTx(ctx, tx, apartmentID, applicationID); err != nil {
-				return false, err
-			}
-		}
+		return "", fmt.Errorf("update owner application status: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return false, fmt.Errorf("commit update owner application: %w", err)
-	}
+	return updatedGroupID, nil
+}
 
-	return true, nil
+func (r *Repository) updateGroupStatusAfterOwnerDecisionTx(ctx context.Context, tx pgx.Tx, apartmentID, groupID, nextGroupStatus, applicationID string, approve bool) error {
+	if groupID == "" {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `UPDATE public.groups SET status = $2, updated_at = NOW() WHERE id = $1`, groupID, nextGroupStatus); err != nil {
+		return fmt.Errorf("update group status after owner decision: %w", err)
+	}
+	if !approve {
+		return nil
+	}
+	return r.rejectOtherPendingGroupApplicationsTx(ctx, tx, apartmentID, applicationID)
+}
+
+func (r *Repository) resolveOwnerApplicationStatusUpdateNoRows(ctx context.Context, applicationID, ownerID string) error {
+	exists, err := r.ownerApplicationExists(ctx, applicationID, ownerID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+func rollbackTx(ctx context.Context, tx pgx.Tx) {
+	_ = tx.Rollback(ctx)
 }
 
 func (r *Repository) hasAcceptedGroupApplicationForApartmentTx(ctx context.Context, tx pgx.Tx, apartmentID, currentApplicationID string) (bool, error) {

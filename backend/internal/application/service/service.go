@@ -86,6 +86,8 @@ var ErrOwnerApplicationAlreadyHandled = errors.New("owner application is not pen
 // ErrOwnerApplicationConflict is returned when approving the application would create an inconsistent state.
 var ErrOwnerApplicationConflict = errors.New("owner application conflicts with the current apartment assignment")
 
+const ownerApplicationConflictMessage = "owner application conflicts with the current apartment assignment"
+
 // Service contains application use cases.
 type Service struct {
 	repo            repository
@@ -150,45 +152,17 @@ func (s *Service) ApplyToApartment(ctx context.Context, apartmentID, tenantID, r
 
 // ApplyGroupToAssignedApartment creates or returns the current group application for the assigned apartment.
 func (s *Service) ApplyGroupToAssignedApartment(ctx context.Context, groupID, userID, role string) (*application.Record, bool, error) {
-	if strings.TrimSpace(groupID) == "" {
-		return nil, false, errors.New("group id is required")
-	}
-	if strings.TrimSpace(userID) == "" {
-		return nil, false, errors.New("tenant id is required")
-	}
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return nil, false, ErrTenantRequired
-	}
-
-	groupContext, err := s.repo.GetGroupApplicationContext(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
+	trimmedGroupID, trimmedUserID, err := validateGroupApplicationInput(groupID, userID, role)
 	if err != nil {
 		return nil, false, err
 	}
-	if groupContext == nil {
-		return nil, false, ErrGroupNotFound
-	}
-	if !groupContext.IsCreator && !groupContext.IsMember {
-		return nil, false, ErrGroupApplicationForbidden
-	}
-	if !groupContext.IsCreator {
-		return nil, false, ErrGroupApplicationForbidden
-	}
-	if !groupContext.IsFullyAccepted {
-		return nil, false, ErrGroupNotReady
-	}
-	if strings.TrimSpace(groupContext.ApartmentID) == "" {
-		return nil, false, ErrGroupApartmentRequired
-	}
 
-	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, groupContext.ApartmentID)
+	groupContext, err := s.loadAndValidateGroupApplicationContext(ctx, trimmedGroupID, trimmedUserID)
 	if err != nil {
 		return nil, false, err
 	}
-	if apartmentRow == nil {
-		return nil, false, ErrApartmentNotFound
-	}
-	if apartmentRow.TotalSpots-apartmentRow.OccupiedSpots <= 0 {
-		return nil, false, ErrApartmentFull
+	if err := s.validateGroupApplicationApartment(ctx, groupContext.ApartmentID); err != nil {
+		return nil, false, err
 	}
 
 	existing, err := s.repo.GetLatestGroupApplicationForApartment(ctx, groupContext.ApartmentID, groupContext.GroupID)
@@ -212,6 +186,58 @@ func (s *Service) ApplyGroupToAssignedApartment(ctx context.Context, groupID, us
 	}
 
 	return created, true, nil
+}
+
+func validateGroupApplicationInput(groupID, userID, role string) (string, string, error) {
+	trimmedGroupID := strings.TrimSpace(groupID)
+	if trimmedGroupID == "" {
+		return "", "", errors.New("group id is required")
+	}
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return "", "", errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return "", "", ErrTenantRequired
+	}
+	return trimmedGroupID, trimmedUserID, nil
+}
+
+func (s *Service) loadAndValidateGroupApplicationContext(ctx context.Context, groupID, userID string) (*application.GroupApplicationContext, error) {
+	groupContext, err := s.repo.GetGroupApplicationContext(ctx, groupID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if groupContext == nil {
+		return nil, ErrGroupNotFound
+	}
+	if !groupContext.IsCreator && !groupContext.IsMember {
+		return nil, ErrGroupApplicationForbidden
+	}
+	if !groupContext.IsCreator {
+		return nil, ErrGroupApplicationForbidden
+	}
+	if !groupContext.IsFullyAccepted {
+		return nil, ErrGroupNotReady
+	}
+	if strings.TrimSpace(groupContext.ApartmentID) == "" {
+		return nil, ErrGroupApartmentRequired
+	}
+	return groupContext, nil
+}
+
+func (s *Service) validateGroupApplicationApartment(ctx context.Context, apartmentID string) error {
+	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, apartmentID)
+	if err != nil {
+		return err
+	}
+	if apartmentRow == nil {
+		return ErrApartmentNotFound
+	}
+	if apartmentRow.TotalSpots-apartmentRow.OccupiedSpots <= 0 {
+		return ErrApartmentFull
+	}
+	return nil
 }
 
 // CancelTenantApplication cancels a pending tenant application.
@@ -426,7 +452,7 @@ func (s *Service) ApproveOwnerApplication(ctx context.Context, applicationID, ow
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrOwnerApplicationNotFound
 		}
-		if errors.Is(err, ErrOwnerApplicationConflict) {
+		if isOwnerApplicationConflictError(err) {
 			return ErrOwnerApplicationConflict
 		}
 		return err
@@ -444,6 +470,10 @@ func isActiveApplicationStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+func isOwnerApplicationConflictError(err error) bool {
+	return err != nil && err.Error() == ownerApplicationConflictMessage
 }
 
 // RejectOwnerApplication rejects a pending application belonging to the owner.
