@@ -24,6 +24,7 @@ export default function TenantProfilePage() {
   const [email, setEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('')
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
 
   const profileNotice = useNotice()
   const passwordNotice = useNotice()
@@ -55,6 +56,7 @@ export default function TenantProfilePage() {
         setFullName(profile.fullName)
         setEmail(profile.email)
         setAvatarUrl(profile.avatarUrl)
+        setAvatarLoadFailed(false)
       } catch (error) {
         if (!isMounted) {
           return
@@ -109,6 +111,7 @@ export default function TenantProfilePage() {
     try {
       const uploadedAvatarUrl = await uploadTenantAvatar(file)
       setAvatarUrl(uploadedAvatarUrl)
+      setAvatarLoadFailed(false)
       showProfileSuccess(t('tenantProfile.personal.avatarUploaded'))
     } catch (error) {
       URL.revokeObjectURL(previewUrl)
@@ -161,7 +164,7 @@ export default function TenantProfilePage() {
     }
   }
 
-  const profileImage = avatarPreviewUrl || avatarUrl || placeholderAvatar
+  const profileImage = avatarPreviewUrl || (!avatarLoadFailed && avatarUrl ? avatarUrl : placeholderAvatar)
 
   return (
     <TenantLayout>
@@ -204,10 +207,7 @@ export default function TenantProfilePage() {
                       src={profileImage}
                       alt={t('tenantProfile.personal.avatarAlt')}
                       className={styles.avatar}
-                      onError={(event) => {
-                        event.currentTarget.onerror = null
-                        event.currentTarget.src = placeholderAvatar
-                      }}
+                      onError={() => setAvatarLoadFailed(true)}
                     />
                     <div className={styles.avatarCopy}>
                       <p className={styles.avatarTitle}>{t('tenantProfile.personal.avatarTitle')}</p>

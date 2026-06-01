@@ -48,7 +48,7 @@ interface TenantPersonalProfileDto {
   error?: string
 }
 
-interface TenantPersonalProfileResponseDto extends TenantPersonalProfileDto {}
+type TenantPersonalProfileResponseDto = TenantPersonalProfileDto
 
 interface TenantAvatarUploadResponseDto {
   message?: string

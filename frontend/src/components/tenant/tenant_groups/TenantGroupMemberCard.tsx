@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import type { TenantGroupAcceptedMember } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
@@ -7,19 +8,18 @@ interface TenantGroupMemberCardProps {
 }
 
 export default function TenantGroupMemberCard({ member }: TenantGroupMemberCardProps) {
+  const [imageFailed, setImageFailed] = useState(false)
   const roleClass =
     member.role === 'owner' ? styles.roleOwner : styles.roleMember
+  const avatarSrc = !imageFailed && member.avatarUrl ? member.avatarUrl : placeholderAvatar
 
   return (
     <div className={styles.memberCard}>
       <img
-        src={member.avatarUrl || placeholderAvatar}
+        src={avatarSrc}
         alt={member.name}
         className={styles.memberAvatar}
-        onError={(event) => {
-          event.currentTarget.onerror = null
-          event.currentTarget.src = placeholderAvatar
-        }}
+        onError={() => setImageFailed(true)}
       />
       <div className={styles.memberInfo}>
         <p className={styles.memberName}>{member.name}</p>

@@ -88,22 +88,52 @@ func (s *Service) SaveTenantPersonalProfile(ctx context.Context, userID, role st
 
 // UploadTenantAvatar stores the avatar in storage and persists its public URL.
 func (s *Service) UploadTenantAvatar(ctx context.Context, userID, role, filename, contentType string, fileData []byte) (string, error) {
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return "", ErrTenantRequired
-	}
-	if s.imageStorage == nil {
-		return "", errors.New("image upload is not configured")
-	}
-	if strings.TrimSpace(userID) == "" {
-		return "", errors.New("user id is required")
-	}
-	if len(fileData) == 0 {
-		return "", errors.New("avatar file is required")
-	}
-	if len(fileData) > 2_000_000 {
-		return "", errors.New("avatar file exceeds maximum size of 2MB")
+	if err := s.validateTenantAvatarUpload(userID, role, fileData); err != nil {
+		return "", err
 	}
 
+	ext, err := resolveAvatarExtension(filename, contentType)
+	if err != nil {
+		return "", err
+	}
+	contentType, err = resolveAvatarContentType(contentType, ext)
+	if err != nil {
+		return "", err
+	}
+	objectPath := buildAvatarObjectPath(userID, ext)
+	if err := s.imageStorage.UploadObject(ctx, profileAvatarsBucket, objectPath, contentType, fileData); err != nil {
+		return "", fmt.Errorf("upload tenant avatar: %w", err)
+	}
+	if err := s.repo.UpdateTenantAvatarURL(ctx, userID, objectPath); err != nil {
+		return "", err
+	}
+	avatarURL, err := s.signedAvatarURL(ctx, objectPath)
+	if err != nil {
+		return "", err
+	}
+	return avatarURL, nil
+}
+
+func (s *Service) validateTenantAvatarUpload(userID, role string, fileData []byte) error {
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return ErrTenantRequired
+	}
+	if s.imageStorage == nil {
+		return errors.New("image upload is not configured")
+	}
+	if strings.TrimSpace(userID) == "" {
+		return errors.New("user id is required")
+	}
+	if len(fileData) == 0 {
+		return errors.New("avatar file is required")
+	}
+	if len(fileData) > 2_000_000 {
+		return errors.New("avatar file exceeds maximum size of 2MB")
+	}
+	return nil
+}
+
+func resolveAvatarExtension(filename, contentType string) (string, error) {
 	ext := strings.ToLower(strings.TrimSpace(filepath.Ext(filename)))
 	if ext == "" {
 		exts, _ := mime.ExtensionsByType(contentType)
@@ -117,25 +147,22 @@ func (s *Service) UploadTenantAvatar(ctx context.Context, userID, role, filename
 	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp" {
 		return "", fmt.Errorf("avatar file type %q is not supported", ext)
 	}
+	return ext, nil
+}
+
+func resolveAvatarContentType(contentType, ext string) (string, error) {
 	if strings.TrimSpace(contentType) == "" {
 		contentType = mime.TypeByExtension(ext)
 	}
-	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(contentType)), "image/") {
+	contentType = strings.ToLower(strings.TrimSpace(contentType))
+	if !strings.HasPrefix(contentType, "image/") {
 		return "", errors.New("avatar file must be an image")
 	}
+	return contentType, nil
+}
 
-	objectPath := fmt.Sprintf("avatars/%s/profile%s", strings.TrimSpace(userID), ext)
-	if err := s.imageStorage.UploadObject(ctx, profileAvatarsBucket, objectPath, contentType, fileData); err != nil {
-		return "", fmt.Errorf("upload tenant avatar: %w", err)
-	}
-	if err := s.repo.UpdateTenantAvatarURL(ctx, userID, objectPath); err != nil {
-		return "", err
-	}
-	avatarURL, err := s.signedAvatarURL(ctx, objectPath)
-	if err != nil {
-		return "", err
-	}
-	return avatarURL, nil
+func buildAvatarObjectPath(userID, ext string) string {
+	return fmt.Sprintf("avatars/%s/profile%s", strings.TrimSpace(userID), ext)
 }
 
 func (s *Service) signedAvatarURL(ctx context.Context, avatarValue string) (string, error) {

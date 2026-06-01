@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import type { TenantGroupInvitation } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
@@ -15,16 +16,16 @@ export default function TenantGroupInvitationCard({
   onReject,
   isResponding = false,
 }: TenantGroupInvitationCardProps) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const avatarSrc = !imageFailed && invitation.user.avatarUrl ? invitation.user.avatarUrl : placeholderAvatar
+
   return (
     <div className={styles.invitationCard}>
       <img
-        src={invitation.user.avatarUrl || placeholderAvatar}
+        src={avatarSrc}
         alt={invitation.user.name}
         className={styles.memberAvatar}
-        onError={(event) => {
-          event.currentTarget.onerror = null
-          event.currentTarget.src = placeholderAvatar
-        }}
+        onError={() => setImageFailed(true)}
       />
       <div className={styles.invitationInfo}>
         <p>{invitation.user.name}</p>
