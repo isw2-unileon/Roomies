@@ -2,6 +2,8 @@ package httpadapter
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -35,11 +37,19 @@ type tenantProfileRequest struct {
 	PartyFrequency   string `json:"party_frequency,omitempty"`
 }
 
+type tenantPersonalProfileRequest struct {
+	FullName  string `json:"full_name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
 // RegisterRoutes wires profile endpoints into the API router.
 func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service) {
 	h := &handler{profileService: profileService}
 	api.GET("/profile/status", h.status)
 	api.POST("/tenant-profile", h.saveTenantProfile)
+	api.GET("/tenant-profile/personal", h.getTenantPersonalProfile)
+	api.PUT("/tenant-profile/personal", h.saveTenantPersonalProfile)
+	api.POST("/tenant-profile/avatar", h.uploadTenantAvatar)
 }
 
 func (h *handler) status(c *gin.Context) {
@@ -81,6 +91,100 @@ func (h *handler) saveTenantProfile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "tenant profile saved", "onboarding_complete": true})
+}
+
+func (h *handler) getTenantPersonalProfile(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	personalProfile, err := h.profileService.GetTenantPersonalProfile(c.Request.Context(), userID, role)
+	if err != nil {
+		if errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load tenant personal profile"})
+		return
+	}
+	if personalProfile == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tenant profile not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"user_id":    personalProfile.UserID,
+		"full_name":  personalProfile.FullName,
+		"email":      personalProfile.Email,
+		"avatar_url": personalProfile.AvatarURL,
+	})
+}
+
+func (h *handler) saveTenantPersonalProfile(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	var request tenantPersonalProfileRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	fullName := strings.TrimSpace(request.FullName)
+	if len(fullName) < 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "full_name must be at least 2 characters"})
+		return
+	}
+	avatarURL := strings.TrimSpace(request.AvatarURL)
+	err := h.profileService.SaveTenantPersonalProfile(c.Request.Context(), userID, role, profile.TenantPersonalProfileInput{
+		FullName:  fullName,
+		AvatarURL: avatarURL,
+	})
+	if err != nil {
+		if errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save tenant personal profile"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "tenant personal profile saved"})
+}
+
+func (h *handler) uploadTenantAvatar(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "avatar file is required"})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fileHeader.Filename)})
+		return
+	}
+	fileData, readErr := io.ReadAll(file)
+	closeErr := file.Close()
+	if readErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fileHeader.Filename)})
+		return
+	}
+	if closeErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fileHeader.Filename)})
+		return
+	}
+	avatarURL, err := h.profileService.UploadTenantAvatar(c.Request.Context(), userID, role, fileHeader.Filename, fileHeader.Header.Get("Content-Type"), fileData)
+	if err != nil {
+		if errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "tenant avatar uploaded", "avatar_url": avatarURL})
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {

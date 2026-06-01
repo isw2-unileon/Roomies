@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getTenantApartmentDetail, listTenantApartments } from './tenantService'
+import {
+  getTenantApartmentDetail,
+  getTenantPersonalProfile,
+  listTenantApartments,
+  saveTenantPersonalProfile,
+  uploadTenantAvatar,
+} from './tenantService'
 
 describe('tenantService', () => {
   beforeEach(() => {
@@ -103,5 +109,62 @@ describe('tenantService', () => {
     })
 
     expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', { credentials: 'include' })
+  })
+
+  test('loads tenant personal profile data', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({
+		user_id: 'user-1',
+		full_name: 'Jairo Test',
+		email: 'jairo@example.test',
+		avatar_url: 'data:image/png;base64,abc',
+	  }),
+	} as Response)
+
+	await expect(getTenantPersonalProfile()).resolves.toEqual({
+	  userId: 'user-1',
+	  fullName: 'Jairo Test',
+	  email: 'jairo@example.test',
+	  avatarUrl: 'data:image/png;base64,abc',
+	})
+
+	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/personal', { credentials: 'include' })
+  })
+
+  test('saves tenant personal profile data', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({ message: 'tenant personal profile saved' }),
+	} as Response)
+
+	await expect(saveTenantPersonalProfile({
+	  fullName: 'Jairo Test',
+	})).resolves.toBe('tenant personal profile saved')
+
+	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/personal', {
+	  method: 'PUT',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({
+		full_name: 'Jairo Test',
+	  }),
+	  credentials: 'include',
+	})
+  })
+
+  test('uploads tenant avatar as multipart form data', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({ avatar_url: 'https://example.test/avatar.png' }),
+	} as Response)
+
+	const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })
+	await expect(uploadTenantAvatar(file)).resolves.toBe('https://example.test/avatar.png')
+
+	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/avatar', expect.objectContaining({
+	  method: 'POST',
+	  body: expect.any(FormData),
+	  credentials: 'include',
+	}))
   })
 })

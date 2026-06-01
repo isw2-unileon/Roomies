@@ -24,6 +24,13 @@ export interface TenantProfile {
     compatibilityAverage: number
 }
 
+export interface TenantPersonalProfile {
+    userId: string
+    fullName: string
+    email: string
+    avatarUrl: string
+}
+
 export interface TenantProperty {
     id: string
     titleKey: string

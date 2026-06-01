@@ -3,10 +3,17 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/group"
 )
+
+const signedAvatarURLTTLSeconds = 3600
+
+type imageStorage interface {
+	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
+}
 
 type repository interface {
 	ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error)
@@ -66,12 +73,13 @@ var ErrJoinRequestNotFound = errors.New("join request not found")
 
 // Service contains tenant group business logic.
 type Service struct {
-	repo repository
+	repo         repository
+	imageStorage imageStorage
 }
 
 // NewService creates a tenant group service.
-func NewService(repo repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo repository, imageStorage imageStorage) *Service {
+	return &Service{repo: repo, imageStorage: imageStorage}
 }
 
 // ListTenantGroups returns the groups related to the authenticated tenant.
@@ -89,7 +97,14 @@ func (s *Service) ListTenantGroups(ctx context.Context, userID, role string, fil
 		filters.SortBy = "recent"
 	}
 
-	return s.repo.ListTenantGroups(ctx, strings.TrimSpace(userID), filters)
+	groups, err := s.repo.ListTenantGroups(ctx, strings.TrimSpace(userID), filters)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.signGroups(ctx, groups); err != nil {
+		return nil, err
+	}
+	return groups, nil
 }
 
 // GetTenantGroupByID returns a group detail if the tenant is related to it.
@@ -109,6 +124,9 @@ func (s *Service) GetTenantGroupByID(ctx context.Context, groupID, userID, role 
 		return nil, ErrGroupNotFound
 	}
 
+	if err := s.signGroup(ctx, result); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
@@ -167,7 +185,14 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 	filters.Search = strings.TrimSpace(filters.Search)
 	filters.University = strings.TrimSpace(filters.University)
 
-	return s.repo.ListGroupCandidates(ctx, strings.TrimSpace(currentUserID), filters)
+	candidates, err := s.repo.ListGroupCandidates(ctx, strings.TrimSpace(currentUserID), filters)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.signCandidates(ctx, candidates); err != nil {
+		return nil, err
+	}
+	return candidates, nil
 }
 
 // AcceptInvitation accepts a pending group invitation and adds the tenant as member.
@@ -310,7 +335,85 @@ func (s *Service) ListJoinRequests(ctx context.Context, groupID, userID, role st
 		return nil, ErrForbidden
 	}
 
-	return s.repo.ListJoinRequests(ctx, groupID)
+	joinRequests, err := s.repo.ListJoinRequests(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.signJoinRequests(ctx, joinRequests); err != nil {
+		return nil, err
+	}
+	return joinRequests, nil
+}
+
+func (s *Service) signGroups(ctx context.Context, groups []group.Group) error {
+	for idx := range groups {
+		if err := s.signGroup(ctx, &groups[idx]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) signGroup(ctx context.Context, item *group.Group) error {
+	for idx := range item.Members {
+		signedURL, err := s.signAvatarURL(ctx, item.Members[idx].AvatarURL)
+		if err != nil {
+			return err
+		}
+		item.Members[idx].AvatarURL = signedURL
+	}
+	for idx := range item.PendingInvitations {
+		signedURL, err := s.signAvatarURL(ctx, item.PendingInvitations[idx].User.AvatarURL)
+		if err != nil {
+			return err
+		}
+		item.PendingInvitations[idx].User.AvatarURL = signedURL
+	}
+	for idx := range item.JoinRequests {
+		signedURL, err := s.signAvatarURL(ctx, item.JoinRequests[idx].Requester.AvatarURL)
+		if err != nil {
+			return err
+		}
+		item.JoinRequests[idx].Requester.AvatarURL = signedURL
+	}
+	return nil
+}
+
+func (s *Service) signCandidates(ctx context.Context, candidates []group.Candidate) error {
+	for idx := range candidates {
+		signedURL, err := s.signAvatarURL(ctx, candidates[idx].AvatarURL)
+		if err != nil {
+			return err
+		}
+		candidates[idx].AvatarURL = signedURL
+	}
+	return nil
+}
+
+func (s *Service) signJoinRequests(ctx context.Context, joinRequests []group.JoinRequest) error {
+	for idx := range joinRequests {
+		signedURL, err := s.signAvatarURL(ctx, joinRequests[idx].Requester.AvatarURL)
+		if err != nil {
+			return err
+		}
+		joinRequests[idx].Requester.AvatarURL = signedURL
+	}
+	return nil
+}
+
+func (s *Service) signAvatarURL(ctx context.Context, avatarURL string) (string, error) {
+	avatarURL = strings.TrimSpace(avatarURL)
+	if avatarURL == "" || strings.HasPrefix(avatarURL, "http://") || strings.HasPrefix(avatarURL, "https://") || strings.HasPrefix(avatarURL, "data:image/") {
+		return avatarURL, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, "profile-avatars", avatarURL, signedAvatarURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign group avatar: %w", err)
+	}
+	return signedURL, nil
 }
 
 // VoteJoinRequest casts a member vote on a pending join request.

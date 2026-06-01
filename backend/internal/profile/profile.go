@@ -23,6 +23,12 @@ type TenantProfileInput struct {
 	PartyFrequency   string
 }
 
+// TenantPersonalProfileInput contains editable account fields shown in profile.
+type TenantPersonalProfileInput struct {
+	FullName  string
+	AvatarURL string
+}
+
 // TenantProfile contains tenant profile data used by matching and application use cases.
 type TenantProfile struct {
 	UserID        string
@@ -36,4 +42,12 @@ type TenantProfile struct {
 	WorkSchedule  string
 	Age           int
 	University    string
+}
+
+// TenantPersonalProfile contains editable account data for a tenant user.
+type TenantPersonalProfile struct {
+	UserID     string
+	FullName   string
+	Email      string
+	AvatarURL  string
 }

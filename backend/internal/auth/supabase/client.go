@@ -24,6 +24,16 @@ type Client struct {
 	client  *http.Client
 }
 
+// PublicObjectURL builds the public URL for an object in a public bucket.
+func (c *Client) PublicObjectURL(bucket, objectPath string) string {
+	bucket = strings.Trim(strings.TrimSpace(bucket), "/")
+	objectPath = strings.Trim(strings.TrimSpace(objectPath), "/")
+	if bucket == "" || objectPath == "" {
+		return ""
+	}
+	return c.baseURL + "/storage/v1/object/public/" + url.PathEscape(bucket) + "/" + escapeStorageObjectPath(objectPath)
+}
+
 type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`

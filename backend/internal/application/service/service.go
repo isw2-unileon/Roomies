@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/apartment"
@@ -10,6 +11,12 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/matching"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 )
+
+const signedAvatarURLTTLSeconds = 3600
+
+type imageStorage interface {
+	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
+}
 
 type repository interface {
 	HasActiveApplication(ctx context.Context, apartmentID, tenantID string) (bool, error)
@@ -52,11 +59,12 @@ type Service struct {
 	repo            repository
 	apartmentReader apartmentReader
 	profileReader   profileReader
+	imageStorage    imageStorage
 }
 
 // NewService creates the application service.
-func NewService(repo repository, apartmentReader apartmentReader, profileReader profileReader) *Service {
-	return &Service{repo: repo, apartmentReader: apartmentReader, profileReader: profileReader}
+func NewService(repo repository, apartmentReader apartmentReader, profileReader profileReader, imageStorage imageStorage) *Service {
+	return &Service{repo: repo, apartmentReader: apartmentReader, profileReader: profileReader, imageStorage: imageStorage}
 }
 
 // GetTenantApplicationForApartment returns the most recent tenant application for an apartment.
@@ -180,7 +188,29 @@ func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID, viewer
 			Compatibility: score,
 		})
 	}
+	for idx := range result {
+		signedURL, signErr := s.signAvatarURL(ctx, result[idx].AvatarURL)
+		if signErr != nil {
+			return nil, signErr
+		}
+		result[idx].AvatarURL = signedURL
+	}
 	return result, nil
+}
+
+func (s *Service) signAvatarURL(ctx context.Context, avatarURL string) (string, error) {
+	avatarURL = strings.TrimSpace(avatarURL)
+	if avatarURL == "" || strings.HasPrefix(avatarURL, "http://") || strings.HasPrefix(avatarURL, "https://") || strings.HasPrefix(avatarURL, "data:image/") {
+		return avatarURL, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, "profile-avatars", avatarURL, signedAvatarURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign application avatar: %w", err)
+	}
+	return signedURL, nil
 }
 
 func authorizeInterestedTenantsViewer(apartmentRow *apartment.Apartment, viewerID, role string) error {
