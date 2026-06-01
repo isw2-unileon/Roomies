@@ -16,6 +16,10 @@ export default function TenantGroupMemberCard({ member }: TenantGroupMemberCardP
         src={member.avatarUrl || placeholderAvatar}
         alt={member.name}
         className={styles.memberAvatar}
+        onError={(event) => {
+          event.currentTarget.onerror = null
+          event.currentTarget.src = placeholderAvatar
+        }}
       />
       <div className={styles.memberInfo}>
         <p className={styles.memberName}>{member.name}</p>

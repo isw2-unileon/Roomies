@@ -15,8 +15,10 @@ const profileAvatarsBucket = "profile-avatars"
 
 type imageStorage interface {
 	UploadObject(ctx context.Context, bucket, objectPath, contentType string, fileData []byte) error
-	PublicObjectURL(bucket, objectPath string) string
+	CreateSignedURL(ctx context.Context, bucket, path string, expiresIn int) (string, error)
 }
+
+const signedAvatarURLTTLSeconds = 3600
 
 type repository interface {
 	LookupRoleByUserID(ctx context.Context, userID string) (string, error)
@@ -64,7 +66,16 @@ func (s *Service) GetTenantPersonalProfile(ctx context.Context, userID, role str
 	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
 		return nil, ErrTenantRequired
 	}
-	return s.repo.GetTenantPersonalProfile(ctx, userID)
+	personalProfile, err := s.repo.GetTenantPersonalProfile(ctx, userID)
+	if err != nil || personalProfile == nil {
+		return personalProfile, err
+	}
+	result := *personalProfile
+	result.AvatarURL, err = s.signedAvatarURL(ctx, personalProfile.AvatarURL)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // SaveTenantPersonalProfile updates editable account fields for a tenant user.
@@ -117,12 +128,30 @@ func (s *Service) UploadTenantAvatar(ctx context.Context, userID, role, filename
 	if err := s.imageStorage.UploadObject(ctx, profileAvatarsBucket, objectPath, contentType, fileData); err != nil {
 		return "", fmt.Errorf("upload tenant avatar: %w", err)
 	}
-	avatarURL := s.imageStorage.PublicObjectURL(profileAvatarsBucket, objectPath)
-	if avatarURL == "" {
-		return "", errors.New("could not build public avatar URL")
+	if err := s.repo.UpdateTenantAvatarURL(ctx, userID, objectPath); err != nil {
+		return "", err
 	}
-	if err := s.repo.UpdateTenantAvatarURL(ctx, userID, avatarURL); err != nil {
+	avatarURL, err := s.signedAvatarURL(ctx, objectPath)
+	if err != nil {
 		return "", err
 	}
 	return avatarURL, nil
+}
+
+func (s *Service) signedAvatarURL(ctx context.Context, avatarValue string) (string, error) {
+	avatarValue = strings.TrimSpace(avatarValue)
+	if avatarValue == "" {
+		return "", nil
+	}
+	if strings.HasPrefix(avatarValue, "http://") || strings.HasPrefix(avatarValue, "https://") || strings.HasPrefix(avatarValue, "data:image/") {
+		return avatarValue, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, profileAvatarsBucket, avatarValue, signedAvatarURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign tenant avatar: %w", err)
+	}
+	return signedURL, nil
 }

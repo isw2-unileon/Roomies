@@ -16,7 +16,7 @@ type fakeProfileRepository struct {
 }
 
 type fakeImageStorage struct {
-	publicURL           string
+	signedURL           string
 	uploadedBucket      string
 	uploadedPath        string
 	uploadedContentType string
@@ -61,11 +61,11 @@ func (f *fakeImageStorage) UploadObject(ctx context.Context, bucket, objectPath,
 	return nil
 }
 
-func (f *fakeImageStorage) PublicObjectURL(bucket, objectPath string) string {
-	if f.publicURL != "" {
-		return f.publicURL
+func (f *fakeImageStorage) CreateSignedURL(ctx context.Context, bucket, objectPath string, expiresIn int) (string, error) {
+	if f.signedURL != "" {
+		return f.signedURL, nil
 	}
-	return "https://example.test/storage/v1/object/public/" + bucket + "/" + objectPath
+	return "https://example.test/storage/v1/object/sign/" + bucket + "/" + objectPath + "?token=abc", nil
 }
 
 func TestServiceAcceptsProfileRepositoryInterface(t *testing.T) {
@@ -99,8 +99,9 @@ func TestSaveTenantProfileRejectsNonTenantRole(t *testing.T) {
 }
 
 func TestGetTenantPersonalProfileReturnsRepositoryData(t *testing.T) {
-	repo := &fakeProfileRepository{personal: &profile.TenantPersonalProfile{UserID: "user-1", FullName: "Jairo", Email: "jairo@example.test"}}
-	svc := NewService(repo, nil)
+	repo := &fakeProfileRepository{personal: &profile.TenantPersonalProfile{UserID: "user-1", FullName: "Jairo", Email: "jairo@example.test", AvatarURL: "avatars/user-1/profile.png"}}
+	storage := &fakeImageStorage{signedURL: "https://example.test/avatar-signed.png"}
+	svc := NewService(repo, storage)
 
 	personal, err := svc.GetTenantPersonalProfile(context.Background(), "user-1", "tenant")
 	if err != nil {
@@ -108,6 +109,9 @@ func TestGetTenantPersonalProfileReturnsRepositoryData(t *testing.T) {
 	}
 	if personal == nil || personal.Email != "jairo@example.test" {
 		t.Fatalf("personal = %#v, want email jairo@example.test", personal)
+	}
+	if personal.AvatarURL != "https://example.test/avatar-signed.png" {
+		t.Fatalf("avatarURL = %q, want signed URL", personal.AvatarURL)
 	}
 }
 
@@ -122,7 +126,7 @@ func TestSaveTenantPersonalProfileRejectsNonTenantRole(t *testing.T) {
 
 func TestUploadTenantAvatarStoresPublicURL(t *testing.T) {
 	repo := &fakeProfileRepository{}
-	storage := &fakeImageStorage{publicURL: "https://example.test/avatar.png"}
+	storage := &fakeImageStorage{signedURL: "https://example.test/avatar.png"}
 	svc := NewService(repo, storage)
 
 	avatarURL, err := svc.UploadTenantAvatar(context.Background(), "user-1", "tenant", "avatar.png", "image/png", []byte("image"))
@@ -135,7 +139,7 @@ func TestUploadTenantAvatarStoresPublicURL(t *testing.T) {
 	if storage.uploadedBucket != "profile-avatars" {
 		t.Fatalf("bucket = %q, want profile-avatars", storage.uploadedBucket)
 	}
-	if repo.savedPerson.AvatarURL != "https://example.test/avatar.png" {
+	if repo.savedPerson.AvatarURL != "avatars/user-1/profile.png" {
 		t.Fatalf("saved avatar = %q", repo.savedPerson.AvatarURL)
 	}
 }

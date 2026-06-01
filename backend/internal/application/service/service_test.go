@@ -109,7 +109,7 @@ func (f fakeProfileReader) GetTenantProfileByUserID(ctx context.Context, userID 
 
 func TestApplyToApartmentCreatesTenantApplication(t *testing.T) {
 	repo := &fakeApplicationRepository{}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	applicationID, err := svc.ApplyToApartment(context.Background(), "apartment-1", "tenant-1", "tenant")
 	if err != nil {
@@ -125,7 +125,7 @@ func TestApplyToApartmentCreatesTenantApplication(t *testing.T) {
 
 func TestApplyToApartmentRejectsDuplicateActiveApplication(t *testing.T) {
 	repo := &fakeApplicationRepository{hasActiveApplication: true}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	_, err := svc.ApplyToApartment(context.Background(), "apartment-1", "tenant-1", "tenant")
 	if !errors.Is(err, ErrApplicationAlreadyExists) {
@@ -135,7 +135,7 @@ func TestApplyToApartmentRejectsDuplicateActiveApplication(t *testing.T) {
 
 func TestListInterestedTenantsCalculatesCompatibility(t *testing.T) {
 	repo := &fakeApplicationRepository{}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	result, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "tenant-1", "tenant")
 	if err != nil {
@@ -152,7 +152,7 @@ func TestListInterestedTenantsCalculatesCompatibility(t *testing.T) {
 func TestListInterestedTenantsAllowsOwnerForOwnApartment(t *testing.T) {
 	repo := &fakeApplicationRepository{}
 	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "HIDDEN"}}
-	svc := NewService(repo, reader, fakeProfileReader{})
+	svc := NewService(repo, reader, fakeProfileReader{}, nil)
 
 	result, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "owner-1", "owner")
 	if err != nil {
@@ -166,7 +166,7 @@ func TestListInterestedTenantsAllowsOwnerForOwnApartment(t *testing.T) {
 func TestListInterestedTenantsRejectsOwnerForOtherApartment(t *testing.T) {
 	repo := &fakeApplicationRepository{}
 	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-2", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: apartment.StatusAvailable}}
-	svc := NewService(repo, reader, fakeProfileReader{})
+	svc := NewService(repo, reader, fakeProfileReader{}, nil)
 
 	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "owner-1", "owner")
 	if !errors.Is(err, ErrInterestedTenantsForbidden) {
@@ -177,7 +177,7 @@ func TestListInterestedTenantsRejectsOwnerForOtherApartment(t *testing.T) {
 func TestListInterestedTenantsHidesClosedApartmentFromTenant(t *testing.T) {
 	repo := &fakeApplicationRepository{}
 	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "CLOSED"}}
-	svc := NewService(repo, reader, fakeProfileReader{})
+	svc := NewService(repo, reader, fakeProfileReader{}, nil)
 
 	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "tenant-1", "tenant")
 	if !errors.Is(err, ErrApartmentNotFound) {
@@ -187,7 +187,7 @@ func TestListInterestedTenantsHidesClosedApartmentFromTenant(t *testing.T) {
 
 func TestListInterestedTenantsRejectsUnknownRole(t *testing.T) {
 	repo := &fakeApplicationRepository{}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "user-1", "admin")
 	if !errors.Is(err, ErrInterestedTenantsForbidden) {
@@ -197,7 +197,7 @@ func TestListInterestedTenantsRejectsUnknownRole(t *testing.T) {
 
 func TestListTenantApplicationsMapsStatus(t *testing.T) {
 	repo := &fakeApplicationRepository{}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	result, err := svc.ListTenantApplications(context.Background(), "tenant-1", "tenant")
 	if err != nil {
@@ -213,7 +213,7 @@ func TestListTenantApplicationsMapsStatus(t *testing.T) {
 
 func TestCancelTenantApplicationRejectsNotCancelable(t *testing.T) {
 	repo := &fakeApplicationRepository{cancelApplicationUpdated: false}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	err := svc.CancelTenantApplication(context.Background(), "application-1", "tenant-1", "tenant")
 	if !errors.Is(err, ErrApplicationNotCancelable) {
@@ -223,7 +223,7 @@ func TestCancelTenantApplicationRejectsNotCancelable(t *testing.T) {
 
 func TestCancelTenantApplicationUpdatesPendingApplication(t *testing.T) {
 	repo := &fakeApplicationRepository{cancelApplicationUpdated: true}
-	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{})
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
 
 	err := svc.CancelTenantApplication(context.Background(), "application-1", "tenant-1", "tenant")
 	if err != nil {

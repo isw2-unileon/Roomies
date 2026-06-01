@@ -206,12 +206,10 @@ func (r *Repository) UpdateTenantPersonalProfile(ctx context.Context, userID str
 		ctx,
 		`UPDATE public.users SET
 			full_name = $2,
-			avatar_url = $3,
 			updated_at = NOW()
 		WHERE id = $1`,
 		userID,
 		strings.TrimSpace(input.FullName),
-		nullIfEmpty(input.AvatarURL),
 	)
 	if err != nil {
 		return fmt.Errorf("update tenant personal profile: %w", err)

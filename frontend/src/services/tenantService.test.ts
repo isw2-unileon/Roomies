@@ -140,7 +140,6 @@ describe('tenantService', () => {
 
 	await expect(saveTenantPersonalProfile({
 	  fullName: 'Jairo Test',
-	  avatarUrl: 'data:image/png;base64,abc',
 	})).resolves.toBe('tenant personal profile saved')
 
 	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/personal', {
@@ -148,7 +147,6 @@ describe('tenantService', () => {
 	  headers: { 'Content-Type': 'application/json' },
 	  body: JSON.stringify({
 		full_name: 'Jairo Test',
-		avatar_url: 'data:image/png;base64,abc',
 	  }),
 	  credentials: 'include',
 	})

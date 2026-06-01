@@ -134,7 +134,6 @@ export default function TenantProfilePage() {
     try {
       const message = await saveTenantPersonalProfile({
         fullName: fullName.trim(),
-        avatarUrl,
       })
       showProfileSuccess(message ?? t('tenantProfile.personal.saveSuccess'))
     } catch (error) {
@@ -201,7 +200,15 @@ export default function TenantProfilePage() {
               ) : (
                 <form className={styles.form} noValidate onSubmit={handleSubmit}>
                   <div className={styles.avatarSection}>
-                    <img src={profileImage} alt={t('tenantProfile.personal.avatarAlt')} className={styles.avatar} />
+                    <img
+                      src={profileImage}
+                      alt={t('tenantProfile.personal.avatarAlt')}
+                      className={styles.avatar}
+                      onError={(event) => {
+                        event.currentTarget.onerror = null
+                        event.currentTarget.src = placeholderAvatar
+                      }}
+                    />
                     <div className={styles.avatarCopy}>
                       <p className={styles.avatarTitle}>{t('tenantProfile.personal.avatarTitle')}</p>
                       <p className={styles.avatarHint}>{t('tenantProfile.personal.avatarHint')}</p>

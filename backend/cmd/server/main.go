@@ -68,8 +68,8 @@ func main() {
 	}
 	profileService := profileservice.NewService(profileRepo, storageClient)
 
-	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo)
-	groupService := groupservice.NewService(groupRepo)
+	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo, storageClient)
+	groupService := groupservice.NewService(groupRepo, storageClient)
 	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner, profileRepo, applicationService)
 	geocodeService := geocodenominatim.NewService()
 	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, groupService, geocodeService)

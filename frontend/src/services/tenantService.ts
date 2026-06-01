@@ -32,7 +32,6 @@ export interface SaveTenantProfileInput {
 
 export interface SaveTenantPersonalProfileInput {
   fullName: string
-  avatarUrl: string
 }
 
 interface TenantProfileResponseDto {
@@ -567,7 +566,6 @@ export async function saveTenantPersonalProfile(input: SaveTenantPersonalProfile
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
 			full_name: input.fullName,
-			avatar_url: input.avatarUrl,
 		}),
 	})
 	const data = (await response.json()) as TenantProfileResponseDto
