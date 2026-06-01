@@ -23,7 +23,6 @@ export default function TenantProfilePage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('')
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
 
   const profileNotice = useNotice()
@@ -76,12 +75,6 @@ export default function TenantProfilePage() {
     }
   }, [clearProfileNotice, showProfileError, t])
 
-  useEffect(() => () => {
-    if (avatarPreviewUrl) {
-      URL.revokeObjectURL(avatarPreviewUrl)
-    }
-  }, [avatarPreviewUrl])
-
   async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) {
@@ -101,11 +94,6 @@ export default function TenantProfilePage() {
       event.target.value = ''
       return
     }
-    if (avatarPreviewUrl) {
-      URL.revokeObjectURL(avatarPreviewUrl)
-    }
-    const previewUrl = URL.createObjectURL(file)
-    setAvatarPreviewUrl(previewUrl)
     setIsUploadingAvatar(true)
 
     try {
@@ -114,8 +102,6 @@ export default function TenantProfilePage() {
       setAvatarLoadFailed(false)
       showProfileSuccess(t('tenantProfile.personal.avatarUploaded'))
     } catch (error) {
-      URL.revokeObjectURL(previewUrl)
-      setAvatarPreviewUrl('')
       showProfileError(error instanceof Error ? error.message : t('tenantProfile.personal.errors.avatarReadFailed'))
     } finally {
       setIsUploadingAvatar(false)
@@ -164,7 +150,7 @@ export default function TenantProfilePage() {
     }
   }
 
-  const profileImage = avatarPreviewUrl || (!avatarLoadFailed && avatarUrl ? avatarUrl : placeholderAvatar)
+  const profileImage = !avatarLoadFailed && avatarUrl ? avatarUrl : placeholderAvatar
 
   return (
     <TenantLayout>
