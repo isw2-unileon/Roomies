@@ -173,6 +173,15 @@ export interface TenantGroupApartment {
     imageUrl: string
 }
 
+export interface TenantGroupApartmentRequest {
+	id: string
+	apartmentId: string
+	groupId: string
+	type: string
+	status: string
+	createdAt: string
+}
+
 export interface TenantGroupListItem {
     id: string
     name: string
@@ -188,6 +197,7 @@ export interface TenantGroupListItem {
     averageBudgetMin: number
     averageBudgetMax: number
     apartment: TenantGroupApartment | null
+	currentApartmentRequest: TenantGroupApartmentRequest | null
 }
 
 export interface TenantGroupProfile {

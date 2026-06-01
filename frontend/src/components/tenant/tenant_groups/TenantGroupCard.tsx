@@ -59,6 +59,22 @@ function formatApartmentSpots(group: TenantGroupListItem) {
     return `${group.apartment.availableSpots} plazas disponibles`
 }
 
+function formatApartmentRequestStatus(status: string) {
+	if (status === 'FULLY_CONFIRMED') {
+		return 'Solicitud grupal aceptada'
+	}
+	if (status === 'REJECTED_BY_OWNER') {
+		return 'Solicitud grupal rechazada'
+	}
+	if (status === 'CANCELLED') {
+		return 'Solicitud grupal cancelada'
+	}
+	if (status === 'PENDING_CONFIRMED_TENANTS') {
+		return 'Pendiente del grupo'
+	}
+	return 'Solicitud grupal pendiente'
+}
+
 export default function TenantGroupCard({
     group,
     onViewGroup,
@@ -114,6 +130,7 @@ export default function TenantGroupCard({
                     <div className={styles.groupStats}>
                         <span>{group.acceptedMembersCount} miembros aceptados</span>
                         <span>{group.pendingInvitationsCount} invitaciones pendientes</span>
+						{group.currentApartmentRequest ? <span>{formatApartmentRequestStatus(group.currentApartmentRequest.status)}</span> : null}
                     </div>
                 </div>
             </div>

@@ -32,23 +32,33 @@ type voteJoinRequestBody struct {
 }
 
 type groupResponse struct {
-	ID                      string                `json:"id"`
-	Name                    string                `json:"name"`
-	Description             string                `json:"description"`
-	Status                  string                `json:"status"`
-	CreatedBy               string                `json:"created_by"`
-	CreatedAt               string                `json:"created_at"`
-	UserRelation            string                `json:"user_relation"`
-	InvitationID            string                `json:"invitation_id"`
-	AcceptedMembersCount    int                   `json:"accepted_members_count"`
-	PendingInvitationsCount int                   `json:"pending_invitations_count"`
-	IsFullyAccepted         bool                  `json:"is_fully_accepted"`
-	AverageBudgetMin        int                   `json:"average_budget_min"`
-	AverageBudgetMax        int                   `json:"average_budget_max"`
-	Apartment               *apartmentResponse    `json:"apartment"`
-	Members                 []memberResponse      `json:"members,omitempty"`
-	PendingInvitations      []invitationResponse  `json:"pending_invitations,omitempty"`
-	JoinRequests            []joinRequestResponse `json:"join_requests,omitempty"`
+	ID                      string                    `json:"id"`
+	Name                    string                    `json:"name"`
+	Description             string                    `json:"description"`
+	Status                  string                    `json:"status"`
+	CreatedBy               string                    `json:"created_by"`
+	CreatedAt               string                    `json:"created_at"`
+	UserRelation            string                    `json:"user_relation"`
+	InvitationID            string                    `json:"invitation_id"`
+	AcceptedMembersCount    int                       `json:"accepted_members_count"`
+	PendingInvitationsCount int                       `json:"pending_invitations_count"`
+	IsFullyAccepted         bool                      `json:"is_fully_accepted"`
+	AverageBudgetMin        int                       `json:"average_budget_min"`
+	AverageBudgetMax        int                       `json:"average_budget_max"`
+	Apartment               *apartmentResponse        `json:"apartment"`
+	CurrentApartmentRequest *apartmentRequestResponse `json:"current_apartment_request"`
+	Members                 []memberResponse          `json:"members,omitempty"`
+	PendingInvitations      []invitationResponse      `json:"pending_invitations,omitempty"`
+	JoinRequests            []joinRequestResponse     `json:"join_requests,omitempty"`
+}
+
+type apartmentRequestResponse struct {
+	ID          string `json:"id"`
+	ApartmentID string `json:"apartment_id"`
+	GroupID     string `json:"group_id"`
+	Type        string `json:"type"`
+	Status      string `json:"status"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type joinRequestResponse struct {
@@ -465,9 +475,25 @@ func groupResponseFromDomain(item group.Group) groupResponse {
 		AverageBudgetMin:        item.AverageBudgetMin,
 		AverageBudgetMax:        item.AverageBudgetMax,
 		Apartment:               apartmentResponseFromDomain(item.Apartment),
+		CurrentApartmentRequest: apartmentRequestResponseFromDomain(item.CurrentApartmentRequest),
 		Members:                 memberResponses(item.Members),
 		PendingInvitations:      invitationResponses(item.PendingInvitations),
 		JoinRequests:            joinRequestResponses(item.JoinRequests),
+	}
+}
+
+func apartmentRequestResponseFromDomain(item *group.ApartmentRequest) *apartmentRequestResponse {
+	if item == nil {
+		return nil
+	}
+
+	return &apartmentRequestResponse{
+		ID:          item.ID,
+		ApartmentID: item.ApartmentID,
+		GroupID:     item.GroupID,
+		Type:        item.Type,
+		Status:      item.Status,
+		CreatedAt:   item.CreatedAt,
 	}
 }
 

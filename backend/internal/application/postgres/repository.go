@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
+	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -205,4 +206,453 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 	}
 
 	return result, nil
+}
+
+// GetGroupApplicationContext returns the metadata required to validate a group application.
+func (r *Repository) GetGroupApplicationContext(ctx context.Context, groupID, userID string) (*application.GroupApplicationContext, error) {
+	const query = `SELECT
+		g.id::text,
+		COALESCE(g.name, ''),
+		COALESCE(g.apartment_id::text, ''),
+		g.created_by::text,
+		(g.created_by = $2) AS is_creator,
+		EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.user_id = $2
+				AND gm.status = 'ACCEPTED'
+		) AS is_member,
+		(
+			COALESCE(g.owner_accepted, FALSE)
+			AND NOT EXISTS (
+				SELECT 1
+				FROM public.group_members gm
+				WHERE gm.group_id = g.id
+					AND gm.status = 'ACCEPTED'
+					AND gm.role <> 'owner'
+					AND COALESCE(gm.member_accepted, FALSE) = FALSE
+			)
+		) AS is_fully_accepted,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS accepted_members,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.status = 'PENDING'
+		), 0)::int AS pending_invites
+	FROM public.groups g
+	WHERE g.id = $1`
+
+	var item application.GroupApplicationContext
+	err := r.db.QueryRow(ctx, query, groupID, userID).Scan(
+		&item.GroupID,
+		&item.GroupName,
+		&item.ApartmentID,
+		&item.CreatedBy,
+		&item.IsCreator,
+		&item.IsMember,
+		&item.IsFullyAccepted,
+		&item.AcceptedMembers,
+		&item.PendingInvites,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get group application context: %w", err)
+	}
+
+	return &item, nil
+}
+
+// GetLatestGroupApplicationForApartment returns the most recent application sent by the group to the apartment.
+func (r *Repository) GetLatestGroupApplicationForApartment(ctx context.Context, apartmentID, groupID string) (*application.Record, error) {
+	const query = `SELECT
+		app.id::text,
+		app.apartment_id::text,
+		COALESCE(app.tenant_id::text, ''),
+		COALESCE(app.group_id::text, ''),
+		app.type,
+		app.status,
+		TO_CHAR(app.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+	FROM public.applications app
+	WHERE app.apartment_id = $1
+		AND app.group_id = $2
+	ORDER BY app.created_at DESC
+	LIMIT 1`
+
+	var item application.Record
+	err := r.db.QueryRow(ctx, query, apartmentID, groupID).Scan(
+		&item.ID,
+		&item.ApartmentID,
+		&item.TenantID,
+		&item.GroupID,
+		&item.Type,
+		&item.Status,
+		&item.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get latest group application: %w", err)
+	}
+
+	return &item, nil
+}
+
+// CreateGroupApplication creates a group application and marks the group as applied.
+func (r *Repository) CreateGroupApplication(ctx context.Context, apartmentID, groupID string) (string, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return "", fmt.Errorf("begin create group application: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	const insertQuery = `INSERT INTO public.applications (apartment_id, group_id, type, status)
+	VALUES ($1, $2, 'group', 'PENDING_OWNER')
+	RETURNING id::text`
+
+	var id string
+	if err := tx.QueryRow(ctx, insertQuery, apartmentID, groupID).Scan(&id); err != nil {
+		return "", fmt.Errorf("create group application: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `UPDATE public.groups SET status = 'APPLIED', updated_at = NOW() WHERE id = $1`, groupID); err != nil {
+		return "", fmt.Errorf("mark group as applied: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", fmt.Errorf("commit create group application: %w", err)
+	}
+
+	return id, nil
+}
+
+// ListOwnerApplications returns all applications received by apartments owned by the given user.
+func (r *Repository) ListOwnerApplications(ctx context.Context, ownerID string) ([]application.OwnerApplication, error) {
+	return r.listOwnerApplications(ctx, ownerID, "")
+}
+
+// GetOwnerApplicationByID returns one application received by the owner.
+func (r *Repository) GetOwnerApplicationByID(ctx context.Context, applicationID, ownerID string) (*application.OwnerApplication, error) {
+	items, err := r.listOwnerApplications(ctx, ownerID, applicationID)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, nil
+	}
+	return &items[0], nil
+}
+
+func (r *Repository) listOwnerApplications(ctx context.Context, ownerID, applicationID string) ([]application.OwnerApplication, error) {
+	const query = `SELECT
+		app.id::text,
+		app.apartment_id::text,
+		COALESCE(a.title, ''),
+		COALESCE(a.address, ''),
+		app.type,
+		app.status,
+		TO_CHAR(app.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE(tu.id::text, ''),
+		COALESCE(tu.full_name, ''),
+		COALESCE(tu.email, ''),
+		COALESCE(tu.avatar_url, ''),
+		COALESCE(g.id::text, ''),
+		COALESCE(g.name, ''),
+		COALESCE(creator.id::text, ''),
+		COALESCE(creator.full_name, ''),
+		COALESCE(creator.email, ''),
+		COALESCE(creator.avatar_url, '')
+	FROM public.applications app
+	INNER JOIN public.apartments a ON a.id = app.apartment_id
+	LEFT JOIN public.users tu ON tu.id = app.tenant_id
+	LEFT JOIN public.groups g ON g.id = app.group_id
+	LEFT JOIN public.users creator ON creator.id = g.created_by
+	WHERE a.owner_id = $1
+		AND ($2 = '' OR app.id::text = $2)
+	ORDER BY app.created_at DESC`
+
+	rows, err := r.db.Query(ctx, query, ownerID, applicationID)
+	if err != nil {
+		return nil, fmt.Errorf("list owner applications: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]application.OwnerApplication, 0)
+	groupIDs := make([]string, 0)
+	seenGroupIDs := make(map[string]struct{})
+	for rows.Next() {
+		var item application.OwnerApplication
+		var tenantID string
+		var tenantName string
+		var tenantEmail string
+		var tenantAvatar string
+		var groupID string
+		var groupName string
+		var creatorID string
+		var creatorName string
+		var creatorEmail string
+		var creatorAvatar string
+		if err := rows.Scan(
+			&item.ID,
+			&item.ApartmentID,
+			&item.PropertyTitle,
+			&item.Address,
+			&item.Type,
+			&item.Status,
+			&item.CreatedAt,
+			&tenantID,
+			&tenantName,
+			&tenantEmail,
+			&tenantAvatar,
+			&groupID,
+			&groupName,
+			&creatorID,
+			&creatorName,
+			&creatorEmail,
+			&creatorAvatar,
+		); err != nil {
+			return nil, fmt.Errorf("scan owner application: %w", err)
+		}
+		if tenantID != "" {
+			item.Tenant = &application.Applicant{UserID: tenantID, Name: tenantName, Email: tenantEmail, AvatarURL: tenantAvatar}
+		}
+		if groupID != "" {
+			item.Group = &application.GroupDetails{
+				GroupID: groupID,
+				Name:    groupName,
+				Creator: application.Applicant{UserID: creatorID, Name: creatorName, Email: creatorEmail, AvatarURL: creatorAvatar},
+			}
+			if _, exists := seenGroupIDs[groupID]; !exists {
+				seenGroupIDs[groupID] = struct{}{}
+				groupIDs = append(groupIDs, groupID)
+			}
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate owner applications: %w", err)
+	}
+
+	if len(groupIDs) == 0 {
+		return result, nil
+	}
+
+	membersByGroupID, err := r.listGroupMembersForOwnerApplications(ctx, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	for idx := range result {
+		if result[idx].Group != nil {
+			result[idx].Group.Members = membersByGroupID[result[idx].Group.GroupID]
+		}
+	}
+
+	return result, nil
+}
+
+func (r *Repository) listGroupMembersForOwnerApplications(ctx context.Context, groupIDs []string) (map[string][]application.GroupMember, error) {
+	const query = `SELECT
+		gm.group_id::text,
+		u.id::text,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, '')
+	FROM public.group_members gm
+	INNER JOIN public.users u ON u.id = gm.user_id
+	WHERE gm.group_id::text = ANY($1)
+		AND gm.status = 'ACCEPTED'
+	ORDER BY u.full_name ASC`
+
+	rows, err := r.db.Query(ctx, query, groupIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list owner application group members: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string][]application.GroupMember, len(groupIDs))
+	for rows.Next() {
+		var groupID string
+		var member application.GroupMember
+		if err := rows.Scan(&groupID, &member.UserID, &member.Name, &member.Email, &member.AvatarURL); err != nil {
+			return nil, fmt.Errorf("scan owner application group member: %w", err)
+		}
+		result[groupID] = append(result[groupID], member)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate owner application group members: %w", err)
+	}
+
+	return result, nil
+}
+
+// ApproveOwnerApplication approves a pending application and updates the group status when needed.
+func (r *Repository) ApproveOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error) {
+	return r.updateOwnerApplicationStatus(ctx, applicationID, ownerID, "FULLY_CONFIRMED", "ACCEPTED", true)
+}
+
+// RejectOwnerApplication rejects a pending application and updates the group status when needed.
+func (r *Repository) RejectOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error) {
+	return r.updateOwnerApplicationStatus(ctx, applicationID, ownerID, "REJECTED_BY_OWNER", "REJECTED", false)
+}
+
+func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicationID, ownerID, nextStatus, nextGroupStatus string, approve bool) (bool, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin update owner application: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var apartmentID string
+	var groupID string
+	var applicationType string
+	var currentStatus string
+	lookupQuery := `SELECT app.apartment_id::text, COALESCE(app.group_id::text, ''), app.type, app.status
+	FROM public.applications app
+	INNER JOIN public.apartments a ON a.id = app.apartment_id
+	WHERE app.id = $1
+		AND a.owner_id = $2`
+	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&apartmentID, &groupID, &applicationType, &currentStatus); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, pgx.ErrNoRows
+		}
+		return false, fmt.Errorf("load owner application before status update: %w", err)
+	}
+	if currentStatus != "PENDING_OWNER" {
+		return false, nil
+	}
+	if approve && applicationType == "group" {
+		conflictExists, conflictErr := r.hasAcceptedGroupApplicationForApartmentTx(ctx, tx, apartmentID, applicationID)
+		if conflictErr != nil {
+			return false, conflictErr
+		}
+		if conflictExists {
+			return false, applicationservice.ErrOwnerApplicationConflict
+		}
+	}
+
+	query := `UPDATE public.applications app
+	SET status = $3,
+		updated_at = NOW(),
+		owner_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.owner_confirmed_at END,
+		fully_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.fully_confirmed_at END
+	FROM public.apartments a
+	WHERE app.id = $1
+		AND app.apartment_id = a.id
+		AND a.owner_id = $2
+		AND app.status = 'PENDING_OWNER'
+	RETURNING COALESCE(app.group_id::text, '')`
+
+	var updatedGroupID string
+	if err := tx.QueryRow(ctx, query, applicationID, ownerID, nextStatus, approve).Scan(&groupID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			exists, existsErr := r.ownerApplicationExists(ctx, applicationID, ownerID)
+			if existsErr != nil {
+				return false, existsErr
+			}
+			if !exists {
+				return false, pgx.ErrNoRows
+			}
+			return false, nil
+		}
+		return false, fmt.Errorf("update owner application status: %w", err)
+	}
+	updatedGroupID = groupID
+
+	if updatedGroupID != "" {
+		if _, err := tx.Exec(ctx, `UPDATE public.groups SET status = $2, updated_at = NOW() WHERE id = $1`, updatedGroupID, nextGroupStatus); err != nil {
+			return false, fmt.Errorf("update group status after owner decision: %w", err)
+		}
+		if approve {
+			if err := r.rejectOtherPendingGroupApplicationsTx(ctx, tx, apartmentID, applicationID); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit update owner application: %w", err)
+	}
+
+	return true, nil
+}
+
+func (r *Repository) hasAcceptedGroupApplicationForApartmentTx(ctx context.Context, tx pgx.Tx, apartmentID, currentApplicationID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.applications
+		WHERE apartment_id = $1
+			AND type = 'group'
+			AND status = 'FULLY_CONFIRMED'
+			AND id::text <> $2
+	)`
+
+	var exists bool
+	if err := tx.QueryRow(ctx, query, apartmentID, currentApplicationID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check accepted group application conflict: %w", err)
+	}
+	return exists, nil
+}
+
+func (r *Repository) rejectOtherPendingGroupApplicationsTx(ctx context.Context, tx pgx.Tx, apartmentID, acceptedApplicationID string) error {
+	const applicationQuery = `UPDATE public.applications
+	SET status = 'REJECTED_BY_OWNER',
+		updated_at = NOW()
+	WHERE apartment_id = $1
+		AND type = 'group'
+		AND status = 'PENDING_OWNER'
+		AND id::text <> $2
+	RETURNING COALESCE(group_id::text, '')`
+
+	rows, err := tx.Query(ctx, applicationQuery, apartmentID, acceptedApplicationID)
+	if err != nil {
+		return fmt.Errorf("reject competing group applications: %w", err)
+	}
+	defer rows.Close()
+
+	rejectedGroupIDs := make([]string, 0)
+	for rows.Next() {
+		var groupID string
+		if err := rows.Scan(&groupID); err != nil {
+			return fmt.Errorf("scan rejected competing group application: %w", err)
+		}
+		if groupID != "" {
+			rejectedGroupIDs = append(rejectedGroupIDs, groupID)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate rejected competing group applications: %w", err)
+	}
+
+	for _, groupID := range rejectedGroupIDs {
+		if _, err := tx.Exec(ctx, `UPDATE public.groups SET status = 'REJECTED', updated_at = NOW() WHERE id = $1`, groupID); err != nil {
+			return fmt.Errorf("update competing group status after approval: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *Repository) ownerApplicationExists(ctx context.Context, applicationID, ownerID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.applications app
+		INNER JOIN public.apartments a ON a.id = app.apartment_id
+		WHERE app.id = $1
+			AND a.owner_id = $2
+	)`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, applicationID, ownerID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check owner application existence: %w", err)
+	}
+	return exists, nil
 }

@@ -1,5 +1,5 @@
 import { apiFetch } from '@/api'
-import type { OwnerDashboardProperty } from '@/types/owner'
+import type { OwnerDashboardProperty, OwnerDashboardRequest } from '@/types/owner'
 
 interface OwnerApartmentDto {
   id: string
@@ -30,6 +30,46 @@ interface CreateApartmentResponseDto {
   apartment_id?: string
   images_stored?: number
   error?: string
+}
+
+interface OwnerApplicationApplicantDto {
+	user_id: string
+	name: string
+	email: string
+	avatar_url: string
+}
+
+interface OwnerApplicationGroupMemberDto {
+	user_id: string
+	name: string
+	email: string
+	avatar_url: string
+}
+
+interface OwnerApplicationGroupDto {
+	group_id: string
+	name: string
+	creator: OwnerApplicationApplicantDto
+	members: OwnerApplicationGroupMemberDto[]
+}
+
+interface OwnerApplicationDto {
+	id: string
+	apartment_id: string
+	property_title: string
+	address: string
+	type: 'individual' | 'group'
+	status: string
+	created_at: string
+	tenant?: OwnerApplicationApplicantDto
+	group?: OwnerApplicationGroupDto
+}
+
+interface OwnerApplicationsResponseDto {
+	applications?: OwnerApplicationDto[]
+	application?: OwnerApplicationDto
+	message?: string
+	error?: string
 }
 
 export interface CreateApartmentInput {
@@ -84,6 +124,34 @@ function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
   return property
 }
 
+function ownerApplicationApplicantFromDto(dto: OwnerApplicationApplicantDto) {
+	return {
+		userId: dto.user_id,
+		name: dto.name,
+		email: dto.email,
+		avatarUrl: dto.avatar_url,
+	}
+}
+
+function ownerApplicationFromDto(dto: OwnerApplicationDto): OwnerDashboardRequest {
+	return {
+		id: dto.id,
+		apartmentId: dto.apartment_id,
+		propertyTitle: dto.property_title,
+		address: dto.address,
+		type: dto.type,
+		status: dto.status,
+		createdAt: dto.created_at,
+		tenant: dto.tenant ? ownerApplicationApplicantFromDto(dto.tenant) : undefined,
+		group: dto.group ? {
+			groupId: dto.group.group_id,
+			name: dto.group.name,
+			creator: ownerApplicationApplicantFromDto(dto.group.creator),
+			members: (dto.group.members ?? []).map(ownerApplicationApplicantFromDto),
+		} : undefined,
+	}
+}
+
 function apartmentPayload(input: CreateApartmentInput) {
   return {
     title: input.title,
@@ -136,6 +204,53 @@ export async function createApartment(input: CreateApartmentInput): Promise<Crea
     apartmentId: data.apartment_id,
     imagesStored: data.images_stored,
   }
+}
+
+export async function listOwnerApplications() {
+	const response = await apiFetch('/api/owner/applications')
+	const data = (await response.json()) as OwnerApplicationsResponseDto
+	if (!response.ok) {
+		throw new Error(data.error ?? 'No se pudieron cargar las solicitudes recibidas.')
+	}
+	return (data.applications ?? []).map(ownerApplicationFromDto)
+}
+
+export async function getOwnerApplication(applicationID: string) {
+	const response = await apiFetch(`/api/owner/applications/${encodeURIComponent(applicationID)}`)
+	const data = (await response.json()) as OwnerApplicationsResponseDto
+	if (!response.ok) {
+		throw new Error(data.error ?? 'No se pudo cargar el detalle de la solicitud.')
+	}
+	if (!data.application) {
+		throw new Error('No se pudo cargar el detalle de la solicitud.')
+	}
+	return ownerApplicationFromDto(data.application)
+}
+
+export async function approveOwnerApplication(applicationID: string) {
+	const response = await apiFetch(`/api/owner/applications/${encodeURIComponent(applicationID)}/approve`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({}),
+	})
+	const data = (await response.json()) as OwnerApplicationsResponseDto
+	if (!response.ok) {
+		throw new Error(data.error ?? 'No se pudo aprobar la solicitud.')
+	}
+	return data.message ?? 'application approved'
+}
+
+export async function rejectOwnerApplication(applicationID: string) {
+	const response = await apiFetch(`/api/owner/applications/${encodeURIComponent(applicationID)}/reject`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({}),
+	})
+	const data = (await response.json()) as OwnerApplicationsResponseDto
+	if (!response.ok) {
+		throw new Error(data.error ?? 'No se pudo rechazar la solicitud.')
+	}
+	return data.message ?? 'application rejected'
 }
 
 export async function updateOwnerApartment(propertyId: string, input: CreateApartmentInput): Promise<CreateApartmentResult> {

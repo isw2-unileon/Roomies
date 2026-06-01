@@ -5,9 +5,36 @@ import type { OwnerDashboardRequest } from '@/types/owner'
 
 interface OwnerRequestsTableProps {
   requests: OwnerDashboardRequest[]
+  onViewDetail?: (applicationID: string) => void
+  onApprove?: (applicationID: string) => void
+  onReject?: (applicationID: string) => void
+  actingApplicationKey?: string | null
 }
 
-export default function OwnerRequestsTable({ requests }: OwnerRequestsTableProps) {
+function formatRequestStatus(status: string) {
+  if (status === 'FULLY_CONFIRMED') {
+    return 'Aceptada'
+  }
+  if (status === 'REJECTED_BY_OWNER') {
+    return 'Rechazada'
+  }
+  if (status === 'CANCELLED') {
+    return 'Cancelada'
+  }
+  if (status === 'PENDING_CONFIRMED_TENANTS') {
+    return 'Pendiente del grupo'
+  }
+  return 'Pendiente'
+}
+
+function formatRequestSource(request: OwnerDashboardRequest) {
+  if (request.type === 'group' && request.group) {
+    return `Grupo: ${request.group.name}`
+  }
+  return 'Solicitud individual'
+}
+
+export default function OwnerRequestsTable({ requests, onViewDetail, onApprove, onReject, actingApplicationKey }: OwnerRequestsTableProps) {
   const { t } = useTranslation()
 
   return (
@@ -17,49 +44,78 @@ export default function OwnerRequestsTable({ requests }: OwnerRequestsTableProps
           <tr>
             <th>{t('ownerDashboard.requests.tenant')}</th>
             <th>{t('ownerDashboard.requests.property')}</th>
-            <th>{t('ownerDashboard.requests.compatibility')}</th>
+            <th>Tipo</th>
             <th>{t('ownerDashboard.requests.status')}</th>
             <th>{t('ownerDashboard.requests.actions')}</th>
           </tr>
         </thead>
         <tbody>
-          {requests.map((request) => (
-            <tr key={request.id}>
-              <td>
-                <strong>{request.tenant}</strong>
-                <br />
-                {request.profile}
-              </td>
-              <td>
-                <strong>{request.property}</strong>
-                <br />
-                {request.address}
-              </td>
-              <td>
-                <strong className={styles.ownerStrongPositive}>{request.compatibility}%</strong>
-                <br />
-                {t('ownerDashboard.requests.veryCompatible')}
-              </td>
-              <td>
-                <span className={`${styles.ownerStatusBadge} ${styles.ownerStatusPending}`}>{t('ownerDashboard.requests.pending')}</span>
-                <br />
-                {t('ownerDashboard.requests.requested', { date: request.requestedAt })}
-              </td>
-              <td>
-                <div className={styles.ownerActionGroup}>
-                  <button type="button" className={`${styles.ownerActionButton} ${styles.ownerActionAccept}`}>
-                    {t('ownerDashboard.requests.accept')}
-                  </button>
-                  <button type="button" className={`${styles.ownerActionButton} ${styles.ownerActionReject}`}>
-                    {t('ownerDashboard.requests.reject')}
-                  </button>
-                  <button type="button" className={styles.ownerIconButton} aria-label={t('ownerDashboard.requests.moreActions')}>
-                    <EllipsisVerticalIcon className={styles.ownerIconSmall} aria-hidden="true" />
-                  </button>
-                </div>
-              </td>
+          {requests.length === 0 ? (
+            <tr>
+              <td colSpan={5}>No hay solicitudes recibidas para tus pisos.</td>
             </tr>
-          ))}
+          ) : requests.map((request) => {
+            const isPending = request.status === 'PENDING_OWNER'
+            const approveKey = `${request.id}:approve`
+            const rejectKey = `${request.id}:reject`
+
+            return (
+              <tr key={request.id}>
+                <td>
+                  <strong>{request.type === 'group' ? request.group?.creator.name : request.tenant?.name}</strong>
+                  <br />
+                  {request.type === 'group'
+                    ? `${formatRequestSource(request)} · ${request.group?.members.length ?? 0} miembros`
+                    : request.tenant?.email}
+                </td>
+                <td>
+                  <strong>{request.propertyTitle}</strong>
+                  <br />
+                  {request.address}
+                </td>
+                <td>
+                  <strong>{request.type === 'group' ? 'Grupal' : 'Individual'}</strong>
+                  <br />
+                  {formatRequestSource(request)}
+                </td>
+                <td>
+                  <span className={`${styles.ownerStatusBadge} ${styles.ownerStatusPending}`}>{formatRequestStatus(request.status)}</span>
+                  <br />
+                  {t('ownerDashboard.requests.requested', { date: request.createdAt })}
+                </td>
+                <td>
+                  <div className={styles.ownerActionGroup}>
+                    <button
+                      type="button"
+                      className={`${styles.ownerActionButton} ${styles.ownerActionAccept}`}
+                      onClick={() => onViewDetail?.(request.id)}
+                    >
+                      Ver detalle
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.ownerActionButton} ${styles.ownerActionAccept}`}
+                      onClick={() => onApprove?.(request.id)}
+                      disabled={!isPending || actingApplicationKey === approveKey}
+                    >
+                      {actingApplicationKey === approveKey ? 'Aprobando...' : t('ownerDashboard.requests.accept')}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.ownerActionButton} ${styles.ownerActionReject}`}
+                      onClick={() => onReject?.(request.id)}
+                      disabled={!isPending || actingApplicationKey === rejectKey}
+                    >
+                      {actingApplicationKey === rejectKey ? 'Rechazando...' : t('ownerDashboard.requests.reject')}
+                    </button>
+                    <button type="button" className={styles.ownerIconButton} aria-label={t('ownerDashboard.requests.moreActions')}>
+                      <EllipsisVerticalIcon className={styles.ownerIconSmall} aria-hidden="true" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

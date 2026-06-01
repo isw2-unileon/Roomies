@@ -5,6 +5,22 @@ interface TenantGroupSummaryProps {
   group: TenantGroupDetailItem
 }
 
+function formatApartmentRequestStatus(status: string) {
+	if (status === 'FULLY_CONFIRMED') {
+		return 'Aceptada por el propietario'
+	}
+	if (status === 'REJECTED_BY_OWNER') {
+		return 'Rechazada por el propietario'
+	}
+	if (status === 'CANCELLED') {
+		return 'Cancelada'
+	}
+	if (status === 'PENDING_CONFIRMED_TENANTS') {
+		return 'Pendiente de confirmacion del grupo'
+	}
+	return 'Pendiente de revision del propietario'
+}
+
 export default function TenantGroupSummary({ group }: TenantGroupSummaryProps) {
   return (
     <section className={styles.summarySection}>
@@ -25,6 +41,11 @@ export default function TenantGroupSummary({ group }: TenantGroupSummaryProps) {
         <p>
           Miembros aceptados: {group.acceptedMembersCount} · Invitaciones pendientes: {group.pendingInvitationsCount}
         </p>
+				{group.currentApartmentRequest ? (
+					<p>
+						Estado de la solicitud grupal: {formatApartmentRequestStatus(group.currentApartmentRequest.status)}
+					</p>
+				) : null}
         <p>
           Presupuesto medio: {group.averageBudgetMin}€ - {group.averageBudgetMax}€
         </p>

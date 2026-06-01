@@ -1,5 +1,6 @@
 export type PropertyStatus = 'open' | 'closed' | 'full'
 export type MatchStatus = 'pending' | 'approved' | 'rejected'
+export type OwnerApplicationType = 'individual' | 'group'
 export type OwnerNavTab = 'properties' | 'applications' | 'messages' | 'notifications' | 'profile'
 export type OwnerIssueStatus = 'pending' | 'in_progress' | 'resolved'
 
@@ -53,12 +54,35 @@ export interface OwnerDashboardProperty {
 
 export interface OwnerDashboardRequest {
     id: string
-    tenant: string
-    profile: string
-    property: string
+    apartmentId: string
+    propertyTitle: string
     address: string
-    compatibility: number
-    requestedAt: string
+    type: OwnerApplicationType
+    status: string
+    createdAt: string
+    tenant?: OwnerApplicationApplicant
+    group?: OwnerApplicationGroup
+}
+
+export interface OwnerApplicationApplicant {
+	userId: string
+	name: string
+	email: string
+	avatarUrl: string
+}
+
+export interface OwnerApplicationGroupMember {
+	userId: string
+	name: string
+	email: string
+	avatarUrl: string
+}
+
+export interface OwnerApplicationGroup {
+	groupId: string
+	name: string
+	creator: OwnerApplicationApplicant
+	members: OwnerApplicationGroupMember[]
 }
 
 export interface OwnerDashboardPayment {

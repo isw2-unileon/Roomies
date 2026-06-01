@@ -101,6 +101,7 @@ type Group struct {
 	AverageBudgetMin        int
 	AverageBudgetMax        int
 	Apartment               *Apartment
+	CurrentApartmentRequest *ApartmentRequest
 	Members                 []Member
 	PendingInvitations      []Invitation
 	JoinRequests            []JoinRequest
@@ -117,6 +118,16 @@ type Apartment struct {
 	AvailableSpots int
 	BaseRent       int
 	ImageURL       string
+}
+
+// ApartmentRequest contains the current request from the group to its assigned apartment.
+type ApartmentRequest struct {
+	ID          string
+	ApartmentID string
+	GroupID     string
+	Type        string
+	Status      string
+	CreatedAt   string
 }
 
 // Member represents an accepted group member.
