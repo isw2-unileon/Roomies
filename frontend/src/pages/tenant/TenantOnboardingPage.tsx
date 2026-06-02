@@ -25,6 +25,43 @@ const socializationOptions: Array<{ value: TenantLevel; noteKey?: string }> = [
 
 const nightlifeOptions: TenantLevel[] = ['low', 'medium', 'high']
 
+interface SegmentedLevelFieldProps {
+  name: string
+  label: string
+  value: TenantLevel
+  onChange: (value: TenantLevel) => void
+  options: Array<{ value: TenantLevel; noteKey?: string }>
+  t: (key: string) => string
+}
+
+function SegmentedLevelField({ name, label, value, onChange, options, t }: SegmentedLevelFieldProps) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.roleLabel}>{label}</span>
+      <div className={styles.segmentedControl} role="radiogroup" aria-label={label}>
+        {options.map((option) => {
+          const checked = value === option.value
+
+          return (
+            <label key={option.value} className={`${styles.segmentOption} ${checked ? styles.segmentOptionActive : ''}`}>
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={checked}
+                onChange={(event) => onChange(event.target.value as TenantLevel)}
+                className={styles.segmentInput}
+              />
+              <span className={styles.segmentLabel}>{t(`auth.tenantOnboarding.levelOptions.${option.value}`)}</span>
+              {option.noteKey ? <span className={styles.segmentNote}>{t(option.noteKey)}</span> : <span className={styles.segmentNotePlaceholder} aria-hidden="true" />} 
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPageProps) {
   const { t } = useTranslation()
 
@@ -207,41 +244,23 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
         <section className={styles.form} aria-label={t('auth.tenantOnboarding.sections.livingPreferences')}>
           <h3 className={styles.roleTitle}>{t('auth.tenantOnboarding.sections.livingPreferences')}</h3>
 
-          <div className={styles.field}>
-            <span className={styles.roleLabel}>{t('auth.tenantOnboarding.socializationLabel')}</span>
-            <div className={styles.roleGrid}>
-              {socializationOptions.map((option) => (
-                <label key={option.value} className={styles.roleOption}>
-                  <input
-                    type="radio"
-                    name="socialization-level"
-                    value={option.value}
-                    checked={socializationLevel === option.value}
-                    onChange={(event) => setSocializationLevel(event.target.value as TenantLevel)}
-                    className={styles.roleRadio}
-                  />
-                  <span>
-                    <span className={styles.roleTitle}>{t(`auth.tenantOnboarding.levelOptions.${option.value}`)}</span>
-                    {option.noteKey ? <span className={styles.roleDescription}>{t(option.noteKey)}</span> : null}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
+          <SegmentedLevelField
+            name="socialization-level"
+            label={t('auth.tenantOnboarding.socializationLabel')}
+            value={socializationLevel}
+            onChange={setSocializationLevel}
+            options={socializationOptions}
+            t={t}
+          />
 
-          <div className={styles.field}>
-            <label htmlFor="nightlife-level" className={styles.roleLabel}>{t('auth.tenantOnboarding.nightlifeLabel')}</label>
-            <select
-              id="nightlife-level"
-              value={nightlifeLevel}
-              onChange={(event) => setNightlifeLevel(event.target.value as TenantLevel)}
-              className={styles.select}
-            >
-              {nightlifeOptions.map((option) => (
-                <option key={option} value={option}>{t(`auth.tenantOnboarding.levelOptions.${option}`)}</option>
-              ))}
-            </select>
-          </div>
+          <SegmentedLevelField
+            name="nightlife-level"
+            label={t('auth.tenantOnboarding.nightlifeLabel')}
+            value={nightlifeLevel}
+            onChange={setNightlifeLevel}
+            options={nightlifeOptions.map((option) => ({ value: option }))}
+            t={t}
+          />
         </section>
 
         <AuthNotice kind={notice.kind} message={notice.message} />
