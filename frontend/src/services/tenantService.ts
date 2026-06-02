@@ -140,11 +140,26 @@ interface TenantApplicationDto {
   compatibility: number
   request_type: string
   status_message: string
+  application_type?: 'individual' | 'group'
+  is_group_application?: boolean
+  group_id?: string
+  group_name?: string
+  submitted_by_user_id?: string
+  submitted_by_name?: string
+  group_members?: TenantApplicationGroupMemberDto[]
+  can_cancel?: boolean
 }
 
 interface TenantApplicationsResponseDto {
   applications?: TenantApplicationDto[]
   error?: string
+}
+
+interface TenantApplicationGroupMemberDto {
+  user_id: string
+  name: string
+  email: string
+  avatar_url: string
 }
 
 interface TenantGroupApartmentDto {
@@ -417,6 +432,19 @@ function tenantApplicationFromDto(dto: TenantApplicationDto): TenantApplication 
     compatibility: dto.compatibility,
     requestType: dto.request_type,
     statusMessage: dto.status_message,
+    applicationType: dto.application_type === 'group' ? 'group' : 'individual',
+    isGroupApplication: dto.is_group_application ?? dto.application_type === 'group',
+    groupId: dto.group_id ?? '',
+    groupName: dto.group_name ?? '',
+    submittedByUserId: dto.submitted_by_user_id ?? '',
+    submittedByName: dto.submitted_by_name ?? '',
+    groupMembers: (dto.group_members ?? []).map((member) => ({
+      userId: member.user_id,
+      name: member.name,
+      email: member.email,
+      avatarUrl: member.avatar_url,
+    })),
+    canCancel: dto.can_cancel ?? dto.application_type !== 'group',
   }
 }
 

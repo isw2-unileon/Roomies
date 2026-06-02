@@ -57,6 +57,8 @@ function getStatusIcon(status: ApplicationStatus) {
 }
 
 export default function TenantApplicationCard({ application, onCancel, isCancelling = false }: TenantApplicationCardProps) {
+	const groupMembersLabel = application.groupMembers.map((member) => member.name).join(', ')
+
     return (
         <article className={styles.card}>
             <img className={styles.image} src={application.image} alt="" loading="lazy" />
@@ -93,6 +95,16 @@ export default function TenantApplicationCard({ application, onCancel, isCancell
                     <UserGroupIcon className={styles.iconTiny} aria-hidden="true" />
                     {application.requestType}
                 </span>
+
+				{application.isGroupApplication ? (
+					<div className={styles.groupDetails}>
+						<p className={styles.groupMeta}><strong>Grupo:</strong> {application.groupName || 'Sin nombre'}</p>
+						<p className={styles.groupMeta}><strong>Enviada por:</strong> {application.submittedByName || 'Creador del grupo'}</p>
+						{application.groupMembers.length > 0 ? (
+							<p className={styles.groupMeta}><strong>Miembros:</strong> {groupMembersLabel}</p>
+						) : null}
+					</div>
+				) : null}
             </div>
 
             <aside className={styles.statusPanel} aria-label={`Estado de ${application.propertyTitle}`}>
@@ -115,11 +127,11 @@ export default function TenantApplicationCard({ application, onCancel, isCancell
                 </div>
 
                 <div className={styles.actions}>
-                    {application.status === 'approved' ? (
+					{application.status === 'approved' ? (
                         <button type="button" className={styles.confirmButton}>
                             Confirmar plaza
                         </button>
-                    ) : application.status === 'pending' ? (
+					) : application.status === 'pending' && application.canCancel ? (
                         <button
                             type="button"
                             className={styles.detailsButton}
@@ -128,6 +140,10 @@ export default function TenantApplicationCard({ application, onCancel, isCancell
                         >
                             {isCancelling ? 'Anulando...' : 'Anular solicitud'}
                         </button>
+					) : application.status === 'pending' ? (
+						<button type="button" className={styles.detailsButton} disabled>
+							Pendiente de revision
+						</button>
                     ) : (
                         <button type="button" className={styles.detailsButton}>
                             Ver detalles

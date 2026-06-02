@@ -180,6 +180,20 @@
   border-radius: 0.625rem;
 }
 
+.groupDetails {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+}
+
+.groupMeta {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .statusPanel {
   display: grid;
   gap: 0.75rem;

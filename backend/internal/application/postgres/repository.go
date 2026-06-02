@@ -158,29 +158,100 @@ func (r *Repository) ListInterestedTenants(ctx context.Context, apartmentID stri
 // ListTenantApplications returns applications made by the tenant.
 func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string) ([]application.TenantApplication, error) {
 	const query = `SELECT
-		app.id,
-		app.apartment_id,
-		a.title,
-		COALESCE(owner.full_name, ''),
-		a.address,
-		COALESCE((
-			SELECT ap.url
-			FROM public.apartment_photos ap
-			WHERE ap.apartment_id = a.id
-			ORDER BY ap.position ASC, ap.created_at ASC
-			LIMIT 1
-		), '') AS image_url,
-		a.total_spots,
-		0 AS size,
-		0 AS bathrooms,
-		app.status,
-		TO_CHAR(app.created_at, 'YYYY-MM-DD') AS created_at,
-		0 AS compatibility_score
-	FROM public.applications app
-	INNER JOIN public.apartments a ON a.id = app.apartment_id
-	LEFT JOIN public.users owner ON owner.id = a.owner_id
-	WHERE app.tenant_id = $1
-	ORDER BY app.created_at DESC`
+		item.id,
+		item.apartment_id,
+		item.property_title,
+		item.owner_name,
+		item.address,
+		item.image_url,
+		item.places,
+		item.size,
+		item.bathrooms,
+		item.type,
+		item.status,
+		item.created_at,
+		item.compatibility_score,
+		item.group_id,
+		item.group_name,
+		item.submitted_by_user_id,
+		item.submitted_by_name
+	FROM (
+		SELECT
+			app.id::text AS id,
+			app.apartment_id::text AS apartment_id,
+			COALESCE(a.title, '') AS property_title,
+			COALESCE(owner.full_name, '') AS owner_name,
+			COALESCE(a.address, '') AS address,
+			COALESCE((
+				SELECT ap.url
+				FROM public.apartment_photos ap
+				WHERE ap.apartment_id = a.id
+				ORDER BY ap.position ASC, ap.created_at ASC
+				LIMIT 1
+			), '') AS image_url,
+			COALESCE(a.total_spots, 0) AS places,
+			0 AS size,
+			0 AS bathrooms,
+			app.type,
+			app.status,
+			TO_CHAR(app.created_at, 'YYYY-MM-DD') AS created_at,
+			0 AS compatibility_score,
+			'' AS group_id,
+			'' AS group_name,
+			COALESCE(app.tenant_id::text, '') AS submitted_by_user_id,
+			COALESCE(tenant.full_name, '') AS submitted_by_name,
+			app.created_at AS created_at_sort
+		FROM public.applications app
+		INNER JOIN public.apartments a ON a.id = app.apartment_id
+		LEFT JOIN public.users owner ON owner.id = a.owner_id
+		LEFT JOIN public.users tenant ON tenant.id = app.tenant_id
+		WHERE app.tenant_id = $1
+
+		UNION ALL
+
+		SELECT
+			app.id::text AS id,
+			app.apartment_id::text AS apartment_id,
+			COALESCE(a.title, '') AS property_title,
+			COALESCE(owner.full_name, '') AS owner_name,
+			COALESCE(a.address, '') AS address,
+			COALESCE((
+				SELECT ap.url
+				FROM public.apartment_photos ap
+				WHERE ap.apartment_id = a.id
+				ORDER BY ap.position ASC, ap.created_at ASC
+				LIMIT 1
+			), '') AS image_url,
+			COALESCE(a.total_spots, 0) AS places,
+			0 AS size,
+			0 AS bathrooms,
+			app.type,
+			app.status,
+			TO_CHAR(app.created_at, 'YYYY-MM-DD') AS created_at,
+			0 AS compatibility_score,
+			COALESCE(g.id::text, '') AS group_id,
+			COALESCE(g.name, '') AS group_name,
+			COALESCE(creator.id::text, '') AS submitted_by_user_id,
+			COALESCE(creator.full_name, '') AS submitted_by_name,
+			app.created_at AS created_at_sort
+		FROM public.applications app
+		INNER JOIN public.apartments a ON a.id = app.apartment_id
+		INNER JOIN public.groups g ON g.id = app.group_id
+		LEFT JOIN public.users owner ON owner.id = a.owner_id
+		LEFT JOIN public.users creator ON creator.id = g.created_by
+		WHERE app.group_id IS NOT NULL
+			AND (
+				g.created_by = $1
+				OR EXISTS (
+					SELECT 1
+					FROM public.group_members gm
+					WHERE gm.group_id = g.id
+						AND gm.user_id = $1
+						AND gm.status = 'ACCEPTED'
+				)
+			)
+	) AS item
+	ORDER BY item.created_at_sort DESC`
 
 	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
@@ -189,8 +260,14 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 	defer rows.Close()
 
 	result := make([]application.TenantApplication, 0)
+	groupIDs := make([]string, 0)
+	seenGroupIDs := make(map[string]struct{})
 	for rows.Next() {
 		var item application.TenantApplication
+		var groupID string
+		var groupName string
+		var submittedByUserID string
+		var submittedByName string
 		if err := rows.Scan(
 			&item.ID,
 			&item.ApartmentID,
@@ -201,16 +278,80 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 			&item.Places,
 			&item.Size,
 			&item.Bathrooms,
+			&item.Type,
 			&item.Status,
 			&item.CreatedAt,
 			&item.CompatibilityScore,
+			&groupID,
+			&groupName,
+			&submittedByUserID,
+			&submittedByName,
 		); err != nil {
 			return nil, fmt.Errorf("scan tenant applications: %w", err)
+		}
+		item.GroupID = groupID
+		item.GroupName = groupName
+		item.SubmittedByUserID = submittedByUserID
+		item.SubmittedByName = submittedByName
+		if groupID != "" {
+			if _, exists := seenGroupIDs[groupID]; !exists {
+				seenGroupIDs[groupID] = struct{}{}
+				groupIDs = append(groupIDs, groupID)
+			}
 		}
 		result = append(result, item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate tenant applications: %w", err)
+	}
+
+	if len(groupIDs) == 0 {
+		return result, nil
+	}
+
+	membersByGroupID, err := r.listGroupMembersForTenantApplications(ctx, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	for idx := range result {
+		if result[idx].GroupID != "" {
+			result[idx].GroupMembers = membersByGroupID[result[idx].GroupID]
+		}
+	}
+
+	return result, nil
+}
+
+func (r *Repository) listGroupMembersForTenantApplications(ctx context.Context, groupIDs []string) (map[string][]application.GroupMember, error) {
+	const query = `SELECT
+		gm.group_id::text,
+		u.id::text,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, '')
+	FROM public.group_members gm
+	INNER JOIN public.users u ON u.id = gm.user_id
+	WHERE gm.group_id::text = ANY($1)
+		AND gm.status = 'ACCEPTED'
+	ORDER BY u.full_name ASC`
+
+	rows, err := r.db.Query(ctx, query, groupIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list tenant application group members: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string][]application.GroupMember, len(groupIDs))
+	for rows.Next() {
+		var groupID string
+		var member application.GroupMember
+		if err := rows.Scan(&groupID, &member.UserID, &member.Name, &member.Email, &member.AvatarURL); err != nil {
+			return nil, fmt.Errorf("scan tenant application group member: %w", err)
+		}
+		result[groupID] = append(result[groupID], member)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tenant application group members: %w", err)
 	}
 
 	return result, nil

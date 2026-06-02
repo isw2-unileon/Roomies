@@ -31,21 +31,29 @@ type interestedTenantResponse struct {
 }
 
 type tenantApplicationResponse struct {
-	ID            string `json:"id"`
-	ApartmentID   string `json:"apartment_id"`
-	PropertyTitle string `json:"property_title"`
-	OwnerName     string `json:"owner_name"`
-	Address       string `json:"address"`
-	ImageURL      string `json:"image_url"`
-	Places        int    `json:"places"`
-	Size          int    `json:"size"`
-	Bathrooms     int    `json:"bathrooms"`
-	Status        string `json:"status"`
-	CreatedAt     string `json:"created_at"`
-	DateLabel     string `json:"date_label"`
-	Compatibility int    `json:"compatibility"`
-	RequestType   string `json:"request_type"`
-	StatusMessage string `json:"status_message"`
+	ID                 string                `json:"id"`
+	ApartmentID        string                `json:"apartment_id"`
+	PropertyTitle      string                `json:"property_title"`
+	OwnerName          string                `json:"owner_name"`
+	Address            string                `json:"address"`
+	ImageURL           string                `json:"image_url"`
+	Places             int                   `json:"places"`
+	Size               int                   `json:"size"`
+	Bathrooms          int                   `json:"bathrooms"`
+	Status             string                `json:"status"`
+	CreatedAt          string                `json:"created_at"`
+	DateLabel          string                `json:"date_label"`
+	Compatibility      int                   `json:"compatibility"`
+	RequestType        string                `json:"request_type"`
+	StatusMessage      string                `json:"status_message"`
+	ApplicationType    string                `json:"application_type,omitempty"`
+	IsGroupApplication bool                  `json:"is_group_application,omitempty"`
+	GroupID            string                `json:"group_id,omitempty"`
+	GroupName          string                `json:"group_name,omitempty"`
+	SubmittedByUserID  string                `json:"submitted_by_user_id,omitempty"`
+	SubmittedByName    string                `json:"submitted_by_name,omitempty"`
+	GroupMembers       []groupMemberResponse `json:"group_members,omitempty"`
+	CanCancel          bool                  `json:"can_cancel"`
 }
 
 type applicantResponse struct {
@@ -247,22 +255,39 @@ func (h *handler) listTenantApplications(c *gin.Context) {
 	}
 	response := make([]tenantApplicationResponse, 0, len(applications))
 	for _, item := range applications {
+		members := make([]groupMemberResponse, 0, len(item.GroupMembers))
+		for _, member := range item.GroupMembers {
+			members = append(members, groupMemberResponse{
+				UserID:    member.UserID,
+				Name:      member.Name,
+				Email:     member.Email,
+				AvatarURL: member.AvatarURL,
+			})
+		}
 		response = append(response, tenantApplicationResponse{
-			ID:            item.ID,
-			ApartmentID:   item.ApartmentID,
-			PropertyTitle: item.PropertyTitle,
-			OwnerName:     item.OwnerName,
-			Address:       item.Address,
-			ImageURL:      item.ImageURL,
-			Places:        item.Places,
-			Size:          item.Size,
-			Bathrooms:     item.Bathrooms,
-			Status:        item.Status,
-			CreatedAt:     item.CreatedAt,
-			DateLabel:     item.DateLabel,
-			Compatibility: item.CompatibilityScore,
-			RequestType:   item.RequestType,
-			StatusMessage: item.StatusMessage,
+			ID:                 item.ID,
+			ApartmentID:        item.ApartmentID,
+			PropertyTitle:      item.PropertyTitle,
+			OwnerName:          item.OwnerName,
+			Address:            item.Address,
+			ImageURL:           item.ImageURL,
+			Places:             item.Places,
+			Size:               item.Size,
+			Bathrooms:          item.Bathrooms,
+			Status:             item.Status,
+			CreatedAt:          item.CreatedAt,
+			DateLabel:          item.DateLabel,
+			Compatibility:      item.CompatibilityScore,
+			RequestType:        item.RequestType,
+			StatusMessage:      item.StatusMessage,
+			ApplicationType:    item.Type,
+			IsGroupApplication: strings.EqualFold(item.Type, "group"),
+			GroupID:            item.GroupID,
+			GroupName:          item.GroupName,
+			SubmittedByUserID:  item.SubmittedByUserID,
+			SubmittedByName:    item.SubmittedByName,
+			GroupMembers:       members,
+			CanCancel:          item.CanCancel,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"applications": response})

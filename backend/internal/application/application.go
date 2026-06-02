@@ -36,12 +36,19 @@ type TenantApplication struct {
 	Places             int
 	Size               int
 	Bathrooms          int
+	Type               string
 	Status             string
 	CreatedAt          string
 	DateLabel          string
 	CompatibilityScore int
 	RequestType        string
 	StatusMessage      string
+	GroupID            string
+	GroupName          string
+	SubmittedByUserID  string
+	SubmittedByName    string
+	GroupMembers       []GroupMember
+	CanCancel          bool
 }
 
 // Record contains core application metadata used across tenant and owner flows.

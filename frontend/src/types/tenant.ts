@@ -65,6 +65,21 @@ export interface TenantApplication {
     compatibility: number
     requestType: string
     statusMessage: string
+    applicationType: 'individual' | 'group'
+    isGroupApplication: boolean
+    groupId: string
+    groupName: string
+    submittedByUserId: string
+    submittedByName: string
+    groupMembers: TenantApplicationGroupMember[]
+    canCancel: boolean
+}
+
+export interface TenantApplicationGroupMember {
+    userId: string
+    name: string
+    email: string
+    avatarUrl: string
 }
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'

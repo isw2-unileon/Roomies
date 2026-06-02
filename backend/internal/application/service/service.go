@@ -384,10 +384,43 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		}
 		applications[idx].Status = application.MapStatus(applications[idx].Status)
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
-		applications[idx].RequestType = "Solicitud individual"
-		applications[idx].StatusMessage = application.BuildStatusMessage(applications[idx].Status)
+		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])
+		applications[idx].StatusMessage = buildTenantApplicationStatusMessage(applications[idx])
+		applications[idx].CanCancel = applications[idx].Type == "individual" && applications[idx].Status == "pending"
 	}
 	return applications, nil
+}
+
+func buildTenantRequestTypeLabel(item application.TenantApplication) string {
+	if strings.EqualFold(strings.TrimSpace(item.Type), "group") {
+		if strings.TrimSpace(item.GroupName) != "" {
+			return "Solicitud de grupo · " + item.GroupName
+		}
+		return "Solicitud de grupo"
+	}
+	return "Solicitud individual"
+}
+
+func buildTenantApplicationStatusMessage(item application.TenantApplication) string {
+	if !strings.EqualFold(strings.TrimSpace(item.Type), "group") {
+		return application.BuildStatusMessage(item.Status)
+	}
+
+	submitterName := strings.TrimSpace(item.SubmittedByName)
+	if submitterName == "" {
+		submitterName = "la persona creadora del grupo"
+	}
+
+	switch item.Status {
+	case "approved":
+		return "La solicitud grupal enviada por " + submitterName + " ha sido aceptada por el propietario."
+	case "rejected":
+		return "El propietario ha rechazado la solicitud grupal de este piso."
+	case "cancelled":
+		return "La solicitud grupal fue cancelada."
+	default:
+		return "La solicitud grupal enviada por " + submitterName + " esta pendiente de revision por el propietario."
+	}
 }
 
 // ListOwnerApplications returns individual and group applications received by the owner.

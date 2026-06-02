@@ -75,6 +75,7 @@ func (f *fakeApplicationRepository) ListTenantApplications(ctx context.Context, 
 		ID:            "application-1",
 		ApartmentID:   "apartment-1",
 		PropertyTitle: "Flat",
+		Type:          "individual",
 		Status:        "PENDING_OWNER",
 		CreatedAt:     "2026-05-23",
 	}}, nil
@@ -269,6 +270,46 @@ func TestListTenantApplicationsMapsStatus(t *testing.T) {
 	}
 	if result[0].Status != "pending" {
 		t.Fatalf("Status = %q, want pending", result[0].Status)
+	}
+	if result[0].RequestType != "Solicitud individual" {
+		t.Fatalf("RequestType = %q, want individual label", result[0].RequestType)
+	}
+	if !result[0].CanCancel {
+		t.Fatal("CanCancel = false, want true")
+	}
+}
+
+func TestListTenantApplicationsMapsGroupMetadata(t *testing.T) {
+	repo := &fakeApplicationRepository{tenantApplications: []application.TenantApplication{{
+		ID:                "application-2",
+		ApartmentID:       "apartment-2",
+		PropertyTitle:     "Shared flat",
+		Type:              "group",
+		Status:            "PENDING_OWNER",
+		CreatedAt:         "2026-05-24",
+		GroupID:           "group-1",
+		GroupName:         "Centro Leon",
+		SubmittedByUserID: "tenant-1",
+		SubmittedByName:   "Jairo Test",
+		GroupMembers:      []application.GroupMember{{UserID: "tenant-1", Name: "Jairo Test"}, {UserID: "tenant-2", Name: "Laura Test"}},
+	}}}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	result, err := svc.ListTenantApplications(context.Background(), "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("ListTenantApplications returned error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("len(result) = %d, want 1", len(result))
+	}
+	if result[0].RequestType != "Solicitud de grupo · Centro Leon" {
+		t.Fatalf("RequestType = %q, want group label", result[0].RequestType)
+	}
+	if result[0].CanCancel {
+		t.Fatal("CanCancel = true, want false")
+	}
+	if result[0].StatusMessage == "" {
+		t.Fatal("StatusMessage is empty")
 	}
 }
 

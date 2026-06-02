@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
-  getTenantApartmentDetail,
-  getTenantPersonalProfile,
-  listTenantApartments,
-  saveTenantPersonalProfile,
-  uploadTenantAvatar,
+	getTenantApartmentDetail,
+	getTenantPersonalProfile,
+	listTenantApplications,
+	listTenantApartments,
+	saveTenantPersonalProfile,
+	uploadTenantAvatar,
 } from './tenantService'
 
 describe('tenantService', () => {
@@ -167,4 +168,75 @@ describe('tenantService', () => {
 	  credentials: 'include',
 	}))
   })
+
+	test('maps group applications in tenant applications list', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({
+		  applications: [
+			{
+			  id: 'app-group-1',
+			  apartment_id: 'apt-9',
+			  property_title: 'Piso centro',
+			  owner_name: 'Maria Owner',
+			  address: 'Calle Ancha 12',
+			  image_url: 'https://example.test/apt.jpg',
+			  places: 4,
+			  size: 0,
+			  bathrooms: 0,
+			  status: 'pending',
+			  created_at: '2026-05-21',
+			  date_label: 'Solicitada el 2026-05-21',
+			  compatibility: 81,
+			  request_type: 'Solicitud de grupo · Centro Leon',
+			  status_message: 'Pendiente',
+			  application_type: 'group',
+			  is_group_application: true,
+			  group_id: 'group-1',
+			  group_name: 'Centro Leon',
+			  submitted_by_user_id: 'tenant-1',
+			  submitted_by_name: 'Jairo Test',
+			  can_cancel: false,
+			  group_members: [
+				{ user_id: 'tenant-1', name: 'Jairo Test', email: 'jairo@example.test', avatar_url: '' },
+				{ user_id: 'tenant-2', name: 'Laura Test', email: 'laura@example.test', avatar_url: '' },
+			  ],
+			},
+		  ],
+		}),
+	  } as Response)
+
+	  await expect(listTenantApplications()).resolves.toEqual([
+		{
+		  id: 'app-group-1',
+		  propertyId: 'apt-9',
+		  propertyTitle: 'Piso centro',
+		  ownerName: 'Maria Owner',
+		  address: 'Calle Ancha 12',
+		  image: 'https://example.test/apt.jpg',
+		  places: 4,
+		  size: 0,
+		  bathrooms: 0,
+		  status: 'pending',
+		  createdAt: '2026-05-21',
+		  dateLabel: 'Solicitada el 2026-05-21',
+		  compatibility: 81,
+		  requestType: 'Solicitud de grupo · Centro Leon',
+		  statusMessage: 'Pendiente',
+		  applicationType: 'group',
+		  isGroupApplication: true,
+		  groupId: 'group-1',
+		  groupName: 'Centro Leon',
+		  submittedByUserId: 'tenant-1',
+		  submittedByName: 'Jairo Test',
+		  canCancel: false,
+		  groupMembers: [
+			{ userId: 'tenant-1', name: 'Jairo Test', email: 'jairo@example.test', avatarUrl: '' },
+			{ userId: 'tenant-2', name: 'Laura Test', email: 'laura@example.test', avatarUrl: '' },
+		  ],
+		},
+	  ])
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/applications', { credentials: 'include' })
+	})
 })
