@@ -10,6 +10,7 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/matching"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
+	"github.com/jackc/pgx/v5"
 )
 
 const signedAvatarURLTTLSeconds = 3600
@@ -25,6 +26,13 @@ type repository interface {
 	CancelTenantApplication(ctx context.Context, applicationID, tenantID string) (bool, error)
 	ListInterestedTenants(ctx context.Context, apartmentID string) ([]application.InterestedTenantCandidate, error)
 	ListTenantApplications(ctx context.Context, tenantID string) ([]application.TenantApplication, error)
+	GetGroupApplicationContext(ctx context.Context, groupID, userID string) (*application.GroupApplicationContext, error)
+	GetLatestGroupApplicationForApartment(ctx context.Context, apartmentID, groupID string) (*application.Record, error)
+	CreateGroupApplication(ctx context.Context, apartmentID, groupID string) (string, error)
+	ListOwnerApplications(ctx context.Context, ownerID string) ([]application.OwnerApplication, error)
+	GetOwnerApplicationByID(ctx context.Context, applicationID, ownerID string) (*application.OwnerApplication, error)
+	ApproveOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error)
+	RejectOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error)
 }
 
 type apartmentReader interface {
@@ -38,6 +46,9 @@ type profileReader interface {
 
 // ErrTenantRequired is returned when a non-tenant requests tenant-only operations.
 var ErrTenantRequired = errors.New("tenant role is required")
+
+// ErrOwnerRequired is returned when a non-owner requests owner-only operations.
+var ErrOwnerRequired = errors.New("owner role is required")
 
 // ErrApartmentNotFound is returned when an apartment does not exist.
 var ErrApartmentNotFound = errors.New("apartment not found")
@@ -53,6 +64,29 @@ var ErrApplicationNotCancelable = errors.New("application is not cancelable")
 
 // ErrInterestedTenantsForbidden is returned when a user cannot view interested tenants.
 var ErrInterestedTenantsForbidden = errors.New("interested tenants are not available for this user")
+
+// ErrGroupNotFound is returned when the group does not exist.
+var ErrGroupNotFound = errors.New("group not found")
+
+// ErrGroupNotReady is returned when a group is not fully accepted yet.
+var ErrGroupNotReady = errors.New("group is not fully accepted")
+
+// ErrGroupApartmentRequired is returned when a group has no assigned apartment.
+var ErrGroupApartmentRequired = errors.New("group apartment is required")
+
+// ErrGroupApplicationForbidden is returned when the user cannot submit the group application.
+var ErrGroupApplicationForbidden = errors.New("group application is forbidden")
+
+// ErrOwnerApplicationNotFound is returned when the owner cannot access the application.
+var ErrOwnerApplicationNotFound = errors.New("owner application not found")
+
+// ErrOwnerApplicationAlreadyHandled is returned when an application is no longer pending owner review.
+var ErrOwnerApplicationAlreadyHandled = errors.New("owner application is not pending")
+
+// ErrOwnerApplicationConflict is returned when approving the application would create an inconsistent state.
+var ErrOwnerApplicationConflict = errors.New("owner application conflicts with the current apartment assignment")
+
+const ownerApplicationConflictMessage = "owner application conflicts with the current apartment assignment"
 
 // Service contains application use cases.
 type Service struct {
@@ -114,6 +148,96 @@ func (s *Service) ApplyToApartment(ctx context.Context, apartmentID, tenantID, r
 	compatibilityScore, _ := matching.CalculateCompatibility(*apartmentRow, rules, tenantProfile)
 
 	return s.repo.CreateTenantApplication(ctx, apartmentID, tenantID, compatibilityScore)
+}
+
+// ApplyGroupToAssignedApartment creates or returns the current group application for the assigned apartment.
+func (s *Service) ApplyGroupToAssignedApartment(ctx context.Context, groupID, userID, role string) (*application.Record, bool, error) {
+	trimmedGroupID, trimmedUserID, err := validateGroupApplicationInput(groupID, userID, role)
+	if err != nil {
+		return nil, false, err
+	}
+
+	groupContext, err := s.loadAndValidateGroupApplicationContext(ctx, trimmedGroupID, trimmedUserID)
+	if err != nil {
+		return nil, false, err
+	}
+	if err := s.validateGroupApplicationApartment(ctx, groupContext.ApartmentID); err != nil {
+		return nil, false, err
+	}
+
+	existing, err := s.repo.GetLatestGroupApplicationForApartment(ctx, groupContext.ApartmentID, groupContext.GroupID)
+	if err != nil {
+		return nil, false, err
+	}
+	if existing != nil && isActiveApplicationStatus(existing.Status) {
+		return existing, false, nil
+	}
+
+	if _, err := s.repo.CreateGroupApplication(ctx, groupContext.ApartmentID, groupContext.GroupID); err != nil {
+		return nil, false, err
+	}
+
+	created, err := s.repo.GetLatestGroupApplicationForApartment(ctx, groupContext.ApartmentID, groupContext.GroupID)
+	if err != nil {
+		return nil, false, err
+	}
+	if created == nil {
+		return nil, false, errors.New("group application was not created")
+	}
+
+	return created, true, nil
+}
+
+func validateGroupApplicationInput(groupID, userID, role string) (string, string, error) {
+	trimmedGroupID := strings.TrimSpace(groupID)
+	if trimmedGroupID == "" {
+		return "", "", errors.New("group id is required")
+	}
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return "", "", errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return "", "", ErrTenantRequired
+	}
+	return trimmedGroupID, trimmedUserID, nil
+}
+
+func (s *Service) loadAndValidateGroupApplicationContext(ctx context.Context, groupID, userID string) (*application.GroupApplicationContext, error) {
+	groupContext, err := s.repo.GetGroupApplicationContext(ctx, groupID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if groupContext == nil {
+		return nil, ErrGroupNotFound
+	}
+	if !groupContext.IsCreator && !groupContext.IsMember {
+		return nil, ErrGroupApplicationForbidden
+	}
+	if !groupContext.IsCreator {
+		return nil, ErrGroupApplicationForbidden
+	}
+	if !groupContext.IsFullyAccepted {
+		return nil, ErrGroupNotReady
+	}
+	if strings.TrimSpace(groupContext.ApartmentID) == "" {
+		return nil, ErrGroupApartmentRequired
+	}
+	return groupContext, nil
+}
+
+func (s *Service) validateGroupApplicationApartment(ctx context.Context, apartmentID string) error {
+	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, apartmentID)
+	if err != nil {
+		return err
+	}
+	if apartmentRow == nil {
+		return ErrApartmentNotFound
+	}
+	if apartmentRow.TotalSpots-apartmentRow.OccupiedSpots <= 0 {
+		return ErrApartmentFull
+	}
+	return nil
 }
 
 // CancelTenantApplication cancels a pending tenant application.
@@ -260,8 +384,179 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		}
 		applications[idx].Status = application.MapStatus(applications[idx].Status)
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
-		applications[idx].RequestType = "Solicitud individual"
-		applications[idx].StatusMessage = application.BuildStatusMessage(applications[idx].Status)
+		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])
+		applications[idx].StatusMessage = buildTenantApplicationStatusMessage(applications[idx])
+		applications[idx].CanCancel = applications[idx].Type == "individual" && applications[idx].Status == "pending"
 	}
 	return applications, nil
+}
+
+func buildTenantRequestTypeLabel(item application.TenantApplication) string {
+	if strings.EqualFold(strings.TrimSpace(item.Type), "group") {
+		if strings.TrimSpace(item.GroupName) != "" {
+			return "Solicitud de grupo · " + item.GroupName
+		}
+		return "Solicitud de grupo"
+	}
+	return "Solicitud individual"
+}
+
+func buildTenantApplicationStatusMessage(item application.TenantApplication) string {
+	if !strings.EqualFold(strings.TrimSpace(item.Type), "group") {
+		return application.BuildStatusMessage(item.Status)
+	}
+
+	submitterName := strings.TrimSpace(item.SubmittedByName)
+	if submitterName == "" {
+		submitterName = "la persona creadora del grupo"
+	}
+
+	switch item.Status {
+	case "approved":
+		return "La solicitud grupal enviada por " + submitterName + " ha sido aceptada por el propietario."
+	case "rejected":
+		return "El propietario ha rechazado la solicitud grupal de este piso."
+	case "cancelled":
+		return "La solicitud grupal fue cancelada."
+	default:
+		return "La solicitud grupal enviada por " + submitterName + " esta pendiente de revision por el propietario."
+	}
+}
+
+// ListOwnerApplications returns individual and group applications received by the owner.
+func (s *Service) ListOwnerApplications(ctx context.Context, ownerID, role string) ([]application.OwnerApplication, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+
+	applications, err := s.repo.ListOwnerApplications(ctx, strings.TrimSpace(ownerID))
+	if err != nil {
+		return nil, err
+	}
+	if err := s.signOwnerApplications(ctx, applications); err != nil {
+		return nil, err
+	}
+	return applications, nil
+}
+
+// GetOwnerApplicationByID returns one received application with its full details.
+func (s *Service) GetOwnerApplicationByID(ctx context.Context, applicationID, ownerID, role string) (*application.OwnerApplication, error) {
+	if strings.TrimSpace(applicationID) == "" {
+		return nil, errors.New("application id is required")
+	}
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+
+	item, err := s.repo.GetOwnerApplicationByID(ctx, strings.TrimSpace(applicationID), strings.TrimSpace(ownerID))
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		return nil, ErrOwnerApplicationNotFound
+	}
+	applications := []application.OwnerApplication{*item}
+	if err := s.signOwnerApplications(ctx, applications); err != nil {
+		return nil, err
+	}
+	return &applications[0], nil
+}
+
+// ApproveOwnerApplication approves a pending application belonging to the owner.
+func (s *Service) ApproveOwnerApplication(ctx context.Context, applicationID, ownerID, role string) error {
+	if strings.TrimSpace(applicationID) == "" {
+		return errors.New("application id is required")
+	}
+	if strings.TrimSpace(ownerID) == "" {
+		return errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+
+	updated, err := s.repo.ApproveOwnerApplication(ctx, strings.TrimSpace(applicationID), strings.TrimSpace(ownerID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrOwnerApplicationNotFound
+		}
+		if isOwnerApplicationConflictError(err) {
+			return ErrOwnerApplicationConflict
+		}
+		return err
+	}
+	if !updated {
+		return ErrOwnerApplicationAlreadyHandled
+	}
+	return nil
+}
+
+func isActiveApplicationStatus(status string) bool {
+	switch strings.ToUpper(strings.TrimSpace(status)) {
+	case "PENDING_OWNER", "PENDING_CONFIRMED_TENANTS":
+		return true
+	default:
+		return false
+	}
+}
+
+func isOwnerApplicationConflictError(err error) bool {
+	return err != nil && err.Error() == ownerApplicationConflictMessage
+}
+
+// RejectOwnerApplication rejects a pending application belonging to the owner.
+func (s *Service) RejectOwnerApplication(ctx context.Context, applicationID, ownerID, role string) error {
+	if strings.TrimSpace(applicationID) == "" {
+		return errors.New("application id is required")
+	}
+	if strings.TrimSpace(ownerID) == "" {
+		return errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+
+	updated, err := s.repo.RejectOwnerApplication(ctx, strings.TrimSpace(applicationID), strings.TrimSpace(ownerID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrOwnerApplicationNotFound
+		}
+		return err
+	}
+	if !updated {
+		return ErrOwnerApplicationAlreadyHandled
+	}
+	return nil
+}
+
+func (s *Service) signOwnerApplications(ctx context.Context, applications []application.OwnerApplication) error {
+	for idx := range applications {
+		if applications[idx].Tenant != nil {
+			signedURL, err := s.signAvatarURL(ctx, applications[idx].Tenant.AvatarURL)
+			if err != nil {
+				return err
+			}
+			applications[idx].Tenant.AvatarURL = signedURL
+		}
+		if applications[idx].Group != nil {
+			signedCreatorURL, err := s.signAvatarURL(ctx, applications[idx].Group.Creator.AvatarURL)
+			if err != nil {
+				return err
+			}
+			applications[idx].Group.Creator.AvatarURL = signedCreatorURL
+			for memberIdx := range applications[idx].Group.Members {
+				signedMemberURL, err := s.signAvatarURL(ctx, applications[idx].Group.Members[memberIdx].AvatarURL)
+				if err != nil {
+					return err
+				}
+				applications[idx].Group.Members[memberIdx].AvatarURL = signedMemberURL
+			}
+		}
+	}
+	return nil
 }

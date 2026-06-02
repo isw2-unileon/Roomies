@@ -12,6 +12,7 @@ import TenantGroupDetail from '@/components/tenant/tenant_groups/TenantGroupDeta
 import TenantGroupFilters from '@/components/tenant/tenant_groups/TenantGroupFilters'
 import {
     acceptTenantGroup,
+    createTenantGroupApartmentApplication,
     acceptTenantGroupInvitation,
     createTenantGroupJoinRequest,
     getTenantGroup,
@@ -52,6 +53,7 @@ export default function TenantGroupsPage() {
     const [selectedGroup, setSelectedGroup] = useState<TenantGroupDetailItem | null>(null)
     const [loadingDetail, setLoadingDetail] = useState(false)
     const [acceptingGroupId, setAcceptingGroupId] = useState<string | null>(null)
+    const [creatingApartmentApplicationGroupId, setCreatingApartmentApplicationGroupId] = useState<string | null>(null)
     const [creatingJoinRequestGroupId, setCreatingJoinRequestGroupId] = useState<string | null>(null)
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
 
@@ -203,6 +205,24 @@ export default function TenantGroupsPage() {
         }
     }
 
+	async function handleCreateApartmentApplication(group: TenantGroupDetailItem) {
+		setCreatingApartmentApplicationGroupId(group.id)
+		setError('')
+		setNotice('')
+
+		try {
+			const result = await createTenantGroupApartmentApplication(group.id)
+			setNotice(result.created ? 'Solicitud grupal enviada al propietario del piso.' : 'Ya existia una solicitud grupal para este piso. Se muestra su estado actual.')
+			const detail = await getTenantGroup(group.id)
+			setSelectedGroup(detail)
+			await loadGroups()
+		} catch (requestError) {
+			setError(requestError instanceof Error ? requestError.message : 'No se pudo enviar la solicitud grupal al piso.')
+		} finally {
+			setCreatingApartmentApplicationGroupId(null)
+		}
+	}
+
     async function handleVoteJoinRequest(groupID: string, requestID: string, decision: 'APPROVE' | 'REJECT') {
         setVotingJoinRequestKey(`${requestID}:${decision}`)
         setError('')
@@ -347,6 +367,8 @@ export default function TenantGroupsPage() {
                                         group={selectedGroup}
                                         onAcceptGroup={handleAcceptGroup}
                                         isAcceptingGroup={acceptingGroupId === selectedGroup.id}
+                                        onCreateApartmentApplication={handleCreateApartmentApplication}
+                                        isCreatingApartmentApplication={creatingApartmentApplicationGroupId === selectedGroup.id}
                                         onCreateJoinRequest={handleCreateJoinRequest}
                                         isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}
                                         onVoteJoinRequest={(groupID, request, decision) => handleVoteJoinRequest(groupID, request.id, decision)}

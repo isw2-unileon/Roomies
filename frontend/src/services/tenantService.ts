@@ -6,6 +6,7 @@ import type {
   TenantApplication,
   TenantGroupAcceptedMember,
   TenantGroupApartment,
+  TenantGroupApartmentRequest,
   TenantGroupCandidate,
   TenantGroupDetailItem,
   TenantGroupInvitation,
@@ -139,11 +140,26 @@ interface TenantApplicationDto {
   compatibility: number
   request_type: string
   status_message: string
+  application_type?: 'individual' | 'group'
+  is_group_application?: boolean
+  group_id?: string
+  group_name?: string
+  submitted_by_user_id?: string
+  submitted_by_name?: string
+  group_members?: TenantApplicationGroupMemberDto[]
+  can_cancel?: boolean
 }
 
 interface TenantApplicationsResponseDto {
   applications?: TenantApplicationDto[]
   error?: string
+}
+
+interface TenantApplicationGroupMemberDto {
+  user_id: string
+  name: string
+  email: string
+  avatar_url: string
 }
 
 interface TenantGroupApartmentDto {
@@ -173,9 +189,19 @@ interface TenantGroupDto {
   average_budget_min: number
   average_budget_max: number
   apartment: TenantGroupApartmentDto | null
+  current_apartment_request?: TenantGroupApartmentRequestDto | null
   members?: TenantGroupMemberDto[]
   pending_invitations?: TenantGroupInvitationDto[]
   join_requests?: TenantGroupJoinRequestDto[]
+}
+
+interface TenantGroupApartmentRequestDto {
+	id: string
+	apartment_id: string
+	group_id: string
+	type: string
+	status: string
+	created_at: string
 }
 
 interface TenantGroupJoinVoteDto {
@@ -260,6 +286,9 @@ interface CreateTenantGroupResponseDto {
 interface TenantGroupMessageResponseDto {
   message?: string
   request_id?: string
+  application_id?: string
+  status?: string
+  created?: boolean
   error?: string
 }
 
@@ -403,6 +432,19 @@ function tenantApplicationFromDto(dto: TenantApplicationDto): TenantApplication 
     compatibility: dto.compatibility,
     requestType: dto.request_type,
     statusMessage: dto.status_message,
+    applicationType: dto.application_type === 'group' ? 'group' : 'individual',
+    isGroupApplication: dto.is_group_application ?? dto.application_type === 'group',
+    groupId: dto.group_id ?? '',
+    groupName: dto.group_name ?? '',
+    submittedByUserId: dto.submitted_by_user_id ?? '',
+    submittedByName: dto.submitted_by_name ?? '',
+    groupMembers: (dto.group_members ?? []).map((member) => ({
+      userId: member.user_id,
+      name: member.name,
+      email: member.email,
+      avatarUrl: member.avatar_url,
+    })),
+    canCancel: dto.can_cancel ?? dto.application_type !== 'group',
   }
 }
 
@@ -418,6 +460,17 @@ function tenantGroupApartmentFromDto(dto: TenantGroupApartmentDto): TenantGroupA
     baseRent: dto.base_rent,
     imageUrl: dto.image_url,
   }
+}
+
+function tenantGroupApartmentRequestFromDto(dto: TenantGroupApartmentRequestDto): TenantGroupApartmentRequest {
+	return {
+		id: dto.id,
+		apartmentId: dto.apartment_id,
+		groupId: dto.group_id,
+		type: dto.type,
+		status: dto.status,
+		createdAt: dto.created_at,
+	}
 }
 
 function tenantGroupProfileFromDto(dto: TenantGroupProfileDto): TenantGroupProfile {
@@ -492,6 +545,7 @@ function tenantGroupFromDto(dto: TenantGroupDto): TenantGroupListItem {
     averageBudgetMin: dto.average_budget_min,
     averageBudgetMax: dto.average_budget_max,
     apartment: dto.apartment ? tenantGroupApartmentFromDto(dto.apartment) : null,
+	currentApartmentRequest: dto.current_apartment_request ? tenantGroupApartmentRequestFromDto(dto.current_apartment_request) : null,
   }
 }
 
@@ -898,6 +952,34 @@ export async function createTenantGroupJoinRequest(groupID: string): Promise<str
   }
 
   return data.request_id ?? ''
+}
+
+export interface CreateTenantGroupApartmentApplicationResult {
+	applicationId: string
+	status: string
+	created: boolean
+}
+
+export async function createTenantGroupApartmentApplication(groupID: string): Promise<CreateTenantGroupApartmentApplicationResult> {
+	const response = await apiFetch(`/api/tenant/groups/${groupID}/applications`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({}),
+	})
+
+	const data = (await response.json()) as TenantGroupMessageResponseDto
+	if (!response.ok) {
+		throw new Error(resolveTenantErrorMessage(response, 'No se pudo enviar la solicitud grupal al piso.', data.error))
+	}
+	if (!data.application_id) {
+		throw new Error('No se pudo enviar la solicitud grupal al piso.')
+	}
+
+	return {
+		applicationId: data.application_id,
+		status: data.status ?? '',
+		created: data.created ?? false,
+	}
 }
 
 export async function listTenantGroupJoinRequests(groupID: string): Promise<TenantGroupJoinRequest[]> {

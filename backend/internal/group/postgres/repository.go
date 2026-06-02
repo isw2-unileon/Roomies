@@ -134,7 +134,55 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 			WHERE ap.apartment_id = a.id
 			ORDER BY ap.position ASC, ap.created_at ASC
 			LIMIT 1
-		), '') AS image_url
+		), '') AS image_url,
+		COALESCE((
+			SELECT app.id::text
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_id,
+		COALESCE((
+			SELECT app.apartment_id::text
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_apartment_id,
+		COALESCE((
+			SELECT app.group_id::text
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_group_id,
+		COALESCE((
+			SELECT app.type
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_type,
+		COALESCE((
+			SELECT app.status
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_status,
+		COALESCE((
+			SELECT TO_CHAR(app.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_created_at
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE g.id = $1`
@@ -1082,7 +1130,55 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 			WHERE ap.apartment_id = a.id
 			ORDER BY ap.position ASC, ap.created_at ASC
 			LIMIT 1
-		), '') AS image_url
+		), '') AS image_url,
+		COALESCE((
+			SELECT app.id::text
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_id,
+		COALESCE((
+			SELECT app.apartment_id::text
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_apartment_id,
+		COALESCE((
+			SELECT app.group_id::text
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_group_id,
+		COALESCE((
+			SELECT app.type
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_type,
+		COALESCE((
+			SELECT app.status
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_status,
+		COALESCE((
+			SELECT TO_CHAR(app.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			FROM public.applications app
+			WHERE app.group_id = g.id
+				AND app.apartment_id = g.apartment_id
+			ORDER BY app.created_at DESC
+			LIMIT 1
+		), '') AS current_application_created_at
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE TRUE`
@@ -1201,6 +1297,12 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 	var availableSpots int
 	var baseRent int
 	var imageURL string
+	var currentApplicationID string
+	var currentApplicationApartmentID string
+	var currentApplicationGroupID string
+	var currentApplicationType string
+	var currentApplicationStatus string
+	var currentApplicationCreatedAt string
 
 	if err := row.Scan(
 		&item.ID,
@@ -1225,6 +1327,12 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 		&availableSpots,
 		&baseRent,
 		&imageURL,
+		&currentApplicationID,
+		&currentApplicationApartmentID,
+		&currentApplicationGroupID,
+		&currentApplicationType,
+		&currentApplicationStatus,
+		&currentApplicationCreatedAt,
 	); err != nil {
 		return group.Group{}, fmt.Errorf("scan group summary: %w", err)
 	}
@@ -1240,6 +1348,16 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 			AvailableSpots: availableSpots,
 			BaseRent:       baseRent,
 			ImageURL:       imageURL,
+		}
+	}
+	if currentApplicationID != "" {
+		item.CurrentApartmentRequest = &group.ApartmentRequest{
+			ID:          currentApplicationID,
+			ApartmentID: currentApplicationApartmentID,
+			GroupID:     currentApplicationGroupID,
+			Type:        currentApplicationType,
+			Status:      currentApplicationStatus,
+			CreatedAt:   currentApplicationCreatedAt,
 		}
 	}
 

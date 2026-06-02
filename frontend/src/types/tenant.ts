@@ -65,6 +65,21 @@ export interface TenantApplication {
     compatibility: number
     requestType: string
     statusMessage: string
+    applicationType: 'individual' | 'group'
+    isGroupApplication: boolean
+    groupId: string
+    groupName: string
+    submittedByUserId: string
+    submittedByName: string
+    groupMembers: TenantApplicationGroupMember[]
+    canCancel: boolean
+}
+
+export interface TenantApplicationGroupMember {
+    userId: string
+    name: string
+    email: string
+    avatarUrl: string
 }
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
@@ -173,6 +188,15 @@ export interface TenantGroupApartment {
     imageUrl: string
 }
 
+export interface TenantGroupApartmentRequest {
+	id: string
+	apartmentId: string
+	groupId: string
+	type: string
+	status: string
+	createdAt: string
+}
+
 export interface TenantGroupListItem {
     id: string
     name: string
@@ -188,6 +212,7 @@ export interface TenantGroupListItem {
     averageBudgetMin: number
     averageBudgetMax: number
     apartment: TenantGroupApartment | null
+	currentApartmentRequest: TenantGroupApartmentRequest | null
 }
 
 export interface TenantGroupProfile {
