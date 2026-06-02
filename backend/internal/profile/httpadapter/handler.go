@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
@@ -18,23 +17,17 @@ type handler struct {
 }
 
 type tenantProfileRequest struct {
-	BudgetMin        int    `json:"budget_min"`
-	BudgetMax        int    `json:"budget_max"`
-	PreferredArea    string `json:"preferred_area"`
-	MoveInDate       string `json:"move_in_date"`
-	Pets             bool   `json:"pets"`
-	Smoking          bool   `json:"smoking"`
-	NoiseLevel       string `json:"noise_level"`
-	Cleanliness      string `json:"cleanliness"`
-	WorkSchedule     string `json:"work_schedule"`
-	SleepSchedule    string `json:"sleep_schedule,omitempty"`
-	SocialLifestyle  string `json:"social_lifestyle,omitempty"`
-	StudyHabits      string `json:"study_habits,omitempty"`
-	Language         string `json:"language,omitempty"`
-	University       string `json:"university,omitempty"`
-	Age              int    `json:"age,omitempty"`
-	GuestPreferences string `json:"guest_preferences,omitempty"`
-	PartyFrequency   string `json:"party_frequency,omitempty"`
+	BudgetMax     int    `json:"budget_max"`
+	PreferredArea string `json:"preferred_area"`
+	Pets          bool   `json:"pets"`
+	Smoking       bool   `json:"smoking"`
+	Age           int    `json:"age"`
+	Sex           string `json:"sex"`
+	Situation     string `json:"situation"`
+	Degree        string `json:"degree,omitempty"`
+	Profession    string `json:"profession,omitempty"`
+	Socialization string `json:"socialization_level"`
+	Nightlife     string `json:"nightlife_level"`
 }
 
 type tenantPersonalProfileRequest struct {
@@ -220,64 +213,91 @@ func bindAndValidateTenantProfile(c *gin.Context) (profile.TenantProfileInput, b
 
 func tenantProfileInputFromRequest(request tenantProfileRequest) profile.TenantProfileInput {
 	return profile.TenantProfileInput{
-		BudgetMin:        request.BudgetMin,
-		BudgetMax:        request.BudgetMax,
-		PreferredArea:    request.PreferredArea,
-		MoveInDate:       request.MoveInDate,
-		Pets:             request.Pets,
-		Smoking:          request.Smoking,
-		NoiseLevel:       request.NoiseLevel,
-		Cleanliness:      request.Cleanliness,
-		WorkSchedule:     request.WorkSchedule,
-		SleepSchedule:    request.SleepSchedule,
-		SocialLifestyle:  request.SocialLifestyle,
-		StudyHabits:      request.StudyHabits,
-		Language:         request.Language,
-		University:       request.University,
-		Age:              request.Age,
-		GuestPreferences: request.GuestPreferences,
-		PartyFrequency:   request.PartyFrequency,
+		BudgetMax:     request.BudgetMax,
+		PreferredArea: request.PreferredArea,
+		Pets:          request.Pets,
+		Smoking:       request.Smoking,
+		Age:           request.Age,
+		Sex:           request.Sex,
+		Situation:     request.Situation,
+		Degree:        request.Degree,
+		Profession:    request.Profession,
+		Socialization: request.Socialization,
+		Nightlife:     request.Nightlife,
 	}
 }
 
 func validateTenantProfileBasic(c *gin.Context, input profile.TenantProfileInput) bool {
-	if input.BudgetMin <= 0 || input.BudgetMax <= 0 || input.BudgetMin > input.BudgetMax {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid budget range"})
+	if input.BudgetMax <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "budget_max must be greater than 0"})
 		return false
 	}
 	if strings.TrimSpace(input.PreferredArea) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "preferred_area is required"})
 		return false
 	}
-	if _, err := time.Parse("2006-01-02", input.MoveInDate); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "move_in_date must have YYYY-MM-DD format"})
+	if input.Age <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "age must be greater than 0"})
+		return false
+	}
+	if strings.TrimSpace(input.Sex) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "sex is required"})
+		return false
+	}
+	if strings.TrimSpace(input.Situation) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "situation is required"})
 		return false
 	}
 	return true
 }
 
 func validateTenantProfileEnums(c *gin.Context, input profile.TenantProfileInput) bool {
-	workSchedule := strings.ToLower(strings.TrimSpace(input.WorkSchedule))
-	if workSchedule != "morning" && workSchedule != "night" && workSchedule != "flexible" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "work_schedule must be morning, night or flexible"})
+	sex := strings.ToLower(strings.TrimSpace(input.Sex))
+	if sex != "male" && sex != "female" && sex != "other" && sex != "prefer_not_to_say" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "sex must be male, female, other or prefer_not_to_say"})
 		return false
 	}
-	noiseLevel := strings.ToLower(strings.TrimSpace(input.NoiseLevel))
-	if noiseLevel != "quiet" && noiseLevel != "moderate" && noiseLevel != "loud" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "noise_level must be quiet, moderate or loud"})
+	situation := strings.ToLower(strings.TrimSpace(input.Situation))
+	if situation != "student" && situation != "worker" && situation != "unemployed" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "situation must be student, worker or unemployed"})
 		return false
 	}
-	cleanliness := strings.ToLower(strings.TrimSpace(input.Cleanliness))
-	if cleanliness != "very_clean" && cleanliness != "normal" && cleanliness != "relaxed" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cleanliness must be very_clean, normal or relaxed"})
+	if situation == "student" && strings.TrimSpace(input.Degree) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "degree is required when situation is student"})
+		return false
+	}
+	if situation == "worker" && strings.TrimSpace(input.Profession) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "profession is required when situation is worker"})
+		return false
+	}
+	if !isTenantLevelValue(input.Socialization) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "socialization_level must be low, medium or high"})
+		return false
+	}
+	if !isTenantLevelValue(input.Nightlife) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nightlife_level must be low, medium or high"})
 		return false
 	}
 	return true
 }
 
 func normalizeTenantProfileInput(input *profile.TenantProfileInput) {
-	input.WorkSchedule = strings.ToLower(strings.TrimSpace(input.WorkSchedule))
-	input.NoiseLevel = strings.ToLower(strings.TrimSpace(input.NoiseLevel))
-	input.Cleanliness = strings.ToLower(strings.TrimSpace(input.Cleanliness))
 	input.PreferredArea = strings.TrimSpace(input.PreferredArea)
+	input.Sex = strings.ToLower(strings.TrimSpace(input.Sex))
+	input.Situation = strings.ToLower(strings.TrimSpace(input.Situation))
+	input.Degree = strings.TrimSpace(input.Degree)
+	input.Profession = strings.TrimSpace(input.Profession)
+	input.Socialization = strings.ToLower(strings.TrimSpace(input.Socialization))
+	input.Nightlife = strings.ToLower(strings.TrimSpace(input.Nightlife))
+	if input.Situation != "student" {
+		input.Degree = ""
+	}
+	if input.Situation != "worker" {
+		input.Profession = ""
+	}
+}
+
+func isTenantLevelValue(value string) bool {
+	level := strings.ToLower(strings.TrimSpace(value))
+	return level == "low" || level == "medium" || level == "high"
 }

@@ -73,13 +73,14 @@ func TestServiceAcceptsProfileRepositoryInterface(t *testing.T) {
 	svc := NewService(repo, nil)
 
 	input := profile.TenantProfileInput{
-		BudgetMin:     300,
 		BudgetMax:     500,
 		PreferredArea: "Center",
-		MoveInDate:    "2026-06-01",
-		WorkSchedule:  "morning",
-		NoiseLevel:    "quiet",
-		Cleanliness:   "normal",
+		Age:           24,
+		Sex:           "male",
+		Situation:     "student",
+		Degree:        "Computer Science",
+		Socialization: "medium",
+		Nightlife:     "low",
 	}
 	if err := svc.SaveTenantProfile(context.Background(), "user-1", "tenant", input); err != nil {
 		t.Fatalf("SaveTenantProfile returned error: %v", err)

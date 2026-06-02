@@ -74,7 +74,13 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 		COALESCE(cleanliness, ''),
 		COALESCE(work_schedule, ''),
 		COALESCE(age, 0),
-		COALESCE(university, '')
+		COALESCE(university, ''),
+		COALESCE(sex, ''),
+		COALESCE(tenant_situation, ''),
+		COALESCE(degree, ''),
+		COALESCE(profession, ''),
+		COALESCE(socialization_level, ''),
+		COALESCE(nightlife_level, '')
 	FROM public.tenant_profiles
 	WHERE user_id = $1`
 
@@ -91,6 +97,12 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 		&tenantProfile.WorkSchedule,
 		&tenantProfile.Age,
 		&tenantProfile.University,
+		&tenantProfile.Sex,
+		&tenantProfile.Situation,
+		&tenantProfile.Degree,
+		&tenantProfile.Profession,
+		&tenantProfile.Socialization,
+		&tenantProfile.Nightlife,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -128,43 +140,31 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 	result, err := r.db.Exec(
 		ctx,
 		`UPDATE public.tenant_profiles SET
-			budget_min = $2,
-			budget_max = $3,
-			preferred_area = $4,
-			move_in_date = $5,
-			pets = $6,
-			smoking = $7,
-			noise_level = $8,
-			cleanliness = $9,
-			work_schedule = $10,
-			sleep_schedule = $11,
-			social_lifestyle = $12,
-			study_habits = $13,
-			language = $14,
-			university = $15,
-			age = $16,
-			guest_preferences = $17,
-			party_frequency = $18,
+			budget_max = $2,
+			preferred_area = $3,
+			pets = $4,
+			smoking = $5,
+			age = $6,
+			sex = $7,
+			tenant_situation = $8,
+			degree = $9,
+			profession = $10,
+			socialization_level = $11,
+			nightlife_level = $12,
 			updated_at = NOW()
 		WHERE user_id = $1`,
 		userID,
-		input.BudgetMin,
 		input.BudgetMax,
 		strings.TrimSpace(input.PreferredArea),
-		input.MoveInDate,
 		input.Pets,
 		input.Smoking,
-		input.NoiseLevel,
-		input.Cleanliness,
-		nullIfEmpty(input.WorkSchedule),
-		nullIfEmpty(input.SleepSchedule),
-		nullIfEmpty(input.SocialLifestyle),
-		nullIfEmpty(input.StudyHabits),
-		nullIfEmpty(input.Language),
-		nullIfEmpty(input.University),
 		input.Age,
-		nullIfEmpty(input.GuestPreferences),
-		nullIfEmpty(input.PartyFrequency),
+		nullIfEmpty(input.Sex),
+		nullIfEmpty(input.Situation),
+		nullIfEmpty(input.Degree),
+		nullIfEmpty(input.Profession),
+		nullIfEmpty(input.Socialization),
+		nullIfEmpty(input.Nightlife),
 	)
 	if err != nil {
 		return err
@@ -175,27 +175,21 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 	_, err = r.db.Exec(
 		ctx,
 		`INSERT INTO public.tenant_profiles
-			(user_id, budget_min, budget_max, preferred_area, move_in_date, pets, smoking, noise_level, cleanliness, work_schedule, sleep_schedule, social_lifestyle, study_habits, language, university, age, guest_preferences, party_frequency, updated_at)
+			(user_id, budget_max, preferred_area, pets, smoking, age, sex, tenant_situation, degree, profession, socialization_level, nightlife_level, updated_at)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())`,
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
 		userID,
-		input.BudgetMin,
 		input.BudgetMax,
 		strings.TrimSpace(input.PreferredArea),
-		input.MoveInDate,
 		input.Pets,
 		input.Smoking,
-		nullIfEmpty(input.NoiseLevel),
-		nullIfEmpty(input.Cleanliness),
-		nullIfEmpty(input.WorkSchedule),
-		nullIfEmpty(input.SleepSchedule),
-		nullIfEmpty(input.SocialLifestyle),
-		nullIfEmpty(input.StudyHabits),
-		nullIfEmpty(input.Language),
-		nullIfEmpty(input.University),
 		input.Age,
-		nullIfEmpty(input.GuestPreferences),
-		nullIfEmpty(input.PartyFrequency),
+		nullIfEmpty(input.Sex),
+		nullIfEmpty(input.Situation),
+		nullIfEmpty(input.Degree),
+		nullIfEmpty(input.Profession),
+		nullIfEmpty(input.Socialization),
+		nullIfEmpty(input.Nightlife),
 	)
 	return err
 }

@@ -29,7 +29,7 @@ func CalculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.R
 		}
 	}
 
-	addScore(0.20, budgetCompatibility(apartmentRow.BaseRent, tenantProfile.BudgetMin, tenantProfile.BudgetMax), "Presupuesto alineado")
+	addScore(0.20, budgetCompatibility(apartmentRow.BaseRent, tenantProfile.BudgetMax), "Presupuesto alineado")
 	addScore(0.15, textEqualityScore(tenantProfile.PreferredArea, apartmentRow.Area), "Zona preferida similar")
 	addScore(0.15, boolRuleScore(rules, tenantProfile.Pets, true), "Preferencias de mascotas compatibles")
 	addScore(0.15, boolRuleScore(rules, tenantProfile.Smoking, false), "Normas de convivencia compatibles")
@@ -53,25 +53,12 @@ func CalculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.R
 	return score, reasons
 }
 
-func budgetCompatibility(baseRent, budgetMin, budgetMax int) float64 {
+func budgetCompatibility(baseRent, budgetMax int) float64 {
 	if baseRent <= 0 || budgetMax <= 0 {
 		return -1
 	}
-	if budgetMin > budgetMax {
-		return -1
-	}
-	if baseRent >= budgetMin && baseRent <= budgetMax {
+	if baseRent <= budgetMax {
 		return 100
-	}
-	if baseRent < budgetMin {
-		delta := budgetMin - baseRent
-		if delta <= 50 {
-			return 90
-		}
-		if delta <= 120 {
-			return 75
-		}
-		return 60
 	}
 	delta := baseRent - budgetMax
 	if delta <= 40 {
