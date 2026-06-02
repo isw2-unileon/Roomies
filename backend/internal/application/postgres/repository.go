@@ -309,7 +309,7 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 		return result, nil
 	}
 
-	membersByGroupID, err := r.listGroupMembersForTenantApplications(ctx, groupIDs)
+	membersByGroupID, err := r.listGroupMembers(ctx, groupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -317,41 +317,6 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 		if result[idx].GroupID != "" {
 			result[idx].GroupMembers = membersByGroupID[result[idx].GroupID]
 		}
-	}
-
-	return result, nil
-}
-
-func (r *Repository) listGroupMembersForTenantApplications(ctx context.Context, groupIDs []string) (map[string][]application.GroupMember, error) {
-	const query = `SELECT
-		gm.group_id::text,
-		u.id::text,
-		COALESCE(u.full_name, ''),
-		COALESCE(u.email, ''),
-		COALESCE(u.avatar_url, '')
-	FROM public.group_members gm
-	INNER JOIN public.users u ON u.id = gm.user_id
-	WHERE gm.group_id::text = ANY($1)
-		AND gm.status = 'ACCEPTED'
-	ORDER BY u.full_name ASC`
-
-	rows, err := r.db.Query(ctx, query, groupIDs)
-	if err != nil {
-		return nil, fmt.Errorf("list tenant application group members: %w", err)
-	}
-	defer rows.Close()
-
-	result := make(map[string][]application.GroupMember, len(groupIDs))
-	for rows.Next() {
-		var groupID string
-		var member application.GroupMember
-		if err := rows.Scan(&groupID, &member.UserID, &member.Name, &member.Email, &member.AvatarURL); err != nil {
-			return nil, fmt.Errorf("scan tenant application group member: %w", err)
-		}
-		result[groupID] = append(result[groupID], member)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate tenant application group members: %w", err)
 	}
 
 	return result, nil
@@ -595,7 +560,7 @@ func (r *Repository) listOwnerApplications(ctx context.Context, ownerID, applica
 		return result, nil
 	}
 
-	membersByGroupID, err := r.listGroupMembersForOwnerApplications(ctx, groupIDs)
+	membersByGroupID, err := r.listGroupMembers(ctx, groupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -608,7 +573,7 @@ func (r *Repository) listOwnerApplications(ctx context.Context, ownerID, applica
 	return result, nil
 }
 
-func (r *Repository) listGroupMembersForOwnerApplications(ctx context.Context, groupIDs []string) (map[string][]application.GroupMember, error) {
+func (r *Repository) listGroupMembers(ctx context.Context, groupIDs []string) (map[string][]application.GroupMember, error) {
 	const query = `SELECT
 		gm.group_id::text,
 		u.id::text,
@@ -623,7 +588,7 @@ func (r *Repository) listGroupMembersForOwnerApplications(ctx context.Context, g
 
 	rows, err := r.db.Query(ctx, query, groupIDs)
 	if err != nil {
-		return nil, fmt.Errorf("list owner application group members: %w", err)
+		return nil, fmt.Errorf("list application group members: %w", err)
 	}
 	defer rows.Close()
 
@@ -632,12 +597,12 @@ func (r *Repository) listGroupMembersForOwnerApplications(ctx context.Context, g
 		var groupID string
 		var member application.GroupMember
 		if err := rows.Scan(&groupID, &member.UserID, &member.Name, &member.Email, &member.AvatarURL); err != nil {
-			return nil, fmt.Errorf("scan owner application group member: %w", err)
+			return nil, fmt.Errorf("scan application group member: %w", err)
 		}
 		result[groupID] = append(result[groupID], member)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate owner application group members: %w", err)
+		return nil, fmt.Errorf("iterate application group members: %w", err)
 	}
 
 	return result, nil
