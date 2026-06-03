@@ -1,0 +1,170 @@
+.content {
+  width: 100%;
+}
+
+.content > * + * {
+  margin-top: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #eeeae5;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  background: var(--tenant-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tenant-text-soft);
+  font-size: 1.1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.cardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  margin: 0.15rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.compatibilityRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ring {
+  --ring-angle: calc(var(--compatibility, 0) * 1%);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: conic-gradient(#149f60 var(--ring-angle), #e7efe9 0);
+  flex-shrink: 0;
+}
+
+.ring::before {
+  position: absolute;
+  inset: 0.4rem;
+  content: '';
+  background: #fff;
+  border-radius: 999px;
+}
+
+.ringValue {
+  position: relative;
+  z-index: 1;
+  color: #149f60;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.compatibleLabel {
+  color: #149f60;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--tenant-text-soft);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.loading {
+  color: var(--tenant-text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+}

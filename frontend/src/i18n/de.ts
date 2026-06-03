@@ -287,6 +287,9 @@ const de = {
         meta: '{{age}} Jahre - {{studies}}',
         compatible: '{{count}}% kompatibel',
         empty: 'Für diese Wohnung sind noch keine interessierten Profile verfügbar.',
+        viewAll: 'Alle anzeigen',
+        backToDetail: 'Zurück zur Wohnung',
+        count: '{{count}} Interessenten',
       },
     },
     properties: {

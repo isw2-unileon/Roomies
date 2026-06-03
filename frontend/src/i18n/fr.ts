@@ -287,6 +287,9 @@ const fr = {
         meta: '{{age}} ans - {{studies}}',
         compatible: '{{count}}% compatible',
         empty: 'Aucun profil intéressé n\'est encore disponible pour ce logement.',
+        viewAll: 'Voir tout',
+        backToDetail: 'Retour au logement',
+        count: '{{count}} personnes intéressées',
       },
     },
     properties: {

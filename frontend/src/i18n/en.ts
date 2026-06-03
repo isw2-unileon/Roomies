@@ -287,6 +287,9 @@ const en = {
         meta: '{{age}} years old - {{studies}}',
         compatible: '{{count}}% compatible',
         empty: 'There are no interested profiles available for this flat yet.',
+        viewAll: 'View all',
+        backToDetail: 'Back to flat',
+        count: '{{count}} people interested',
       },
     },
     properties: {

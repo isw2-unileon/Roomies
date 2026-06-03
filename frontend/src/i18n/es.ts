@@ -287,6 +287,9 @@ const es = {
         meta: '{{age}} años - {{studies}}',
         compatible: '{{count}}% compatible',
         empty: 'Todavía no hay perfiles interesados disponibles para este piso.',
+        viewAll: 'Ver todas',
+        backToDetail: 'Volver al piso',
+        count: '{{count}} personas interesadas',
       },
     },
     properties: {
