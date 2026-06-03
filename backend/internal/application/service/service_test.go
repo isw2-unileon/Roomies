@@ -56,14 +56,13 @@ func (f *fakeApplicationRepository) ListInterestedTenants(ctx context.Context, a
 	}
 	return []application.InterestedTenantCandidate{{
 		InterestedTenant: application.InterestedTenant{UserID: "tenant-2", Name: "Laura", Age: 21, Studies: "Veterinaria"},
-		BudgetMin:        320,
 		BudgetMax:        460,
 		PreferredArea:    "centro",
 		Pets:             false,
 		Smoking:          false,
-		NoiseLevel:       "moderate",
-		Cleanliness:      "normal",
-		WorkSchedule:     "flexible",
+		Situation:        "student",
+		Socialization:    "medium",
+		Nightlife:        "low",
 	}}, nil
 }
 
@@ -155,17 +154,16 @@ func (f fakeApartmentReader) GetApartmentRules(ctx context.Context, apartmentID 
 
 type fakeProfileReader struct{}
 
-func (f fakeProfileReader) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error) {
-	return &profile.TenantProfile{
+func (f fakeProfileReader) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error) {
+	return &profile.TenantProfileInput{
 		UserID:        userID,
-		BudgetMin:     300,
 		BudgetMax:     450,
 		PreferredArea: "centro",
 		Pets:          false,
 		Smoking:       false,
-		NoiseLevel:    "moderate",
-		Cleanliness:   "normal",
-		WorkSchedule:  "flexible",
+		Situation:     "student",
+		Socialization: "medium",
+		Nightlife:     "low",
 	}, nil
 }
 

@@ -1,8 +1,9 @@
 // Package profile defines profile inputs used by the application.
 package profile
 
-// TenantProfileInput contains onboarding/profile fields.
+// TenantProfileInput contains onboarding/profile fields used for matching and display.
 type TenantProfileInput struct {
+	UserID        string
 	BudgetMax     int
 	PreferredArea string
 	Pets          bool
@@ -20,27 +21,6 @@ type TenantProfileInput struct {
 type TenantPersonalProfileInput struct {
 	FullName  string
 	AvatarURL string
-}
-
-// TenantProfile contains tenant profile data used by matching and application use cases.
-type TenantProfile struct {
-	UserID        string
-	BudgetMin     int
-	BudgetMax     int
-	PreferredArea string
-	Pets          bool
-	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
-	Age           int
-	University    string
-	Sex           string
-	Situation     string
-	Degree        string
-	Profession    string
-	Socialization string
-	Nightlife     string
 }
 
 // TenantPersonalProfile contains editable account data for a tenant user.

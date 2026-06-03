@@ -27,7 +27,7 @@ type repository interface {
 }
 
 type profileReader interface {
-	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error)
+	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error)
 }
 
 type applicationReader interface {

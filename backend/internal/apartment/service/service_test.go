@@ -23,7 +23,7 @@ type fakeApartmentRepository struct {
 	tenantApartments []apartment.Apartment
 	apartmentByID    *apartment.Apartment
 	apartmentRules   *apartment.Rules
-	tenantProfile    *profile.TenantProfile
+	tenantProfile    *profile.TenantProfileInput
 }
 
 func (f *fakeApartmentRepository) CreateApartment(ctx context.Context, ownerID string, input apartment.CreateApartmentInput) (string, int, error) {
@@ -77,20 +77,19 @@ func (f *fakeApartmentRepository) GetApartmentRules(ctx context.Context, apartme
 	}, nil
 }
 
-func (f *fakeApartmentRepository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error) {
+func (f *fakeApartmentRepository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error) {
 	if f.tenantProfile != nil {
 		return f.tenantProfile, nil
 	}
-	return &profile.TenantProfile{
+	return &profile.TenantProfileInput{
 		UserID:        userID,
-		BudgetMin:     300,
 		BudgetMax:     450,
 		PreferredArea: "centro",
 		Pets:          false,
 		Smoking:       false,
-		NoiseLevel:    "moderate",
-		Cleanliness:   "normal",
-		WorkSchedule:  "flexible",
+		Situation:     "student",
+		Socialization: "medium",
+		Nightlife:     "low",
 	}, nil
 }
 
