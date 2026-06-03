@@ -43,6 +43,7 @@ func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service
 	api.GET("/tenant-profile/personal", h.getTenantPersonalProfile)
 	api.PUT("/tenant-profile/personal", h.saveTenantPersonalProfile)
 	api.POST("/tenant-profile/avatar", h.uploadTenantAvatar)
+	api.GET("/tenant-profile/:userId", h.getTenantProfileByUserID)
 }
 
 func (h *handler) status(c *gin.Context) {
@@ -178,6 +179,40 @@ func (h *handler) uploadTenantAvatar(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "tenant avatar uploaded", "avatar_url": avatarURL})
+}
+
+func (h *handler) getTenantProfileByUserID(c *gin.Context) {
+	_, _, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	targetUserID := strings.TrimSpace(c.Param("userId"))
+	if targetUserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user id is required"})
+		return
+	}
+	p, err := h.profileService.GetTenantProfileByUserID(c.Request.Context(), targetUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load tenant profile"})
+		return
+	}
+	if p == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tenant profile not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"budget_max":          p.BudgetMax,
+		"preferred_area":      p.PreferredArea,
+		"pets":                p.Pets,
+		"smoking":             p.Smoking,
+		"age":                 p.Age,
+		"sex":                 p.Sex,
+		"situation":           p.Situation,
+		"degree":              p.Degree,
+		"profession":          p.Profession,
+		"socialization_level": p.Socialization,
+		"nightlife_level":     p.Nightlife,
+	})
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
