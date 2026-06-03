@@ -182,7 +182,55 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 				AND app.apartment_id = g.apartment_id
 			ORDER BY app.created_at DESC
 			LIMIT 1
-		), '') AS current_application_created_at
+		), '') AS current_application_created_at,
+		COALESCE((
+			SELECT gjr.id::text
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_id,
+		COALESCE((
+			SELECT gjr.group_id::text
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_group_id,
+		COALESCE((
+			SELECT gjr.requester_user_id::text
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_requester_user_id,
+		COALESCE((
+			SELECT gjr.status
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_status,
+		COALESCE((
+			SELECT TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_created_at,
+		COALESCE((
+			SELECT TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_updated_at
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE g.id = $1`
@@ -594,6 +642,24 @@ func (r *Repository) HasPendingJoinRequest(ctx context.Context, groupID, request
 	var exists bool
 	if err := r.db.QueryRow(ctx, query, groupID, requesterUserID).Scan(&exists); err != nil {
 		return false, fmt.Errorf("check pending join request: %w", err)
+	}
+
+	return exists, nil
+}
+
+// HasRejectedJoinRequest checks whether the user already has a rejected request for the group.
+func (r *Repository) HasRejectedJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.group_join_requests gjr
+		WHERE gjr.group_id = $1
+			AND gjr.requester_user_id = $2
+			AND gjr.status = 'REJECTED'
+	)`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, groupID, requesterUserID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check rejected join request: %w", err)
 	}
 
 	return exists, nil
@@ -1178,7 +1244,55 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 				AND app.apartment_id = g.apartment_id
 			ORDER BY app.created_at DESC
 			LIMIT 1
-		), '') AS current_application_created_at
+		), '') AS current_application_created_at,
+		COALESCE((
+			SELECT gjr.id::text
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_id,
+		COALESCE((
+			SELECT gjr.group_id::text
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_group_id,
+		COALESCE((
+			SELECT gjr.requester_user_id::text
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_requester_user_id,
+		COALESCE((
+			SELECT gjr.status
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_status,
+		COALESCE((
+			SELECT TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_created_at,
+		COALESCE((
+			SELECT TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_updated_at
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE TRUE`
@@ -1192,9 +1306,52 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 		whereClauses = append(whereClauses, "(COALESCE(g.name, '') ILIKE "+arg+" OR COALESCE(g.description, '') ILIKE "+arg+" OR COALESCE(a.title, '') ILIKE "+arg+" OR COALESCE(a.address, '') ILIKE "+arg+" OR COALESCE(a.area, '') ILIKE "+arg+")")
 	}
 
-	if filters.Status != "" && filters.Status != "ALL" {
-		args = append(args, filters.Status)
-		whereClauses = append(whereClauses, fmt.Sprintf("g.status = $%d", len(args)))
+	if filters.Status != "" {
+		switch filters.Status {
+		case group.StatusClosed:
+			args = append(args, group.StatusClosed)
+			whereClauses = append(whereClauses, fmt.Sprintf("g.status = $%d", len(args)))
+		case "REQUEST_SENT":
+			args = append(args, group.JoinRequestStatusPending)
+			whereClauses = append(whereClauses, fmt.Sprintf(`COALESCE((
+				SELECT gjr.status
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $1
+				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+				LIMIT 1
+			), '') = $%d`, len(args)))
+		case "REJECTED":
+			args = append(args, group.JoinRequestStatusRejected)
+			whereClauses = append(whereClauses, fmt.Sprintf(`COALESCE((
+				SELECT gjr.status
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $1
+				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+				LIMIT 1
+			), '') = $%d`, len(args)))
+		case "ACCEPTED":
+			args = append(args, group.JoinRequestStatusApproved)
+			whereClauses = append(whereClauses, fmt.Sprintf(`(
+				g.created_by = $1
+				OR EXISTS (
+					SELECT 1
+					FROM public.group_members gm
+					WHERE gm.group_id = g.id
+						AND gm.user_id = $1
+						AND gm.status = 'ACCEPTED'
+				)
+				OR COALESCE((
+					SELECT gjr.status
+					FROM public.group_join_requests gjr
+					WHERE gjr.group_id = g.id
+						AND gjr.requester_user_id = $1
+					ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+					LIMIT 1
+				), '') = $%d
+			)`, len(args)))
+		}
 	}
 
 	if filters.HasApartment == "true" {
@@ -1303,6 +1460,12 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 	var currentApplicationType string
 	var currentApplicationStatus string
 	var currentApplicationCreatedAt string
+	var currentJoinRequestID string
+	var currentJoinRequestGroupID string
+	var currentJoinRequestRequesterUserID string
+	var currentJoinRequestStatus string
+	var currentJoinRequestCreatedAt string
+	var currentJoinRequestUpdatedAt string
 
 	if err := row.Scan(
 		&item.ID,
@@ -1333,6 +1496,12 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 		&currentApplicationType,
 		&currentApplicationStatus,
 		&currentApplicationCreatedAt,
+		&currentJoinRequestID,
+		&currentJoinRequestGroupID,
+		&currentJoinRequestRequesterUserID,
+		&currentJoinRequestStatus,
+		&currentJoinRequestCreatedAt,
+		&currentJoinRequestUpdatedAt,
 	); err != nil {
 		return group.Group{}, fmt.Errorf("scan group summary: %w", err)
 	}
@@ -1358,6 +1527,16 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 			Type:        currentApplicationType,
 			Status:      currentApplicationStatus,
 			CreatedAt:   currentApplicationCreatedAt,
+		}
+	}
+	if currentJoinRequestID != "" {
+		item.CurrentJoinRequest = &group.UserJoinRequest{
+			ID:              currentJoinRequestID,
+			GroupID:         currentJoinRequestGroupID,
+			RequesterUserID: currentJoinRequestRequesterUserID,
+			Status:          currentJoinRequestStatus,
+			CreatedAt:       currentJoinRequestCreatedAt,
+			UpdatedAt:       currentJoinRequestUpdatedAt,
 		}
 	}
 

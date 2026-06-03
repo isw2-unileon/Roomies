@@ -102,6 +102,7 @@ type Group struct {
 	AverageBudgetMax        int
 	Apartment               *Apartment
 	CurrentApartmentRequest *ApartmentRequest
+	CurrentJoinRequest      *UserJoinRequest
 	Members                 []Member
 	PendingInvitations      []Invitation
 	JoinRequests            []JoinRequest
@@ -194,6 +195,16 @@ type JoinRequest struct {
 	UpdatedAt       string
 	Requester       Candidate
 	Votes           []JoinRequestVote
+}
+
+// UserJoinRequest contains the latest join request created by the current user for a group.
+type UserJoinRequest struct {
+	ID              string
+	GroupID         string
+	RequesterUserID string
+	Status          string
+	CreatedAt       string
+	UpdatedAt       string
 }
 
 // JoinRequestVote represents a member's vote on a join request.

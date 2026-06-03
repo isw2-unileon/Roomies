@@ -79,7 +79,6 @@
   flex-wrap: wrap;
 }
 
-.filterButton,
 .createButton {
   display: inline-flex;
   align-items: center;
@@ -91,16 +90,6 @@
   font-weight: 900;
   border-radius: 0.8rem;
   cursor: pointer;
-}
-
-.filterButton {
-  color: var(--tenant-text);
-  background: var(--tenant-surface);
-  border: 1px solid var(--tenant-border-light);
-}
-
-.filterButton:hover {
-  background: var(--tenant-bg-soft);
 }
 
 .createButton {
@@ -272,7 +261,8 @@
 }
 
 .acceptedBadge,
-.pendingBadge {
+.pendingBadge,
+.rejectedBadge {
   padding: 0.25rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 900;
@@ -287,6 +277,11 @@
 .pendingBadge {
   color: #b54708;
   background: #fffaeb;
+}
+
+.rejectedBadge {
+  color: #b42318;
+  background: #fff1f0;
 }
 
 .location,
@@ -561,19 +556,6 @@
   line-height: 1.4;
 }
 
-.moreTips {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 1rem;
-  color: var(--tenant-primary);
-  font-size: 0.8125rem;
-  font-weight: 900;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
 .pagination {
   display: flex;
   align-items: center;
@@ -704,7 +686,6 @@
     width: 100%;
   }
 
-  .filterButton,
   .createButton {
     flex: 1;
   }

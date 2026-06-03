@@ -6,6 +6,7 @@ import type {
   TenantApplication,
   TenantGroupAcceptedMember,
   TenantGroupApartment,
+  TenantGroupCurrentJoinRequest,
   TenantGroupApartmentRequest,
   TenantGroupCandidate,
   TenantGroupDetailItem,
@@ -192,6 +193,7 @@ interface TenantGroupDto {
   average_budget_max: number
   apartment: TenantGroupApartmentDto | null
   current_apartment_request?: TenantGroupApartmentRequestDto | null
+  current_join_request?: TenantGroupCurrentJoinRequestDto | null
   members?: TenantGroupMemberDto[]
   pending_invitations?: TenantGroupInvitationDto[]
   join_requests?: TenantGroupJoinRequestDto[]
@@ -204,6 +206,15 @@ interface TenantGroupApartmentRequestDto {
 	type: string
 	status: string
 	created_at: string
+}
+
+interface TenantGroupCurrentJoinRequestDto {
+	id: string
+	group_id: string
+	requester_user_id: string
+	status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+	created_at: string
+	updated_at: string
 }
 
 interface TenantGroupJoinVoteDto {
@@ -314,7 +325,7 @@ export interface TenantApartmentListFilters {
 
 export interface TenantGroupListFilters {
   search?: string
-  status?: string
+  status?: 'all' | 'request_sent' | 'accepted' | 'rejected' | 'closed'
   hasApartment?: string
   members?: number
   sort?: string
@@ -475,6 +486,17 @@ function tenantGroupApartmentRequestFromDto(dto: TenantGroupApartmentRequestDto)
 	}
 }
 
+function tenantGroupCurrentJoinRequestFromDto(dto: TenantGroupCurrentJoinRequestDto): TenantGroupCurrentJoinRequest {
+	return {
+		id: dto.id,
+		groupId: dto.group_id,
+		requesterUserId: dto.requester_user_id,
+		status: dto.status,
+		createdAt: dto.created_at,
+		updatedAt: dto.updated_at,
+	}
+}
+
 function tenantGroupProfileFromDto(dto: TenantGroupProfileDto): TenantGroupProfile {
   return {
     userId: dto.user_id,
@@ -548,6 +570,7 @@ function tenantGroupFromDto(dto: TenantGroupDto): TenantGroupListItem {
     averageBudgetMax: dto.average_budget_max,
     apartment: dto.apartment ? tenantGroupApartmentFromDto(dto.apartment) : null,
 	currentApartmentRequest: dto.current_apartment_request ? tenantGroupApartmentRequestFromDto(dto.current_apartment_request) : null,
+	currentJoinRequest: dto.current_join_request ? tenantGroupCurrentJoinRequestFromDto(dto.current_join_request) : null,
   }
 }
 

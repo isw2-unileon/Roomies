@@ -6,9 +6,10 @@ import styles from '@/styles/TenantCreateGroup.module.css'
 interface Props {
   selected: TenantProperty | null
   onChange: (apartment: TenantProperty | null) => void
+  allowEmptySelection?: boolean
 }
 
-export default function TenantGroupApartmentSelector({ selected, onChange }: Props) {
+export default function TenantGroupApartmentSelector({ selected, onChange, allowEmptySelection = true }: Props) {
   const [search, setSearch] = useState('')
   const [apartments, setApartments] = useState<TenantProperty[]>([])
   const [loading, setLoading] = useState(false)
@@ -49,17 +50,19 @@ export default function TenantGroupApartmentSelector({ selected, onChange }: Pro
         <p className={styles.helpText}>Cargando pisos...</p>
       ) : (
         <ul className={styles.apartmentsList}>
-          <li>
-            <button
-              type="button"
-              className={`${styles.apartmentItem} ${selectedApartmentId === '__none__' ? styles.selectedApartment : ''}`}
-              onClick={() => onChange(null)}
-              aria-pressed={selectedApartmentId === '__none__'}
-            >
-              <span className={styles.itemTitle}>Sin piso asignado</span>
-              <span className={styles.itemMeta}>Puedes asignarlo mas adelante.</span>
-            </button>
-          </li>
+          {allowEmptySelection ? (
+            <li>
+              <button
+                type="button"
+                className={`${styles.apartmentItem} ${selectedApartmentId === '__none__' ? styles.selectedApartment : ''}`}
+                onClick={() => onChange(null)}
+                aria-pressed={selectedApartmentId === '__none__'}
+              >
+                <span className={styles.itemTitle}>Sin piso asignado</span>
+                <span className={styles.itemMeta}>Puedes asignarlo mas adelante.</span>
+              </button>
+            </li>
+          ) : null}
           {apartments.map((apartment) => {
             const isSelected = selectedApartmentId === apartment.id
 

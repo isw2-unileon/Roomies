@@ -191,6 +191,15 @@ export interface TenantGroupApartmentRequest {
 	createdAt: string
 }
 
+export interface TenantGroupCurrentJoinRequest {
+	id: string
+	groupId: string
+	requesterUserId: string
+	status: TenantGroupJoinRequestStatus
+	createdAt: string
+	updatedAt: string
+}
+
 export interface TenantGroupListItem {
     id: string
     name: string
@@ -207,6 +216,7 @@ export interface TenantGroupListItem {
     averageBudgetMax: number
     apartment: TenantGroupApartment | null
 	currentApartmentRequest: TenantGroupApartmentRequest | null
+	currentJoinRequest: TenantGroupCurrentJoinRequest | null
 }
 
 export interface TenantGroupProfile {

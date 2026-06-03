@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-    FunnelIcon,
     MagnifyingGlassIcon,
     UserGroupIcon,
 } from '@heroicons/react/24/outline'
@@ -10,6 +9,7 @@ import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantGroupCard from '@/components/tenant/tenant_groups/TenantGroupCard'
 import TenantGroupDetail from '@/components/tenant/tenant_groups/TenantGroupDetail'
 import TenantGroupFilters from '@/components/tenant/tenant_groups/TenantGroupFilters'
+import type { TenantGroupDisplayStatus } from '@/components/tenant/tenant_groups/groupDisplayStatus'
 import {
     acceptTenantGroup,
     createTenantGroupApartmentApplication,
@@ -20,9 +20,10 @@ import {
     listTenantGroups,
     rejectTenantGroupInvitation,
     voteTenantGroupJoinRequest,
+    updateTenantGroupApartment,
 } from '@/services/tenantService'
 import styles from '@/styles/TenantGroups.module.css'
-import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupListItem } from '@/types/tenant'
+import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupListItem, TenantProperty } from '@/types/tenant'
 import { paths } from '@/routes/paths'
 
 function memberFilterToNumber(value: string) {
@@ -42,7 +43,7 @@ export default function TenantGroupsPage() {
     const navigate = useNavigate()
     const [groups, setGroups] = useState<TenantGroupListItem[]>([])
     const [search, setSearch] = useState('')
-    const [status, setStatus] = useState('all')
+    const [status, setStatus] = useState<TenantGroupDisplayStatus>('all')
     const [hasApartment, setHasApartment] = useState('all')
     const [selectedMembers, setSelectedMembers] = useState('all')
     const [sort, setSort] = useState('recent')
@@ -56,6 +57,7 @@ export default function TenantGroupsPage() {
     const [creatingApartmentApplicationGroupId, setCreatingApartmentApplicationGroupId] = useState<string | null>(null)
     const [creatingJoinRequestGroupId, setCreatingJoinRequestGroupId] = useState<string | null>(null)
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
+    const [linkingApartmentGroupId, setLinkingApartmentGroupId] = useState<string | null>(null)
 
     const loadGroups = useCallback(async () => {
         setLoading(true)
@@ -223,6 +225,24 @@ export default function TenantGroupsPage() {
 		}
 	}
 
+	async function handleLinkApartment(group: TenantGroupDetailItem, apartment: TenantProperty) {
+		setLinkingApartmentGroupId(group.id)
+		setError('')
+		setNotice('')
+
+		try {
+			await updateTenantGroupApartment(group.id, apartment.id)
+			setNotice('Vivienda vinculada correctamente al grupo.')
+			const detail = await getTenantGroup(group.id)
+			setSelectedGroup(detail)
+			await loadGroups()
+		} catch (linkError) {
+			setError(linkError instanceof Error ? linkError.message : 'No se pudo vincular la vivienda al grupo.')
+		} finally {
+			setLinkingApartmentGroupId(null)
+		}
+	}
+
     async function handleVoteJoinRequest(groupID: string, requestID: string, decision: 'APPROVE' | 'REJECT') {
         setVotingJoinRequestKey(`${requestID}:${decision}`)
         setError('')
@@ -273,14 +293,6 @@ export default function TenantGroupsPage() {
                             </label>
 
                             <div className={styles.toolbarActions}>
-                                <button type="button" className={styles.filterButton}>
-                                    <FunnelIcon
-                                        className={styles.iconSmall}
-                                        aria-hidden="true"
-                                    />
-                                    Filtros
-                                </button>
-
                                 <button
                                     type="button"
                                     className={styles.createButton}
@@ -373,12 +385,14 @@ export default function TenantGroupsPage() {
                                         isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}
                                         onVoteJoinRequest={(groupID, request, decision) => handleVoteJoinRequest(groupID, request.id, decision)}
                                         votingJoinRequestKey={votingJoinRequestKey}
-                                        onAcceptInvitation={handleAcceptDetailInvitation}
-                                        onRejectInvitation={handleRejectDetailInvitation}
-                                        isRespondingInvitation={respondingInvitationId}
-                                    />
-                                )}
-                            </div>
+                                         onAcceptInvitation={handleAcceptDetailInvitation}
+                                         onRejectInvitation={handleRejectDetailInvitation}
+                                         isRespondingInvitation={respondingInvitationId}
+                                         onLinkApartment={handleLinkApartment}
+                                         isLinkingApartment={linkingApartmentGroupId === selectedGroup.id}
+                                     />
+                                 )}
+                             </div>
                         )}
                     </section>
 

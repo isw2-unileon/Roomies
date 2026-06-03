@@ -31,6 +31,7 @@ type repository interface {
 	CanUserAcceptGroup(ctx context.Context, groupID, userID string) (bool, error)
 	AcceptGroupForUser(ctx context.Context, groupID, userID string) error
 	HasPendingJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
+	HasRejectedJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
 	CreateJoinRequest(ctx context.Context, groupID, requesterUserID string) (string, error)
 	ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error)
 	CanUserReviewJoinRequests(ctx context.Context, groupID, userID string) (bool, error)
@@ -68,8 +69,17 @@ var ErrNoValidInvitedUsers = errors.New("no valid invited users found")
 // ErrJoinRequestAlreadyPending is returned when the user already has a pending join request for the group.
 var ErrJoinRequestAlreadyPending = errors.New("join request already pending")
 
+// ErrJoinRequestAlreadyRejected is returned when the user already has a rejected join request for the group.
+var ErrJoinRequestAlreadyRejected = errors.New("join request already rejected")
+
 // ErrJoinRequestNotFound is returned when the requested join request does not exist.
 var ErrJoinRequestNotFound = errors.New("join request not found")
+
+// ErrGroupApartmentAlreadyAssigned is returned when the group already has a linked apartment.
+var ErrGroupApartmentAlreadyAssigned = errors.New("group apartment already assigned")
+
+// ErrGroupApartmentRemovalNotAllowed is returned when trying to remove a linked apartment.
+var ErrGroupApartmentRemovalNotAllowed = errors.New("group apartment removal is not allowed")
 
 // Service contains tenant group business logic.
 type Service struct {
@@ -89,7 +99,7 @@ func (s *Service) ListTenantGroups(ctx context.Context, userID, role string, fil
 	}
 
 	filters.Search = strings.TrimSpace(filters.Search)
-	filters.Status = strings.ToUpper(strings.TrimSpace(filters.Status))
+	filters.Status = normalizeTenantGroupStatusFilter(filters.Status)
 	filters.HasApartment = strings.ToLower(strings.TrimSpace(filters.HasApartment))
 	filters.SortBy = strings.ToLower(strings.TrimSpace(filters.SortBy))
 
@@ -313,6 +323,14 @@ func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role s
 		return "", ErrJoinRequestAlreadyPending
 	}
 
+	hasRejected, err := s.repo.HasRejectedJoinRequest(ctx, groupID, userID)
+	if err != nil {
+		return "", err
+	}
+	if hasRejected {
+		return "", ErrJoinRequestAlreadyRejected
+	}
+
 	return s.repo.CreateJoinRequest(ctx, groupID, userID)
 }
 
@@ -520,9 +538,21 @@ func (s *Service) UpdateGroupApartment(ctx context.Context, groupID, userID, rol
 		return ErrForbidden
 	}
 
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+
 	apartmentID := strings.TrimSpace(input.ApartmentID)
 	if apartmentID == "" {
-		return s.repo.UpdateGroupApartment(ctx, strings.TrimSpace(groupID), nil)
+		return ErrGroupApartmentRemovalNotAllowed
+	}
+
+	if groupDetail.Apartment != nil {
+		return ErrGroupApartmentAlreadyAssigned
 	}
 
 	currentPeople, err := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, strings.TrimSpace(groupID))
@@ -544,6 +574,23 @@ func validateTenant(userID, role string) error {
 		return ErrTenantRequired
 	}
 	return nil
+}
+
+func normalizeTenantGroupStatusFilter(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "request_sent":
+		return "REQUEST_SENT"
+	case "accepted":
+		return "ACCEPTED"
+	case "rejected":
+		return "REJECTED"
+	case "closed":
+		return "CLOSED"
+	case "all", "":
+		return ""
+	default:
+		return ""
+	}
 }
 
 func normalizeUserIDs(userIDs []string, currentUserID string) []string {

@@ -1,7 +1,11 @@
+import { useEffect, useState } from 'react'
+
 import TenantGroupSummary from './TenantGroupSummary'
 import TenantGroupMembers from './TenantGroupMembers'
 import TenantGroupInvitationCard from './TenantGroupInvitationCard'
-import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupJoinRequest } from '@/types/tenant'
+import TenantGroupApartmentSelector from './TenantGroupApartmentSelector'
+import { canCreateNewJoinRequest, getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
+import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupJoinRequest, TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
 
 interface TenantGroupDetailProps {
@@ -17,6 +21,8 @@ interface TenantGroupDetailProps {
   onAcceptInvitation?: (invitation: TenantGroupInvitation) => void
   onRejectInvitation?: (invitation: TenantGroupInvitation) => void
   isRespondingInvitation?: string | null
+  onLinkApartment?: (group: TenantGroupDetailItem, apartment: TenantProperty) => void
+  isLinkingApartment?: boolean
 }
 
 function formatApartmentRequestStatus(status: string) {
@@ -52,13 +58,24 @@ export default function TenantGroupDetail({
   onAcceptInvitation,
   onRejectInvitation,
   isRespondingInvitation,
+  onLinkApartment,
+  isLinkingApartment = false,
 }: TenantGroupDetailProps) {
+  const [selectedApartment, setSelectedApartment] = useState<TenantProperty | null>(null)
+
+  useEffect(() => {
+    setSelectedApartment(null)
+  }, [group.id])
+
   const canAcceptGroup =
     !group.isFullyAccepted
     && (group.userRelation === 'creator'
       || (group.userRelation === 'member' && group.members.some((member) => member.isCurrentUser && !member.hasAccepted)))
 
-  const canCreateJoinRequest = group.userRelation === 'viewer'
+	const currentJoinRequestLabel = getCurrentJoinRequestLabel(group.currentJoinRequest)
+	const canCreateJoinRequest = group.userRelation === 'viewer' && canCreateNewJoinRequest(group.currentJoinRequest)
+	const hasRejectedJoinRequest = isRejectedJoinRequest(group.currentJoinRequest)
+	const canLinkApartment = group.userRelation === 'creator' && !group.apartment
 	const canCreateApartmentApplication = Boolean(group.apartment)
 		&& group.isFullyAccepted
 		&& group.userRelation === 'creator'
@@ -79,6 +96,13 @@ export default function TenantGroupDetail({
         </button>
       ) : null}
 
+      {group.userRelation === 'viewer' && currentJoinRequestLabel ? (
+		<p className={hasRejectedJoinRequest ? styles.rejectedText : styles.pendingText}>
+			Estado de tu solicitud para unirte a este grupo: {currentJoinRequestLabel}.
+			{hasRejectedJoinRequest ? ' No puedes volver a solicitar plaza en este grupo.' : ''}
+		</p>
+	  ) : null}
+
       {canCreateJoinRequest ? (
         <button
           type="button"
@@ -89,6 +113,28 @@ export default function TenantGroupDetail({
           {isCreatingJoinRequest ? 'Enviando solicitud...' : 'Solicitar unirme'}
         </button>
       ) : null}
+
+	  {canLinkApartment ? (
+		<section className={styles.apartmentLinkSection}>
+			<h3>Vincular vivienda</h3>
+			<p className={styles.sectionHint}>
+				Selecciona una vivienda para asociarla a este grupo. Esta accion solo puede hacerse una vez.
+			</p>
+			<TenantGroupApartmentSelector
+				selected={selectedApartment}
+				onChange={setSelectedApartment}
+				allowEmptySelection={false}
+			/>
+			<button
+				type="button"
+				className={styles.acceptGroupButton}
+				onClick={() => selectedApartment && onLinkApartment?.(group, selectedApartment)}
+				disabled={!selectedApartment || isLinkingApartment}
+			>
+				{isLinkingApartment ? 'Vinculando vivienda...' : 'Vincular vivienda'}
+			</button>
+		</section>
+	  ) : null}
 
 		{group.apartment ? (
 			group.currentApartmentRequest ? (

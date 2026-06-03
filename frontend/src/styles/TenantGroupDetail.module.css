@@ -27,7 +27,8 @@
 }
 
 .acceptedText,
-.pendingText {
+.pendingText,
+.rejectedText {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   font-weight: 800;
@@ -41,6 +42,10 @@
   color: #b54708;
 }
 
+.rejectedText {
+  color: #b42318;
+}
+
 .groupMeta p {
   margin: 0.25rem 0;
   font-size: 0.8125rem;
@@ -48,11 +53,17 @@
 }
 
 .membersSection,
-.invitationsSection {
+.invitationsSection,
+.apartmentLinkSection {
   padding: 1rem;
   background: var(--tenant-surface);
   border: 1px solid var(--tenant-border);
   border-radius: 1rem;
+}
+
+.apartmentLinkSection {
+  display: grid;
+  gap: 1rem;
 }
 
 .acceptGroupButton {

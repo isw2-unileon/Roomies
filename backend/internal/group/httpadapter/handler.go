@@ -32,24 +32,25 @@ type voteJoinRequestBody struct {
 }
 
 type groupResponse struct {
-	ID                      string                    `json:"id"`
-	Name                    string                    `json:"name"`
-	Description             string                    `json:"description"`
-	Status                  string                    `json:"status"`
-	CreatedBy               string                    `json:"created_by"`
-	CreatedAt               string                    `json:"created_at"`
-	UserRelation            string                    `json:"user_relation"`
-	InvitationID            string                    `json:"invitation_id"`
-	AcceptedMembersCount    int                       `json:"accepted_members_count"`
-	PendingInvitationsCount int                       `json:"pending_invitations_count"`
-	IsFullyAccepted         bool                      `json:"is_fully_accepted"`
-	AverageBudgetMin        int                       `json:"average_budget_min"`
-	AverageBudgetMax        int                       `json:"average_budget_max"`
-	Apartment               *apartmentResponse        `json:"apartment"`
-	CurrentApartmentRequest *apartmentRequestResponse `json:"current_apartment_request"`
-	Members                 []memberResponse          `json:"members,omitempty"`
-	PendingInvitations      []invitationResponse      `json:"pending_invitations,omitempty"`
-	JoinRequests            []joinRequestResponse     `json:"join_requests,omitempty"`
+	ID                      string                      `json:"id"`
+	Name                    string                      `json:"name"`
+	Description             string                      `json:"description"`
+	Status                  string                      `json:"status"`
+	CreatedBy               string                      `json:"created_by"`
+	CreatedAt               string                      `json:"created_at"`
+	UserRelation            string                      `json:"user_relation"`
+	InvitationID            string                      `json:"invitation_id"`
+	AcceptedMembersCount    int                         `json:"accepted_members_count"`
+	PendingInvitationsCount int                         `json:"pending_invitations_count"`
+	IsFullyAccepted         bool                        `json:"is_fully_accepted"`
+	AverageBudgetMin        int                         `json:"average_budget_min"`
+	AverageBudgetMax        int                         `json:"average_budget_max"`
+	Apartment               *apartmentResponse          `json:"apartment"`
+	CurrentApartmentRequest *apartmentRequestResponse   `json:"current_apartment_request"`
+	CurrentJoinRequest      *currentJoinRequestResponse `json:"current_join_request"`
+	Members                 []memberResponse            `json:"members,omitempty"`
+	PendingInvitations      []invitationResponse        `json:"pending_invitations,omitempty"`
+	JoinRequests            []joinRequestResponse       `json:"join_requests,omitempty"`
 }
 
 type apartmentRequestResponse struct {
@@ -70,6 +71,15 @@ type joinRequestResponse struct {
 	UpdatedAt       string             `json:"updated_at"`
 	Requester       candidateResponse  `json:"requester"`
 	Votes           []joinVoteResponse `json:"votes"`
+}
+
+type currentJoinRequestResponse struct {
+	ID              string `json:"id"`
+	GroupID         string `json:"group_id"`
+	RequesterUserID string `json:"requester_user_id"`
+	Status          string `json:"status"`
+	CreatedAt       string `json:"created_at"`
+	UpdatedAt       string `json:"updated_at"`
 }
 
 type joinVoteResponse struct {
@@ -442,8 +452,14 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{"error": "invitation is not pending"})
 	case errors.Is(err, groupservice.ErrApartmentFull):
 		c.JSON(http.StatusConflict, gin.H{"error": "group exceeds apartment available spots"})
+	case errors.Is(err, groupservice.ErrGroupApartmentAlreadyAssigned):
+		c.JSON(http.StatusConflict, gin.H{"error": "group apartment already assigned"})
+	case errors.Is(err, groupservice.ErrGroupApartmentRemovalNotAllowed):
+		c.JSON(http.StatusConflict, gin.H{"error": "group apartment removal is not allowed"})
 	case errors.Is(err, groupservice.ErrJoinRequestAlreadyPending):
 		c.JSON(http.StatusConflict, gin.H{"error": "join request already pending"})
+	case errors.Is(err, groupservice.ErrJoinRequestAlreadyRejected):
+		c.JSON(http.StatusConflict, gin.H{"error": "join request already rejected"})
 	case errors.Is(err, groupservice.ErrJoinRequestNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "join request not found"})
 	default:
@@ -476,6 +492,7 @@ func groupResponseFromDomain(item group.Group) groupResponse {
 		AverageBudgetMax:        item.AverageBudgetMax,
 		Apartment:               apartmentResponseFromDomain(item.Apartment),
 		CurrentApartmentRequest: apartmentRequestResponseFromDomain(item.CurrentApartmentRequest),
+		CurrentJoinRequest:      currentJoinRequestResponseFromDomain(item.CurrentJoinRequest),
 		Members:                 memberResponses(item.Members),
 		PendingInvitations:      invitationResponses(item.PendingInvitations),
 		JoinRequests:            joinRequestResponses(item.JoinRequests),
@@ -494,6 +511,21 @@ func apartmentRequestResponseFromDomain(item *group.ApartmentRequest) *apartment
 		Type:        item.Type,
 		Status:      item.Status,
 		CreatedAt:   item.CreatedAt,
+	}
+}
+
+func currentJoinRequestResponseFromDomain(item *group.UserJoinRequest) *currentJoinRequestResponse {
+	if item == nil {
+		return nil
+	}
+
+	return &currentJoinRequestResponse{
+		ID:              item.ID,
+		GroupID:         item.GroupID,
+		RequesterUserID: item.RequesterUserID,
+		Status:          item.Status,
+		CreatedAt:       item.CreatedAt,
+		UpdatedAt:       item.UpdatedAt,
 	}
 }
 

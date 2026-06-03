@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
 	getTenantApartmentDetail,
 	getTenantPersonalProfile,
+	listTenantGroups,
 	listTenantApplications,
 	listTenantApartments,
 	saveTenantProfile,
@@ -278,5 +279,90 @@ describe('tenantService', () => {
 	  ])
 
 	  expect(fetch).toHaveBeenCalledWith('/api/tenant/applications', { credentials: 'include' })
+	})
+
+	test('maps current join request state in tenant groups list', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({
+		  groups: [
+			{
+			  id: 'group-1',
+			  name: 'Centro Leon',
+			  description: 'Grupo tranquilo',
+			  status: 'FORMING',
+			  created_by: 'tenant-9',
+			  created_at: '2026-06-01T12:00:00Z',
+			  user_relation: 'viewer',
+			  invitation_id: '',
+			  accepted_members_count: 2,
+			  pending_invitations_count: 0,
+			  is_fully_accepted: false,
+			  average_budget_min: 300,
+			  average_budget_max: 450,
+			  apartment: null,
+			  current_apartment_request: null,
+			  current_join_request: {
+				id: 'join-request-1',
+				group_id: 'group-1',
+				requester_user_id: 'tenant-1',
+				status: 'REJECTED',
+				created_at: '2026-06-02T10:00:00Z',
+				updated_at: '2026-06-03T11:00:00Z',
+			  },
+			},
+		  ],
+		}),
+	  } as Response)
+
+	  await expect(listTenantGroups()).resolves.toEqual([
+		{
+		  id: 'group-1',
+		  name: 'Centro Leon',
+		  description: 'Grupo tranquilo',
+		  status: 'FORMING',
+		  createdBy: 'tenant-9',
+		  createdAt: '2026-06-01T12:00:00Z',
+		  userRelation: 'viewer',
+		  invitationId: '',
+		  acceptedMembersCount: 2,
+		  pendingInvitationsCount: 0,
+		  isFullyAccepted: false,
+		  averageBudgetMin: 300,
+		  averageBudgetMax: 450,
+		  apartment: null,
+		  currentApartmentRequest: null,
+		  currentJoinRequest: {
+			id: 'join-request-1',
+			groupId: 'group-1',
+			requesterUserId: 'tenant-1',
+			status: 'REJECTED',
+			createdAt: '2026-06-02T10:00:00Z',
+			updatedAt: '2026-06-03T11:00:00Z',
+		  },
+		},
+	  ])
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups', { credentials: 'include' })
+	})
+
+	test('sends tenant group status filters with normalized values', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ groups: [] }),
+	  } as Response)
+
+	  await listTenantGroups({
+		search: 'centro',
+		status: 'request_sent',
+		hasApartment: 'false',
+		members: 3,
+		sort: 'members',
+	  })
+
+	  expect(fetch).toHaveBeenCalledWith(
+		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members',
+		{ credentials: 'include' },
+	  )
 	})
 })

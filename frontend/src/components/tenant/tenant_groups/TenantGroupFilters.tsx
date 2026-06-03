@@ -1,6 +1,7 @@
-import { ArrowRightIcon, CalendarDaysIcon, ShieldCheckIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, ShieldCheckIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 
 import styles from '@/styles/TenantGroups.module.css'
+import { tenantGroupStatusFilterOptions, type TenantGroupDisplayStatus } from './groupDisplayStatus'
 
 const memberOptions = [
     { value: 'all', label: 'Todos' },
@@ -14,8 +15,8 @@ const memberOptions = [
 interface TenantGroupFiltersProps {
     selectedMembers: string
     onSelectedMembersChange: (value: string) => void
-    status: string
-    onStatusChange: (value: string) => void
+    status: TenantGroupDisplayStatus
+    onStatusChange: (value: TenantGroupDisplayStatus) => void
     hasApartment: string
     onHasApartmentChange: (value: string) => void
     onClearFilters: () => void
@@ -46,15 +47,11 @@ export default function TenantGroupFilters({
                         id="status-filter"
                         className={styles.filterSelect}
                         value={status}
-                        onChange={(event) => onStatusChange(event.target.value)}
+                        onChange={(event) => onStatusChange(event.target.value as TenantGroupDisplayStatus)}
                     >
-                        <option value="all">Todos</option>
-                        <option value="FORMING">En formación</option>
-                        <option value="READY">Listo</option>
-                        <option value="APPLIED">Solicitud enviada</option>
-                        <option value="ACCEPTED">Aceptado</option>
-                        <option value="REJECTED">Rechazado</option>
-                        <option value="CLOSED">Cerrado</option>
+                        {tenantGroupStatusFilterOptions.map((option) => (
+							<option key={option.value} value={option.value}>{option.label}</option>
+						))}
                     </select>
                 </div>
 
@@ -123,11 +120,6 @@ export default function TenantGroupFilters({
                         </div>
                     </div>
                 </div>
-
-                <button type="button" className={styles.moreTips}>
-                    Ver más consejos
-                    <ArrowRightIcon className={styles.iconSmall} aria-hidden="true" />
-                </button>
             </section>
         </aside>
     )
