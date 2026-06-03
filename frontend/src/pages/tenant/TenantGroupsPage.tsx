@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-    FunnelIcon,
     MagnifyingGlassIcon,
     UserGroupIcon,
 } from '@heroicons/react/24/outline'
@@ -294,14 +293,6 @@ export default function TenantGroupsPage() {
                             </label>
 
                             <div className={styles.toolbarActions}>
-                                <button type="button" className={styles.filterButton}>
-                                    <FunnelIcon
-                                        className={styles.iconSmall}
-                                        aria-hidden="true"
-                                    />
-                                    Filtros
-                                </button>
-
                                 <button
                                     type="button"
                                     className={styles.createButton}

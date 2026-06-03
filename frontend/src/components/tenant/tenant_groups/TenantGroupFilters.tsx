@@ -1,4 +1,4 @@
-import { ArrowRightIcon, CalendarDaysIcon, ShieldCheckIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, ShieldCheckIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 
 import styles from '@/styles/TenantGroups.module.css'
 import { tenantGroupStatusFilterOptions, type TenantGroupDisplayStatus } from './groupDisplayStatus'
@@ -120,11 +120,6 @@ export default function TenantGroupFilters({
                         </div>
                     </div>
                 </div>
-
-                <button type="button" className={styles.moreTips}>
-                    Ver más consejos
-                    <ArrowRightIcon className={styles.iconSmall} aria-hidden="true" />
-                </button>
             </section>
         </aside>
     )
