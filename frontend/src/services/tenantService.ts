@@ -911,6 +911,17 @@ export async function getTenantGroup(groupID: string): Promise<TenantGroupDetail
   return tenantGroupDetailFromDto(data.group)
 }
 
+export async function getMyGroupForApartment(apartmentID: string): Promise<TenantGroupDetailItem | null> {
+  const response = await apiFetch(`/api/apartments/${apartmentID}/my-group`)
+  if (response.status === 404) return null
+  const data = (await response.json()) as TenantGroupResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo cargar tu grupo para este piso.')
+  }
+  if (!data.group) return null
+  return tenantGroupDetailFromDto(data.group)
+}
+
 export async function createTenantGroup(input: CreateTenantGroupInput): Promise<string> {
   const response = await apiFetch('/api/tenant/groups', {
     method: 'POST',

@@ -6,13 +6,15 @@ import styles from '@/styles/TenantCreateGroup.module.css'
 interface Props {
   selected: TenantGroupCandidate[]
   onChange: (candidates: TenantGroupCandidate[]) => void
+  preselectedUserIds?: string[]
 }
 
-export default function TenantGroupCandidateSelector({ selected, onChange }: Props) {
+export default function TenantGroupCandidateSelector({ selected, onChange, preselectedUserIds }: Props) {
   const [search, setSearch] = useState('')
   const [candidates, setCandidates] = useState<TenantGroupCandidate[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [didAutoSelect, setDidAutoSelect] = useState(false)
 
   useEffect(() => {
     const loadCandidates = async () => {
@@ -30,6 +32,17 @@ export default function TenantGroupCandidateSelector({ selected, onChange }: Pro
     }
     void loadCandidates()
   }, [search])
+
+  useEffect(() => {
+    if (!preselectedUserIds?.length || didAutoSelect || candidates.length === 0) return
+    const toAdd = candidates.filter(
+      (c) => preselectedUserIds.includes(c.userId) && !selected.some((s) => s.userId === c.userId)
+    )
+    if (toAdd.length > 0) {
+      onChange([...selected, ...toAdd])
+      setDidAutoSelect(true)
+    }
+  }, [candidates, preselectedUserIds, didAutoSelect, selected, onChange])
 
   const toggleCandidate = (candidate: TenantGroupCandidate) => {
     if (selected.find((c) => c.userId === candidate.userId)) {

@@ -7,13 +7,15 @@ interface Props {
   selected: TenantProperty | null
   onChange: (apartment: TenantProperty | null) => void
   allowEmptySelection?: boolean
+  preselectedApartmentId?: string
 }
 
-export default function TenantGroupApartmentSelector({ selected, onChange, allowEmptySelection = true }: Props) {
+export default function TenantGroupApartmentSelector({ selected, onChange, allowEmptySelection = true, preselectedApartmentId }: Props) {
   const [search, setSearch] = useState('')
   const [apartments, setApartments] = useState<TenantProperty[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [didAutoSelect, setDidAutoSelect] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +33,15 @@ export default function TenantGroupApartmentSelector({ selected, onChange, allow
     }
     void load()
   }, [search])
+
+  useEffect(() => {
+    if (!preselectedApartmentId || didAutoSelect || selected || apartments.length === 0) return
+    const match = apartments.find((a) => a.id === preselectedApartmentId)
+    if (match) {
+      onChange(match)
+      setDidAutoSelect(true)
+    }
+  }, [apartments, preselectedApartmentId, didAutoSelect, selected, onChange])
 
   const selectedApartmentId = selected?.id ?? '__none__'
 
