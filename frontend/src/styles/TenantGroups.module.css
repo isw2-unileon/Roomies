@@ -272,7 +272,8 @@
 }
 
 .acceptedBadge,
-.pendingBadge {
+.pendingBadge,
+.rejectedBadge {
   padding: 0.25rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 900;
@@ -287,6 +288,11 @@
 .pendingBadge {
   color: #b54708;
   background: #fffaeb;
+}
+
+.rejectedBadge {
+  color: #b42318;
+  background: #fff1f0;
 }
 
 .location,

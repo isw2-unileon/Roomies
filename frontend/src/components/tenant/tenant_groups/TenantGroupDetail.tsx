@@ -1,6 +1,7 @@
 import TenantGroupSummary from './TenantGroupSummary'
 import TenantGroupMembers from './TenantGroupMembers'
 import TenantGroupInvitationCard from './TenantGroupInvitationCard'
+import { canCreateNewJoinRequest, getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
 import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupJoinRequest } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
 
@@ -58,7 +59,9 @@ export default function TenantGroupDetail({
     && (group.userRelation === 'creator'
       || (group.userRelation === 'member' && group.members.some((member) => member.isCurrentUser && !member.hasAccepted)))
 
-  const canCreateJoinRequest = group.userRelation === 'viewer'
+	const currentJoinRequestLabel = getCurrentJoinRequestLabel(group.currentJoinRequest)
+	const canCreateJoinRequest = group.userRelation === 'viewer' && canCreateNewJoinRequest(group.currentJoinRequest)
+	const hasRejectedJoinRequest = isRejectedJoinRequest(group.currentJoinRequest)
 	const canCreateApartmentApplication = Boolean(group.apartment)
 		&& group.isFullyAccepted
 		&& group.userRelation === 'creator'
@@ -78,6 +81,13 @@ export default function TenantGroupDetail({
           {isAcceptingGroup ? 'Aceptando grupo...' : 'Aceptar grupo'}
         </button>
       ) : null}
+
+      {group.userRelation === 'viewer' && currentJoinRequestLabel ? (
+		<p className={hasRejectedJoinRequest ? styles.rejectedText : styles.pendingText}>
+			Estado de tu solicitud para unirte a este grupo: {currentJoinRequestLabel}.
+			{hasRejectedJoinRequest ? ' No puedes volver a solicitar plaza en este grupo.' : ''}
+		</p>
+	  ) : null}
 
       {canCreateJoinRequest ? (
         <button

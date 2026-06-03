@@ -31,6 +31,7 @@ type repository interface {
 	CanUserAcceptGroup(ctx context.Context, groupID, userID string) (bool, error)
 	AcceptGroupForUser(ctx context.Context, groupID, userID string) error
 	HasPendingJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
+	HasRejectedJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
 	CreateJoinRequest(ctx context.Context, groupID, requesterUserID string) (string, error)
 	ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error)
 	CanUserReviewJoinRequests(ctx context.Context, groupID, userID string) (bool, error)
@@ -67,6 +68,9 @@ var ErrNoValidInvitedUsers = errors.New("no valid invited users found")
 
 // ErrJoinRequestAlreadyPending is returned when the user already has a pending join request for the group.
 var ErrJoinRequestAlreadyPending = errors.New("join request already pending")
+
+// ErrJoinRequestAlreadyRejected is returned when the user already has a rejected join request for the group.
+var ErrJoinRequestAlreadyRejected = errors.New("join request already rejected")
 
 // ErrJoinRequestNotFound is returned when the requested join request does not exist.
 var ErrJoinRequestNotFound = errors.New("join request not found")
@@ -311,6 +315,14 @@ func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role s
 	}
 	if hasPending {
 		return "", ErrJoinRequestAlreadyPending
+	}
+
+	hasRejected, err := s.repo.HasRejectedJoinRequest(ctx, groupID, userID)
+	if err != nil {
+		return "", err
+	}
+	if hasRejected {
+		return "", ErrJoinRequestAlreadyRejected
 	}
 
 	return s.repo.CreateJoinRequest(ctx, groupID, userID)

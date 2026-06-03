@@ -27,7 +27,8 @@
 }
 
 .acceptedText,
-.pendingText {
+.pendingText,
+.rejectedText {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   font-weight: 800;
@@ -39,6 +40,10 @@
 
 .pendingText {
   color: #b54708;
+}
+
+.rejectedText {
+  color: #b42318;
 }
 
 .groupMeta p {

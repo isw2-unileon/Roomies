@@ -7,6 +7,7 @@ import {
 
 import styles from '@/styles/TenantGroups.module.css'
 import type { TenantGroupListItem, TenantGroupUserRelation } from '@/types/tenant'
+import { getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
 
 interface TenantGroupCardProps {
     group: TenantGroupListItem
@@ -84,6 +85,10 @@ export default function TenantGroupCard({
 }: TenantGroupCardProps) {
     const hasPendingInvitation = group.userRelation === 'pending_invitation'
     const relationClassName = `${styles.relationBadge} ${getRelationClassName(group.userRelation)}`
+    const currentJoinRequestLabel = getCurrentJoinRequestLabel(group.currentJoinRequest)
+    const currentJoinRequestClassName = isRejectedJoinRequest(group.currentJoinRequest)
+        ? styles.rejectedBadge
+        : styles.pendingBadge
 
     return (
         <article className={styles.groupCard}>
@@ -110,6 +115,11 @@ export default function TenantGroupCard({
                     <span className={group.isFullyAccepted ? styles.acceptedBadge : styles.pendingBadge}>
                         {group.isFullyAccepted ? 'Aceptacion completa' : 'Pendiente de aceptacion'}
                     </span>
+                    {currentJoinRequestLabel ? (
+                        <span className={currentJoinRequestClassName}>
+                            {currentJoinRequestLabel}
+                        </span>
+                    ) : null}
                 </div>
 
                 {group.apartment ? (
@@ -130,6 +140,7 @@ export default function TenantGroupCard({
                     <div className={styles.groupStats}>
                         <span>{group.acceptedMembersCount} miembros aceptados</span>
                         <span>{group.pendingInvitationsCount} invitaciones pendientes</span>
+						{currentJoinRequestLabel ? <span>Tu solicitud: {currentJoinRequestLabel}</span> : null}
 						{group.currentApartmentRequest ? <span>{formatApartmentRequestStatus(group.currentApartmentRequest.status)}</span> : null}
                     </div>
                 </div>

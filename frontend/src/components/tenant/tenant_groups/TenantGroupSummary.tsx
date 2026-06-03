@@ -1,5 +1,6 @@
 import type { TenantGroupDetailItem } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
+import { getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
 
 interface TenantGroupSummaryProps {
   group: TenantGroupDetailItem
@@ -22,6 +23,11 @@ function formatApartmentRequestStatus(status: string) {
 }
 
 export default function TenantGroupSummary({ group }: TenantGroupSummaryProps) {
+	const currentJoinRequestLabel = getCurrentJoinRequestLabel(group.currentJoinRequest)
+	const currentJoinRequestClassName = isRejectedJoinRequest(group.currentJoinRequest)
+		? styles.rejectedText
+		: styles.pendingText
+
   return (
     <section className={styles.summarySection}>
       <h2 className={styles.groupTitle}>{group.name}</h2>
@@ -44,6 +50,11 @@ export default function TenantGroupSummary({ group }: TenantGroupSummaryProps) {
 				{group.currentApartmentRequest ? (
 					<p>
 						Estado de la solicitud grupal: {formatApartmentRequestStatus(group.currentApartmentRequest.status)}
+					</p>
+				) : null}
+				{currentJoinRequestLabel ? (
+					<p className={currentJoinRequestClassName}>
+						Estado de tu solicitud de union: {currentJoinRequestLabel}
 					</p>
 				) : null}
         <p>
