@@ -6,6 +6,7 @@ export const paths = {
   tenantOnboarding: '/onboarding/tenant',
   tenantExplore: '/tenant/explore',
   tenantExploreDetail: '/tenant/explore/:propertyId',
+  tenantInterestedTenants: '/tenant/explore/:propertyId/interested',
   tenantApplications: '/tenant/applications',
   tenantGroups: '/tenant/groups',
   tenantCreateGroup: '/tenant/groups/new',

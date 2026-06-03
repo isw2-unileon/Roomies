@@ -17,6 +17,7 @@ import TenantExplorePage from '@/pages/tenant/TenantExplorePage'
 import TenantGroupsPage from '@/pages/tenant/TenantGroupsPage'
 import TenantMessagesPage from '@/pages/tenant/TenantMessagesPage'
 import TenantNotificationsPage from '@/pages/tenant/TenantNotificationsPage'
+import TenantInterestedTenantsPage from '@/pages/tenant/TenantInterestedTenantsPage'
 import TenantOnboardingPage from '@/pages/tenant/TenantOnboardingPage'
 import TenantProfilePage from '@/pages/tenant/TenantProfilePage'
 
@@ -104,6 +105,14 @@ function AppRoutes() {
         element={(
           <ProtectedRoleRoute requiredRole="tenant">
             <TenantExploreDetailPage />
+          </ProtectedRoleRoute>
+        )}
+      />
+      <Route
+        path={paths.tenantInterestedTenants}
+        element={(
+          <ProtectedRoleRoute requiredRole="tenant">
+            <TenantInterestedTenantsPage />
           </ProtectedRoleRoute>
         )}
       />
