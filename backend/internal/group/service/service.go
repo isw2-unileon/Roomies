@@ -75,6 +75,12 @@ var ErrJoinRequestAlreadyRejected = errors.New("join request already rejected")
 // ErrJoinRequestNotFound is returned when the requested join request does not exist.
 var ErrJoinRequestNotFound = errors.New("join request not found")
 
+// ErrGroupApartmentAlreadyAssigned is returned when the group already has a linked apartment.
+var ErrGroupApartmentAlreadyAssigned = errors.New("group apartment already assigned")
+
+// ErrGroupApartmentRemovalNotAllowed is returned when trying to remove a linked apartment.
+var ErrGroupApartmentRemovalNotAllowed = errors.New("group apartment removal is not allowed")
+
 // Service contains tenant group business logic.
 type Service struct {
 	repo         repository
@@ -532,9 +538,21 @@ func (s *Service) UpdateGroupApartment(ctx context.Context, groupID, userID, rol
 		return ErrForbidden
 	}
 
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+
 	apartmentID := strings.TrimSpace(input.ApartmentID)
 	if apartmentID == "" {
-		return s.repo.UpdateGroupApartment(ctx, strings.TrimSpace(groupID), nil)
+		return ErrGroupApartmentRemovalNotAllowed
+	}
+
+	if groupDetail.Apartment != nil {
+		return ErrGroupApartmentAlreadyAssigned
 	}
 
 	currentPeople, err := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, strings.TrimSpace(groupID))

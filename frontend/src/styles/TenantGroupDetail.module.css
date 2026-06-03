@@ -53,11 +53,17 @@
 }
 
 .membersSection,
-.invitationsSection {
+.invitationsSection,
+.apartmentLinkSection {
   padding: 1rem;
   background: var(--tenant-surface);
   border: 1px solid var(--tenant-border);
   border-radius: 1rem;
+}
+
+.apartmentLinkSection {
+  display: grid;
+  gap: 1rem;
 }
 
 .acceptGroupButton {

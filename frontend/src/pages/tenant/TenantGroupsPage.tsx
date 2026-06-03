@@ -21,9 +21,10 @@ import {
     listTenantGroups,
     rejectTenantGroupInvitation,
     voteTenantGroupJoinRequest,
+    updateTenantGroupApartment,
 } from '@/services/tenantService'
 import styles from '@/styles/TenantGroups.module.css'
-import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupListItem } from '@/types/tenant'
+import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupListItem, TenantProperty } from '@/types/tenant'
 import { paths } from '@/routes/paths'
 
 function memberFilterToNumber(value: string) {
@@ -57,6 +58,7 @@ export default function TenantGroupsPage() {
     const [creatingApartmentApplicationGroupId, setCreatingApartmentApplicationGroupId] = useState<string | null>(null)
     const [creatingJoinRequestGroupId, setCreatingJoinRequestGroupId] = useState<string | null>(null)
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
+    const [linkingApartmentGroupId, setLinkingApartmentGroupId] = useState<string | null>(null)
 
     const loadGroups = useCallback(async () => {
         setLoading(true)
@@ -224,6 +226,24 @@ export default function TenantGroupsPage() {
 		}
 	}
 
+	async function handleLinkApartment(group: TenantGroupDetailItem, apartment: TenantProperty) {
+		setLinkingApartmentGroupId(group.id)
+		setError('')
+		setNotice('')
+
+		try {
+			await updateTenantGroupApartment(group.id, apartment.id)
+			setNotice('Vivienda vinculada correctamente al grupo.')
+			const detail = await getTenantGroup(group.id)
+			setSelectedGroup(detail)
+			await loadGroups()
+		} catch (linkError) {
+			setError(linkError instanceof Error ? linkError.message : 'No se pudo vincular la vivienda al grupo.')
+		} finally {
+			setLinkingApartmentGroupId(null)
+		}
+	}
+
     async function handleVoteJoinRequest(groupID: string, requestID: string, decision: 'APPROVE' | 'REJECT') {
         setVotingJoinRequestKey(`${requestID}:${decision}`)
         setError('')
@@ -374,12 +394,14 @@ export default function TenantGroupsPage() {
                                         isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}
                                         onVoteJoinRequest={(groupID, request, decision) => handleVoteJoinRequest(groupID, request.id, decision)}
                                         votingJoinRequestKey={votingJoinRequestKey}
-                                        onAcceptInvitation={handleAcceptDetailInvitation}
-                                        onRejectInvitation={handleRejectDetailInvitation}
-                                        isRespondingInvitation={respondingInvitationId}
-                                    />
-                                )}
-                            </div>
+                                         onAcceptInvitation={handleAcceptDetailInvitation}
+                                         onRejectInvitation={handleRejectDetailInvitation}
+                                         isRespondingInvitation={respondingInvitationId}
+                                         onLinkApartment={handleLinkApartment}
+                                         isLinkingApartment={linkingApartmentGroupId === selectedGroup.id}
+                                     />
+                                 )}
+                             </div>
                         )}
                     </section>
 

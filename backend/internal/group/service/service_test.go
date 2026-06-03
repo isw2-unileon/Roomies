@@ -14,6 +14,8 @@ type fakeGroupRepository struct {
 	hasRejectedJoinRequest bool
 	createdJoinRequestID   string
 	createdJoinRequest     bool
+	isGroupCreator         bool
+	updatedApartmentID     *string
 }
 
 func (f *fakeGroupRepository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
@@ -117,10 +119,11 @@ func (f *fakeGroupRepository) CancelJoinRequest(ctx context.Context, requestID, 
 }
 
 func (f *fakeGroupRepository) IsGroupCreator(ctx context.Context, groupID, userID string) (bool, error) {
-	return false, nil
+	return f.isGroupCreator, nil
 }
 
 func (f *fakeGroupRepository) UpdateGroupApartment(ctx context.Context, groupID string, apartmentID *string) error {
+	f.updatedApartmentID = apartmentID
 	return nil
 }
 
@@ -160,5 +163,74 @@ func TestCreateJoinRequestAllowsViewerWithoutPreviousRequest(t *testing.T) {
 	}
 	if !repo.createdJoinRequest {
 		t.Fatalf("CreateJoinRequest should be called when no previous rejected request exists")
+	}
+}
+
+func TestUpdateGroupApartmentAllowsFirstApartmentLink(t *testing.T) {
+	repo := &fakeGroupRepository{
+		isGroupCreator: true,
+		groupDetail: &group.Group{
+			ID:           "group-1",
+			UserRelation: group.UserRelationCreator,
+			Apartment:    nil,
+		},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.UpdateGroupApartment(context.Background(), "group-1", "tenant-1", "tenant", group.UpdateGroupApartmentInput{ApartmentID: "apt-1"})
+	if err != nil {
+		t.Fatalf("UpdateGroupApartment returned error: %v", err)
+	}
+	if repo.updatedApartmentID == nil || *repo.updatedApartmentID != "apt-1" {
+		t.Fatalf("updatedApartmentID = %v, want apt-1", repo.updatedApartmentID)
+	}
+}
+
+func TestUpdateGroupApartmentRejectsRemoval(t *testing.T) {
+	repo := &fakeGroupRepository{
+		isGroupCreator: true,
+		groupDetail: &group.Group{
+			ID:           "group-1",
+			UserRelation: group.UserRelationCreator,
+		},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.UpdateGroupApartment(context.Background(), "group-1", "tenant-1", "tenant", group.UpdateGroupApartmentInput{})
+	if !errors.Is(err, ErrGroupApartmentRemovalNotAllowed) {
+		t.Fatalf("err = %v, want %v", err, ErrGroupApartmentRemovalNotAllowed)
+	}
+}
+
+func TestUpdateGroupApartmentRejectsReplacingAssignedApartment(t *testing.T) {
+	repo := &fakeGroupRepository{
+		isGroupCreator: true,
+		groupDetail: &group.Group{
+			ID:           "group-1",
+			UserRelation: group.UserRelationCreator,
+			Apartment:    &group.Apartment{ID: "apt-1"},
+		},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.UpdateGroupApartment(context.Background(), "group-1", "tenant-1", "tenant", group.UpdateGroupApartmentInput{ApartmentID: "apt-2"})
+	if !errors.Is(err, ErrGroupApartmentAlreadyAssigned) {
+		t.Fatalf("err = %v, want %v", err, ErrGroupApartmentAlreadyAssigned)
+	}
+}
+
+func TestUpdateGroupApartmentRejectsNonCreator(t *testing.T) {
+	repo := &fakeGroupRepository{
+		isGroupCreator: false,
+		groupDetail: &group.Group{
+			ID:           "group-1",
+			UserRelation: group.UserRelationMember,
+		},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.UpdateGroupApartment(context.Background(), "group-1", "tenant-2", "tenant", group.UpdateGroupApartmentInput{ApartmentID: "apt-2"})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrForbidden)
 	}
 }

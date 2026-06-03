@@ -452,6 +452,10 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{"error": "invitation is not pending"})
 	case errors.Is(err, groupservice.ErrApartmentFull):
 		c.JSON(http.StatusConflict, gin.H{"error": "group exceeds apartment available spots"})
+	case errors.Is(err, groupservice.ErrGroupApartmentAlreadyAssigned):
+		c.JSON(http.StatusConflict, gin.H{"error": "group apartment already assigned"})
+	case errors.Is(err, groupservice.ErrGroupApartmentRemovalNotAllowed):
+		c.JSON(http.StatusConflict, gin.H{"error": "group apartment removal is not allowed"})
 	case errors.Is(err, groupservice.ErrJoinRequestAlreadyPending):
 		c.JSON(http.StatusConflict, gin.H{"error": "join request already pending"})
 	case errors.Is(err, groupservice.ErrJoinRequestAlreadyRejected):
