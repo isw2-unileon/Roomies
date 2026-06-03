@@ -157,7 +157,7 @@ export default function TenantExploreDetailPage() {
           <TenantCompatibilityCard compatibility={compatibility} reasons={compatibilityReasons} />
           <TenantPropertyDetailsCard property={property} />
           <TenantServicesLocationCard property={property} rules={rules} />
-          <TenantInterestedTenantsCard tenants={interestedTenants} />
+          <TenantInterestedTenantsCard tenants={interestedTenants} propertyId={propertyId} />
         </div>
       </div>
     </TenantLayout>
