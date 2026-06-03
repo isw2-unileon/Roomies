@@ -9,26 +9,73 @@ import { useNotice } from '@/hooks/useNotice'
 import { saveTenantProfile } from '@/services/tenantService'
 import styles from '@/styles/auth.module.css'
 
-type WorkSchedule = 'morning' | 'night' | 'flexible'
-type NoiseLevel = 'quiet' | 'moderate' | 'loud'
-type Cleanliness = 'very_clean' | 'normal' | 'relaxed'
+type TenantSituation = 'student' | 'worker' | 'unemployed'
+type TenantSex = 'male' | 'female' | 'other' | 'prefer_not_to_say'
+type TenantLevel = 'low' | 'medium' | 'high'
 
 interface TenantOnboardingPageProps {
   onCompleted: () => void
 }
 
+const socializationOptions: Array<{ value: TenantLevel; noteKey?: string }> = [
+  { value: 'low', noteKey: 'auth.tenantOnboarding.socializationNotes.low' },
+  { value: 'medium' },
+  { value: 'high', noteKey: 'auth.tenantOnboarding.socializationNotes.high' },
+]
+
+const nightlifeOptions: TenantLevel[] = ['low', 'medium', 'high']
+
+interface SegmentedLevelFieldProps {
+  name: string
+  label: string
+  value: TenantLevel
+  onChange: (value: TenantLevel) => void
+  options: Array<{ value: TenantLevel; noteKey?: string }>
+  t: (key: string) => string
+}
+
+function SegmentedLevelField({ name, label, value, onChange, options, t }: SegmentedLevelFieldProps) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.roleLabel}>{label}</span>
+      <div className={styles.segmentedControl} role="radiogroup" aria-label={label}>
+        {options.map((option) => {
+          const checked = value === option.value
+
+          return (
+            <label key={option.value} className={`${styles.segmentOption} ${checked ? styles.segmentOptionActive : ''}`}>
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={checked}
+                onChange={(event) => onChange(event.target.value as TenantLevel)}
+                className={styles.segmentInput}
+              />
+              <span className={styles.segmentLabel}>{t(`auth.tenantOnboarding.levelOptions.${option.value}`)}</span>
+              {option.noteKey ? <span className={styles.segmentNote}>{t(option.noteKey)}</span> : <span className={styles.segmentNotePlaceholder} aria-hidden="true" />} 
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPageProps) {
   const { t } = useTranslation()
 
-  const [budgetMin, setBudgetMin] = useState('400')
   const [budgetMax, setBudgetMax] = useState('900')
   const [preferredArea, setPreferredArea] = useState('')
-  const [moveInDate, setMoveInDate] = useState('')
-  const [workSchedule, setWorkSchedule] = useState<WorkSchedule>('flexible')
   const [pets, setPets] = useState(false)
   const [smoking, setSmoking] = useState(false)
-  const [noiseLevel, setNoiseLevel] = useState<NoiseLevel>('moderate')
-  const [cleanliness, setCleanliness] = useState<Cleanliness>('normal')
+  const [age, setAge] = useState('')
+  const [sex, setSex] = useState<TenantSex>('prefer_not_to_say')
+  const [situation, setSituation] = useState<TenantSituation>('student')
+  const [degree, setDegree] = useState('')
+  const [profession, setProfession] = useState('')
+  const [socializationLevel, setSocializationLevel] = useState<TenantLevel>('medium')
+  const [nightlifeLevel, setNightlifeLevel] = useState<TenantLevel>('medium')
   const [isLoading, setIsLoading] = useState(false)
 
   const { notice, showError, showSuccess, clearNotice } = useNotice()
@@ -37,16 +84,16 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
     event.preventDefault()
     clearNotice()
 
-    const parsedBudgetMin = Number.parseInt(budgetMin, 10)
     const parsedBudgetMax = Number.parseInt(budgetMax, 10)
+    const parsedAge = Number.parseInt(age, 10)
 
-    if (!Number.isFinite(parsedBudgetMin) || !Number.isFinite(parsedBudgetMax)) {
-      showError(t('auth.tenantOnboarding.errors.invalidBudgetNumbers'))
+    if (!Number.isFinite(parsedBudgetMax) || parsedBudgetMax <= 0) {
+      showError(t('auth.tenantOnboarding.errors.invalidBudgetMax'))
       return
     }
 
-    if (parsedBudgetMin <= 0 || parsedBudgetMax <= 0 || parsedBudgetMin > parsedBudgetMax) {
-      showError(t('auth.tenantOnboarding.errors.invalidBudgetRange'))
+    if (!Number.isFinite(parsedAge) || parsedAge <= 0) {
+      showError(t('auth.tenantOnboarding.errors.invalidAge'))
       return
     }
 
@@ -55,8 +102,13 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
       return
     }
 
-    if (!moveInDate) {
-      showError(t('auth.tenantOnboarding.errors.moveInDateRequired'))
+    if (situation === 'student' && degree.trim().length < 2) {
+      showError(t('auth.tenantOnboarding.errors.degreeRequired'))
+      return
+    }
+
+    if (situation === 'worker' && profession.trim().length < 2) {
+      showError(t('auth.tenantOnboarding.errors.professionRequired'))
       return
     }
 
@@ -64,15 +116,17 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
 
     try {
       const message = await saveTenantProfile({
-        budgetMin: parsedBudgetMin,
         budgetMax: parsedBudgetMax,
         preferredArea: preferredArea.trim(),
-        moveInDate,
-        workSchedule,
         pets,
         smoking,
-        noiseLevel,
-        cleanliness,
+        age: parsedAge,
+        sex,
+        situation,
+        degree: situation === 'student' ? degree.trim() : undefined,
+        profession: situation === 'worker' ? profession.trim() : undefined,
+        socializationLevel,
+        nightlifeLevel,
       })
       showSuccess(message ?? t('auth.tenantOnboarding.successDefault'))
       onCompleted()
@@ -94,16 +148,65 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
       />
 
       <form className={styles.form} noValidate onSubmit={handleSubmit}>
-        <div className={styles.twoColumns}>
-          <FormField
-            id="budget-min"
-            label={t('auth.tenantOnboarding.budgetMinLabel')}
-            type="number"
-            min={1}
-            value={budgetMin}
-            onChange={(event) => setBudgetMin(event.target.value)}
-            required
-          />
+        <section className={styles.form} aria-label={t('auth.tenantOnboarding.sections.personal')}>
+          <h3 className={styles.roleTitle}>{t('auth.tenantOnboarding.sections.personal')}</h3>
+
+          <div className={styles.twoColumns}>
+            <FormField
+              id="age"
+              label={t('auth.tenantOnboarding.ageLabel')}
+              type="number"
+              min={18}
+              value={age}
+              onChange={(event) => setAge(event.target.value)}
+              required
+            />
+
+            <div className={styles.field}>
+              <label htmlFor="sex" className={styles.roleLabel}>{t('auth.tenantOnboarding.sexLabel')}</label>
+              <select id="sex" value={sex} onChange={(event) => setSex(event.target.value as TenantSex)} className={styles.select}>
+                <option value="male">{t('auth.tenantOnboarding.sexOptions.male')}</option>
+                <option value="female">{t('auth.tenantOnboarding.sexOptions.female')}</option>
+                <option value="other">{t('auth.tenantOnboarding.sexOptions.other')}</option>
+                <option value="prefer_not_to_say">{t('auth.tenantOnboarding.sexOptions.preferNotToSay')}</option>
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="situation" className={styles.roleLabel}>{t('auth.tenantOnboarding.situationLabel')}</label>
+            <select id="situation" value={situation} onChange={(event) => setSituation(event.target.value as TenantSituation)} className={styles.select}>
+              <option value="student">{t('auth.tenantOnboarding.situationOptions.student')}</option>
+              <option value="worker">{t('auth.tenantOnboarding.situationOptions.worker')}</option>
+              <option value="unemployed">{t('auth.tenantOnboarding.situationOptions.unemployed')}</option>
+            </select>
+          </div>
+
+          {situation === 'student' ? (
+            <FormField
+              id="degree"
+              label={t('auth.tenantOnboarding.degreeLabel')}
+              type="text"
+              value={degree}
+              onChange={(event) => setDegree(event.target.value)}
+              required
+            />
+          ) : null}
+
+          {situation === 'worker' ? (
+            <FormField
+              id="profession"
+              label={t('auth.tenantOnboarding.professionLabel')}
+              type="text"
+              value={profession}
+              onChange={(event) => setProfession(event.target.value)}
+              required
+            />
+          ) : null}
+        </section>
+
+        <section className={styles.form} aria-label={t('auth.tenantOnboarding.sections.housing')}>
+          <h3 className={styles.roleTitle}>{t('auth.tenantOnboarding.sections.housing')}</h3>
 
           <FormField
             id="budget-max"
@@ -114,105 +217,56 @@ export default function TenantOnboardingPage({ onCompleted }: TenantOnboardingPa
             onChange={(event) => setBudgetMax(event.target.value)}
             required
           />
-        </div>
 
-        <FormField
-          id="preferred-area"
-          label={t('auth.tenantOnboarding.preferredAreaLabel')}
-          type="text"
-          value={preferredArea}
-          onChange={(event) => setPreferredArea(event.target.value)}
-          placeholder={t('auth.tenantOnboarding.preferredAreaPlaceholder')}
-          required
-        />
+          <FormField
+            id="preferred-area"
+            label={t('auth.tenantOnboarding.preferredAreaLabel')}
+            type="text"
+            value={preferredArea}
+            onChange={(event) => setPreferredArea(event.target.value)}
+            placeholder={t('auth.tenantOnboarding.preferredAreaPlaceholder')}
+            required
+          />
 
-        <FormField
-          id="move-in-date"
-          label={t('auth.tenantOnboarding.moveInDateLabel')}
-          type="date"
-          value={moveInDate}
-          onChange={(event) => setMoveInDate(event.target.value)}
-          required
-        />
-
-        <div className={styles.twoColumns}>
-          <div className={styles.field}>
-            <label htmlFor="work-schedule" className={styles.roleLabel}>
-              {t('auth.tenantOnboarding.scheduleLabel')}
+          <div className={styles.checkboxGrid}>
+            <label className={styles.checkboxCard}>
+              <input type="checkbox" checked={pets} onChange={(event) => setPets(event.target.checked)} className={styles.roleRadio} />
+              <span>{t('auth.tenantOnboarding.petsLabel')}</span>
             </label>
-            <select
-              id="work-schedule"
-              value={workSchedule}
-              onChange={(event) => setWorkSchedule(event.target.value as WorkSchedule)}
-              className={styles.select}
-            >
-              <option value="morning">{t('auth.tenantOnboarding.scheduleOptions.morning')}</option>
-              <option value="night">{t('auth.tenantOnboarding.scheduleOptions.night')}</option>
-              <option value="flexible">{t('auth.tenantOnboarding.scheduleOptions.flexible')}</option>
-            </select>
-          </div>
 
-          <div className={styles.field}>
-            <label htmlFor="noise-level" className={styles.roleLabel}>
-              {t('auth.tenantOnboarding.noiseLevelLabel')}
+            <label className={styles.checkboxCard}>
+              <input type="checkbox" checked={smoking} onChange={(event) => setSmoking(event.target.checked)} className={styles.roleRadio} />
+              <span>{t('auth.tenantOnboarding.smokerLabel')}</span>
             </label>
-            <select
-              id="noise-level"
-              value={noiseLevel}
-              onChange={(event) => setNoiseLevel(event.target.value as NoiseLevel)}
-              className={styles.select}
-            >
-              <option value="quiet">{t('auth.tenantOnboarding.noiseLevelOptions.quiet')}</option>
-              <option value="moderate">{t('auth.tenantOnboarding.noiseLevelOptions.moderate')}</option>
-              <option value="loud">{t('auth.tenantOnboarding.noiseLevelOptions.loud')}</option>
-            </select>
           </div>
-        </div>
+        </section>
 
-        <div className={styles.field}>
-          <label htmlFor="cleanliness" className={styles.roleLabel}>
-            {t('auth.tenantOnboarding.cleanlinessLabel')}
-          </label>
-          <select
-            id="cleanliness"
-            value={cleanliness}
-            onChange={(event) => setCleanliness(event.target.value as Cleanliness)}
-            className={styles.select}
-          >
-            <option value="very_clean">{t('auth.tenantOnboarding.cleanlinessOptions.veryClean')}</option>
-            <option value="normal">{t('auth.tenantOnboarding.cleanlinessOptions.normal')}</option>
-            <option value="relaxed">{t('auth.tenantOnboarding.cleanlinessOptions.relaxed')}</option>
-          </select>
-        </div>
+        <section className={styles.form} aria-label={t('auth.tenantOnboarding.sections.livingPreferences')}>
+          <h3 className={styles.roleTitle}>{t('auth.tenantOnboarding.sections.livingPreferences')}</h3>
 
-        <div className={styles.checkboxGrid}>
-          <label className={styles.checkboxCard}>
-            <input
-              type="checkbox"
-              checked={pets}
-              onChange={(event) => setPets(event.target.checked)}
-              className={styles.roleRadio}
-            />
-            <span>{t('auth.tenantOnboarding.petsLabel')}</span>
-          </label>
+          <SegmentedLevelField
+            name="socialization-level"
+            label={t('auth.tenantOnboarding.socializationLabel')}
+            value={socializationLevel}
+            onChange={setSocializationLevel}
+            options={socializationOptions}
+            t={t}
+          />
 
-          <label className={styles.checkboxCard}>
-            <input
-              type="checkbox"
-              checked={smoking}
-              onChange={(event) => setSmoking(event.target.checked)}
-              className={styles.roleRadio}
-            />
-            <span>{t('auth.tenantOnboarding.smokerLabel')}</span>
-          </label>
-        </div>
+          <SegmentedLevelField
+            name="nightlife-level"
+            label={t('auth.tenantOnboarding.nightlifeLabel')}
+            value={nightlifeLevel}
+            onChange={setNightlifeLevel}
+            options={nightlifeOptions.map((option) => ({ value: option }))}
+            t={t}
+          />
+        </section>
 
         <AuthNotice kind={notice.kind} message={notice.message} />
 
         <button type="submit" disabled={isLoading} className={styles.btnPrimary}>
-          {isLoading
-            ? t('auth.tenantOnboarding.submitting')
-            : t('auth.tenantOnboarding.submit')}
+          {isLoading ? t('auth.tenantOnboarding.submitting') : t('auth.tenantOnboarding.submit')}
         </button>
       </form>
     </AuthLayout>

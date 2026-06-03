@@ -3,24 +3,17 @@ package profile
 
 // TenantProfileInput contains onboarding/profile fields.
 type TenantProfileInput struct {
-	BudgetMin     int
 	BudgetMax     int
 	PreferredArea string
-	MoveInDate    string
 	Pets          bool
 	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
-
-	SleepSchedule    string
-	SocialLifestyle  string
-	StudyHabits      string
-	Language         string
-	University       string
-	Age              int
-	GuestPreferences string
-	PartyFrequency   string
+	Age           int
+	Sex           string
+	Situation     string
+	Degree        string
+	Profession    string
+	Socialization string
+	Nightlife     string
 }
 
 // TenantPersonalProfileInput contains editable account fields shown in profile.
@@ -42,12 +35,18 @@ type TenantProfile struct {
 	WorkSchedule  string
 	Age           int
 	University    string
+	Sex           string
+	Situation     string
+	Degree        string
+	Profession    string
+	Socialization string
+	Nightlife     string
 }
 
 // TenantPersonalProfile contains editable account data for a tenant user.
 type TenantPersonalProfile struct {
-	UserID     string
-	FullName   string
-	Email      string
-	AvatarURL  string
+	UserID    string
+	FullName  string
+	Email     string
+	AvatarURL string
 }

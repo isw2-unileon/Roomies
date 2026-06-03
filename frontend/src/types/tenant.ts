@@ -5,21 +5,15 @@ export interface TenantProfile {
     age: number
     preferredArea: string
     preferredAreaKey: string
-    budgetMin: number
     budgetMax: number
-    moveInDate: string
     pets: boolean
     smoking: boolean
-    noiseLevel: string
-    cleanliness: string
-    workSchedule: string
-    sleepSchedule?: string
-    socialLifestyle?: string
-    studyHabits?: string
-    language?: string
-    university?: string
-    guestPreferences?: string
-    partyFrequency?: string
+    sex?: string
+    situation?: string
+    degree?: string
+    profession?: string
+    socializationLevel?: string
+    nightlifeLevel?: string
     profileCompletion: number
     compatibilityAverage: number
 }

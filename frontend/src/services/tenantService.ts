@@ -20,15 +20,17 @@ import type {
 } from '@/types/tenant'
 
 export interface SaveTenantProfileInput {
-  budgetMin: number
   budgetMax: number
   preferredArea: string
-  moveInDate: string
-  workSchedule: string
   pets: boolean
   smoking: boolean
-  noiseLevel: string
-  cleanliness: string
+  age: number
+  sex: 'male' | 'female' | 'other' | 'prefer_not_to_say'
+  situation: 'student' | 'worker' | 'unemployed'
+  degree?: string
+  profession?: string
+  socializationLevel: 'low' | 'medium' | 'high'
+  nightlifeLevel: 'low' | 'medium' | 'high'
 }
 
 export interface SaveTenantPersonalProfileInput {
@@ -587,15 +589,17 @@ export async function saveTenantProfile(input: SaveTenantProfileInput) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      budget_min: input.budgetMin,
-      budget_max: input.budgetMax,
-      preferred_area: input.preferredArea,
-      move_in_date: input.moveInDate,
-      work_schedule: input.workSchedule,
-      pets: input.pets,
-      smoking: input.smoking,
-      noise_level: input.noiseLevel,
-      cleanliness: input.cleanliness,
+		budget_max: input.budgetMax,
+		preferred_area: input.preferredArea,
+		pets: input.pets,
+		smoking: input.smoking,
+		age: input.age,
+		sex: input.sex,
+		situation: input.situation,
+		degree: input.degree?.trim() || undefined,
+		profession: input.profession?.trim() || undefined,
+		socialization_level: input.socializationLevel,
+		nightlife_level: input.nightlifeLevel,
     }),
   })
   const data = (await response.json()) as TenantProfileResponseDto

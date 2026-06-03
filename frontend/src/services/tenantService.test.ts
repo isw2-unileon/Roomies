@@ -5,6 +5,7 @@ import {
 	getTenantPersonalProfile,
 	listTenantApplications,
 	listTenantApartments,
+	saveTenantProfile,
 	saveTenantPersonalProfile,
 	uploadTenantAvatar,
 } from './tenantService'
@@ -168,6 +169,45 @@ describe('tenantService', () => {
 	  credentials: 'include',
 	}))
   })
+
+	test('saves tenant onboarding profile with updated fields', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ message: 'tenant profile saved' }),
+	  } as Response)
+
+	  await expect(saveTenantProfile({
+		budgetMax: 650,
+		preferredArea: 'Leon',
+		pets: true,
+		smoking: false,
+		age: 23,
+		sex: 'female',
+		situation: 'student',
+		degree: 'Arquitectura',
+		socializationLevel: 'medium',
+		nightlifeLevel: 'low',
+	  })).resolves.toBe('tenant profile saved')
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant-profile', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+		  budget_max: 650,
+		  preferred_area: 'Leon',
+		  pets: true,
+		  smoking: false,
+		  age: 23,
+		  sex: 'female',
+		  situation: 'student',
+		  degree: 'Arquitectura',
+		  profession: undefined,
+		  socialization_level: 'medium',
+		  nightlife_level: 'low',
+		}),
+		credentials: 'include',
+	  })
+	})
 
 	test('maps group applications in tenant applications list', async () => {
 	  vi.spyOn(global, 'fetch').mockResolvedValue({
