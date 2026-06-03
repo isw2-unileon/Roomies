@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
+import { paths } from '@/routes/paths'
 import { getTenantProfileByUserId, type TenantPublicProfile } from '@/services/tenantService'
 import styles from '@/styles/TenantInterestedTenants.module.css'
-import type { InterestedTenant } from '@/types/tenant'
+import type { InterestedTenant, TenantGroupDetailItem } from '@/types/tenant'
 
 interface TenantDetailModalProps {
   tenant: InterestedTenant
+  propertyId: string
+  myGroup: TenantGroupDetailItem | null
   onClose: () => void
 }
 
-export default function TenantDetailModal({ tenant, onClose }: TenantDetailModalProps) {
+export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose }: TenantDetailModalProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<TenantPublicProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -29,6 +34,16 @@ export default function TenantDetailModal({ tenant, onClose }: TenantDetailModal
   }, [tenant.userId])
 
   const avatarSrc = !avatarFailed && tenant.avatarUrl ? tenant.avatarUrl : placeholderAvatar
+
+  function handleInviteToGroup() {
+    if (myGroup) {
+      navigate(paths.tenantGroups)
+    } else {
+      navigate(paths.tenantCreateGroup, {
+        state: { preselectedUserId: tenant.userId, preselectedApartmentId: propertyId },
+      })
+    }
+  }
 
   function situationLabel(s: string) {
     if (s === 'student') return t('tenantDashboard.detail.interested.modal.situationStudent')
@@ -66,6 +81,18 @@ export default function TenantDetailModal({ tenant, onClose }: TenantDetailModal
             </div>
           </div>
         </div>
+
+        {myGroup && (
+          <p className={styles.modalGroupHint}>
+            {t('tenantDashboard.detail.interested.myGroup.alreadyHasGroup')}
+          </p>
+        )}
+
+        <button className={styles.inviteButton} onClick={handleInviteToGroup}>
+          {myGroup
+            ? t('tenantDashboard.detail.interested.myGroup.inviteFromModal')
+            : t('tenantDashboard.detail.interested.inviteToGroup')}
+        </button>
 
         {loading && <p className={styles.modalStatus}>{t('tenantDashboard.detail.interested.modal.loading')}</p>}
         {error && <p className={styles.modalStatus}>{t('tenantDashboard.detail.interested.modal.error')}</p>}

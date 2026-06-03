@@ -1,5 +1,13 @@
-.content {
+.pageLayout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
   width: 100%;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
 }
 
 .content > * + * {
@@ -274,6 +282,24 @@
   border-radius: 999px;
 }
 
+.inviteButton {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0;
+  background: var(--tenant-primary, #149f60);
+  border: none;
+  border-radius: 0.7rem;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.inviteButton:hover {
+  opacity: 0.88;
+}
+
 .modalStatus {
   text-align: center;
   color: var(--tenant-text-soft);
@@ -308,4 +334,130 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--tenant-text);
+}
+
+.modalGroupHint {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+  margin: 0 0 0.5rem;
+  line-height: 1.4;
+}
+
+/* My group panel */
+
+.myGroupPanel {
+  width: 18rem;
+  flex-shrink: 0;
+  padding: 1.5rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+  position: sticky;
+  top: 1.5rem;
+}
+
+.panelTitle {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--tenant-text);
+}
+
+.panelLoading {
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+}
+
+.panelEmpty {
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.panelGroupName {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--tenant-text);
+}
+
+.panelMemberCount {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+}
+
+.memberSlots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.memberSlot {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.slotAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eeeae5;
+}
+
+.slotName {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--tenant-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberSlotEmpty {
+  opacity: 0.45;
+}
+
+.slotAvatarEmpty {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  border: 2px dashed var(--tenant-border);
+  background: transparent;
+}
+
+.slotNameEmpty {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+  font-style: italic;
+}
+
+.panelButton {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0;
+  background: var(--tenant-primary, #149f60);
+  border: none;
+  border-radius: 0.7rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: opacity 0.15s;
+}
+
+.panelButton:hover {
+  opacity: 0.88;
 }

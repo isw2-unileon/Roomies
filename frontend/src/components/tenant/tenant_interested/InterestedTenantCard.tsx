@@ -3,14 +3,16 @@ import { useTranslation } from 'react-i18next'
 
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import styles from '@/styles/TenantInterestedTenants.module.css'
-import type { InterestedTenant } from '@/types/tenant'
+import type { InterestedTenant, TenantGroupDetailItem } from '@/types/tenant'
 import TenantDetailModal from './TenantDetailModal'
 
 interface InterestedTenantCardProps {
   tenant: InterestedTenant
+  propertyId: string
+  myGroup: TenantGroupDetailItem | null
 }
 
-export default function InterestedTenantCard({ tenant }: InterestedTenantCardProps) {
+export default function InterestedTenantCard({ tenant, propertyId, myGroup }: InterestedTenantCardProps) {
   const { t } = useTranslation()
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -49,7 +51,7 @@ export default function InterestedTenantCard({ tenant }: InterestedTenantCardPro
         </button>
       </article>
 
-      {showModal && <TenantDetailModal tenant={tenant} onClose={() => setShowModal(false)} />}
+      {showModal && <TenantDetailModal tenant={tenant} propertyId={propertyId} myGroup={myGroup} onClose={() => setShowModal(false)} />}
     </>
   )
 }
