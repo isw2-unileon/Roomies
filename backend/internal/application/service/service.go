@@ -289,6 +289,9 @@ func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID, viewer
 	}
 	result := make([]application.InterestedTenant, 0, len(candidates))
 	for _, candidate := range candidates {
+		if candidate.UserID == viewerID {
+			continue
+		}
 		candidateProfile := &profile.TenantProfileInput{
 			UserID:        candidate.UserID,
 			BudgetMax:     candidate.BudgetMax,
