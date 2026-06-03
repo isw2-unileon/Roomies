@@ -325,7 +325,7 @@ export interface TenantApartmentListFilters {
 
 export interface TenantGroupListFilters {
   search?: string
-  status?: string
+  status?: 'all' | 'request_sent' | 'accepted' | 'rejected' | 'closed'
   hasApartment?: string
   members?: number
   sort?: string

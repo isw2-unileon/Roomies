@@ -10,6 +10,7 @@ import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantGroupCard from '@/components/tenant/tenant_groups/TenantGroupCard'
 import TenantGroupDetail from '@/components/tenant/tenant_groups/TenantGroupDetail'
 import TenantGroupFilters from '@/components/tenant/tenant_groups/TenantGroupFilters'
+import type { TenantGroupDisplayStatus } from '@/components/tenant/tenant_groups/groupDisplayStatus'
 import {
     acceptTenantGroup,
     createTenantGroupApartmentApplication,
@@ -42,7 +43,7 @@ export default function TenantGroupsPage() {
     const navigate = useNavigate()
     const [groups, setGroups] = useState<TenantGroupListItem[]>([])
     const [search, setSearch] = useState('')
-    const [status, setStatus] = useState('all')
+    const [status, setStatus] = useState<TenantGroupDisplayStatus>('all')
     const [hasApartment, setHasApartment] = useState('all')
     const [selectedMembers, setSelectedMembers] = useState('all')
     const [sort, setSort] = useState('recent')

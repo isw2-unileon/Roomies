@@ -345,4 +345,24 @@ describe('tenantService', () => {
 
 	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups', { credentials: 'include' })
 	})
+
+	test('sends tenant group status filters with normalized values', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ groups: [] }),
+	  } as Response)
+
+	  await listTenantGroups({
+		search: 'centro',
+		status: 'request_sent',
+		hasApartment: 'false',
+		members: 3,
+		sort: 'members',
+	  })
+
+	  expect(fetch).toHaveBeenCalledWith(
+		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members',
+		{ credentials: 'include' },
+	  )
+	})
 })

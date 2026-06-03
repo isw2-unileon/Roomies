@@ -1306,9 +1306,52 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 		whereClauses = append(whereClauses, "(COALESCE(g.name, '') ILIKE "+arg+" OR COALESCE(g.description, '') ILIKE "+arg+" OR COALESCE(a.title, '') ILIKE "+arg+" OR COALESCE(a.address, '') ILIKE "+arg+" OR COALESCE(a.area, '') ILIKE "+arg+")")
 	}
 
-	if filters.Status != "" && filters.Status != "ALL" {
-		args = append(args, filters.Status)
-		whereClauses = append(whereClauses, fmt.Sprintf("g.status = $%d", len(args)))
+	if filters.Status != "" {
+		switch filters.Status {
+		case group.StatusClosed:
+			args = append(args, group.StatusClosed)
+			whereClauses = append(whereClauses, fmt.Sprintf("g.status = $%d", len(args)))
+		case "REQUEST_SENT":
+			args = append(args, group.JoinRequestStatusPending)
+			whereClauses = append(whereClauses, fmt.Sprintf(`COALESCE((
+				SELECT gjr.status
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $1
+				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+				LIMIT 1
+			), '') = $%d`, len(args)))
+		case "REJECTED":
+			args = append(args, group.JoinRequestStatusRejected)
+			whereClauses = append(whereClauses, fmt.Sprintf(`COALESCE((
+				SELECT gjr.status
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $1
+				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+				LIMIT 1
+			), '') = $%d`, len(args)))
+		case "ACCEPTED":
+			args = append(args, group.JoinRequestStatusApproved)
+			whereClauses = append(whereClauses, fmt.Sprintf(`(
+				g.created_by = $1
+				OR EXISTS (
+					SELECT 1
+					FROM public.group_members gm
+					WHERE gm.group_id = g.id
+						AND gm.user_id = $1
+						AND gm.status = 'ACCEPTED'
+				)
+				OR COALESCE((
+					SELECT gjr.status
+					FROM public.group_join_requests gjr
+					WHERE gjr.group_id = g.id
+						AND gjr.requester_user_id = $1
+					ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+					LIMIT 1
+				), '') = $%d
+			)`, len(args)))
+		}
 	}
 
 	if filters.HasApartment == "true" {
