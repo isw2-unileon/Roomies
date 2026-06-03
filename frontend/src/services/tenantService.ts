@@ -812,6 +812,56 @@ export async function listInterestedTenants(apartmentID: string): Promise<Intere
   return (data.tenants ?? []).map(interestedTenantFromDto)
 }
 
+interface TenantProfileByUserIdResponseDto {
+  budget_max?: number
+  preferred_area?: string
+  pets?: boolean
+  smoking?: boolean
+  age?: number
+  sex?: string
+  situation?: string
+  degree?: string
+  profession?: string
+  socialization_level?: string
+  nightlife_level?: string
+  error?: string
+}
+
+export interface TenantPublicProfile {
+  budgetMax: number
+  preferredArea: string
+  pets: boolean
+  smoking: boolean
+  age: number
+  sex: string
+  situation: string
+  degree: string
+  profession: string
+  socializationLevel: string
+  nightlifeLevel: string
+}
+
+export async function getTenantProfileByUserId(userId: string): Promise<TenantPublicProfile> {
+  const response = await apiFetch(`/api/tenant-profile/${userId}`)
+  const data = (await response.json()) as TenantProfileByUserIdResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo cargar el perfil.')
+  }
+  return {
+    budgetMax: data.budget_max ?? 0,
+    preferredArea: data.preferred_area ?? '',
+    pets: data.pets ?? false,
+    smoking: data.smoking ?? false,
+    age: data.age ?? 0,
+    sex: data.sex ?? '',
+    situation: data.situation ?? '',
+    degree: data.degree ?? '',
+    profession: data.profession ?? '',
+    socializationLevel: data.socialization_level ?? '',
+    nightlifeLevel: data.nightlife_level ?? '',
+  }
+}
+
 export async function cancelTenantApplication(applicationID: string) {
   const response = await apiFetch(`/api/applications/${applicationID}/cancel`, {
     method: 'POST',

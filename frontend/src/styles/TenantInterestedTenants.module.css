@@ -168,3 +168,144 @@
   font-size: 0.95rem;
   font-weight: 700;
 }
+
+.detailsButton {
+  width: 100%;
+  padding: 0.45rem 0;
+  background: none;
+  border: 1.5px solid var(--tenant-primary, #149f60);
+  border-radius: 0.6rem;
+  color: var(--tenant-primary, #149f60);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.detailsButton:hover {
+  background: var(--tenant-primary, #149f60);
+  color: #fff;
+}
+
+/* Modal */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modalCard {
+  position: relative;
+  background: var(--tenant-surface, #fff);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 2rem 1.75rem 1.75rem;
+  width: 100%;
+  max-width: 28rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--tenant-text-soft);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modalAvatar {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eeeae5;
+}
+
+.modalName {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--tenant-text);
+}
+
+.modalMeta {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+}
+
+.modalRing {
+  --ring-angle: calc(var(--compatibility, 0) * 1%);
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: conic-gradient(#149f60 var(--ring-angle), #e7efe9 0);
+  position: relative;
+}
+
+.modalRing::before {
+  position: absolute;
+  inset: 0.35rem;
+  content: '';
+  background: var(--tenant-surface, #fff);
+  border-radius: 999px;
+}
+
+.modalStatus {
+  text-align: center;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 1rem 0;
+}
+
+.modalFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.modalField dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tenant-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modalField dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tenant-text);
+}
