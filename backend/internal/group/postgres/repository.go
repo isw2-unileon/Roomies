@@ -1543,6 +1543,46 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 	return item, nil
 }
 
+// HasUserGroupForApartment checks whether the user already has an active group linked to the given apartment.
+func (r *Repository) HasUserGroupForApartment(ctx context.Context, userID, apartmentID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.groups g
+		INNER JOIN public.group_members gm ON gm.group_id = g.id
+		WHERE g.apartment_id = $2
+			AND gm.user_id = $1
+			AND gm.status = 'ACCEPTED'
+			AND g.status NOT IN ('CLOSED', 'REJECTED')
+	)`
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, userID, apartmentID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("has user group for apartment: %w", err)
+	}
+	return exists, nil
+}
+
+// GetMyGroupForApartment returns the group the user belongs to for the given apartment, or nil.
+func (r *Repository) GetMyGroupForApartment(ctx context.Context, userID, apartmentID string) (*group.Group, error) {
+	const query = `SELECT g.id::text
+	FROM public.groups g
+	INNER JOIN public.group_members gm ON gm.group_id = g.id
+	WHERE g.apartment_id = $2
+		AND gm.user_id = $1
+		AND gm.status = 'ACCEPTED'
+		AND g.status NOT IN ('CLOSED', 'REJECTED')
+	ORDER BY g.created_at DESC
+	LIMIT 1`
+
+	var groupID string
+	if err := r.db.QueryRow(ctx, query, userID, apartmentID).Scan(&groupID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get my group for apartment: %w", err)
+	}
+	return r.GetTenantGroupByID(ctx, groupID, userID)
+}
+
 func nullIfEmpty(value string) interface{} {
 	value = strings.TrimSpace(value)
 	if value == "" {

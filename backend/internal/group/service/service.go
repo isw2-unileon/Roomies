@@ -43,6 +43,8 @@ type repository interface {
 	IsGroupCreator(ctx context.Context, groupID, userID string) (bool, error)
 	UpdateGroupApartment(ctx context.Context, groupID string, apartmentID *string) error
 	FilterExistingTenantIDs(ctx context.Context, userIDs []string) ([]string, error)
+	HasUserGroupForApartment(ctx context.Context, userID, apartmentID string) (bool, error)
+	GetMyGroupForApartment(ctx context.Context, userID, apartmentID string) (*group.Group, error)
 }
 
 // ErrTenantRequired is returned when the authenticated user is not a tenant.
@@ -80,6 +82,9 @@ var ErrGroupApartmentAlreadyAssigned = errors.New("group apartment already assig
 
 // ErrGroupApartmentRemovalNotAllowed is returned when trying to remove a linked apartment.
 var ErrGroupApartmentRemovalNotAllowed = errors.New("group apartment removal is not allowed")
+
+// ErrGroupAlreadyExistsForApartment is returned when the user already has a group for this apartment.
+var ErrGroupAlreadyExistsForApartment = errors.New("you already have a group for this apartment")
 
 // Service contains tenant group business logic.
 type Service struct {
@@ -162,6 +167,13 @@ func (s *Service) CreateGroup(ctx context.Context, creatorID, role string, input
 	input.InvitedUserIDs = validInvitedUserIDs
 
 	if input.ApartmentID != "" {
+		alreadyHas, err := s.repo.HasUserGroupForApartment(ctx, strings.TrimSpace(creatorID), input.ApartmentID)
+		if err != nil {
+			return "", err
+		}
+		if alreadyHas {
+			return "", ErrGroupAlreadyExistsForApartment
+		}
 		requiredPlaces := 1 + len(input.InvitedUserIDs)
 		if err := s.ensureApartmentHasCapacity(ctx, input.ApartmentID, requiredPlaces); err != nil {
 			return "", err
@@ -611,6 +623,28 @@ func normalizeUserIDs(userIDs []string, currentUserID string) []string {
 	}
 
 	return result
+}
+
+// GetMyGroupForApartment returns the active group the user belongs to for the given apartment, or nil.
+func (s *Service) GetMyGroupForApartment(ctx context.Context, userID, role, apartmentID string) (*group.Group, error) {
+	if err := validateTenant(userID, role); err != nil {
+		return nil, err
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+	result, err := s.repo.GetMyGroupForApartment(ctx, strings.TrimSpace(userID), apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, nil
+	}
+	if err := s.signGroup(ctx, result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *Service) ensureApartmentHasCapacity(ctx context.Context, apartmentID string, requiredPlaces int) error {

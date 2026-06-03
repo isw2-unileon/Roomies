@@ -131,6 +131,14 @@ func (f *fakeGroupRepository) FilterExistingTenantIDs(ctx context.Context, userI
 	return nil, nil
 }
 
+func (f *fakeGroupRepository) HasUserGroupForApartment(ctx context.Context, userID, apartmentID string) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeGroupRepository) GetMyGroupForApartment(ctx context.Context, userID, apartmentID string) (*group.Group, error) {
+	return nil, nil
+}
+
 func TestCreateJoinRequestRejectsPreviouslyRejectedRequest(t *testing.T) {
 	repo := &fakeGroupRepository{
 		groupDetail:            &group.Group{ID: "group-1", UserRelation: group.UserRelationViewer},
