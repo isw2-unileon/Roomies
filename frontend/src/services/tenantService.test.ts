@@ -75,6 +75,39 @@ describe('tenantService', () => {
     )
   })
 
+  test('sends map filter params to /api/apartments/map endpoint', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        apartments: [
+          {
+            id: 'apt-1',
+            title: 'Piso centro',
+            address: 'Calle Ancha 12',
+            area: 'Centro',
+            total_spots: 3,
+            available_spots: 2,
+            base_rent: 420,
+            status: 'AVAILABLE',
+            created_at: '2026-05-21T10:00:00Z',
+            image_url: 'https://example.test/apt.jpg',
+            latitude: 42.6,
+            longitude: -5.57,
+          },
+        ],
+      }),
+    } as Response)
+
+    const result = await listTenantApartments({ lat: 42.6, lng: -5.57, radius: 2 })
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/apartments/map?lat=42.6&lng=-5.57&radius=2',
+      { credentials: 'include' },
+    )
+    expect(result[0].latitude).toBe(42.6)
+    expect(result[0].longitude).toBe(-5.57)
+  })
+
   test('parses string permission flags from apartment detail safely', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,

@@ -18,6 +18,8 @@ type fakeApartmentRepository struct {
 
 	ownerApartments  []apartment.Apartment
 	tenantApartments []apartment.Apartment
+	mapApartments    []apartment.Apartment
+	mapError         error
 	apartmentByID    *apartment.Apartment
 	apartmentRules   *apartment.Rules
 	tenantProfile    *profile.TenantProfile
@@ -83,6 +85,16 @@ func (f *fakeApartmentRepository) GetTenantProfileByUserID(ctx context.Context, 
 
 func (f *fakeApartmentRepository) GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error) {
 	return f.applicationForApartmentID, f.applicationForApartmentStatus, nil
+}
+
+func (f *fakeApartmentRepository) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
+	if f.mapError != nil {
+		return nil, f.mapError
+	}
+	if f.mapApartments != nil {
+		return f.mapApartments, nil
+	}
+	return []apartment.Apartment{{ID: "apartment-1", Title: "Nearby flat", Latitude: lat, Longitude: lng}}, nil
 }
 
 type fakeImageSigner struct {
@@ -204,6 +216,87 @@ func TestListAvailableApartmentsSignsTenantImagePaths(t *testing.T) {
 
 	if apartments[0].ImageURL != "https://signed.example.test/mock_1.avif" {
 		t.Fatalf("ImageURL = %q, want signed URL", apartments[0].ImageURL)
+	}
+}
+
+func TestListApartmentsInRadiusReturnsApartments(t *testing.T) {
+	repo := &fakeApartmentRepository{
+		mapApartments: []apartment.Apartment{
+			{ID: "apt-1", Title: "Piso centro", Latitude: 42.6, Longitude: -5.57},
+			{ID: "apt-2", Title: "Piso norte", Latitude: 42.61, Longitude: -5.56},
+		},
+	}
+	svc := NewService(repo, nil, repo, repo)
+
+	apartments, err := svc.ListApartmentsInRadius(context.Background(), 42.6, -5.57, 2.0)
+	if err != nil {
+		t.Fatalf("ListApartmentsInRadius returned error: %v", err)
+	}
+	if len(apartments) != 2 {
+		t.Fatalf("len(apartments) = %d, want 2", len(apartments))
+	}
+	if apartments[0].ID != "apt-1" {
+		t.Fatalf("apartments[0].ID = %q, want apt-1", apartments[0].ID)
+	}
+}
+
+func TestListApartmentsInRadiusSignsImages(t *testing.T) {
+	repo := &fakeApartmentRepository{
+		mapApartments: []apartment.Apartment{{
+			ID:       "apt-1",
+			Title:    "Flat",
+			ImageURL: "apartments/apt-1/photo.jpg",
+			Latitude: 42.6, Longitude: -5.57,
+		}},
+	}
+	signer := &fakeImageSigner{}
+	svc := NewService(repo, signer, repo, repo)
+
+	apartments, err := svc.ListApartmentsInRadius(context.Background(), 42.6, -5.57, 1.0)
+	if err != nil {
+		t.Fatalf("ListApartmentsInRadius returned error: %v", err)
+	}
+	if apartments[0].ImageURL != "https://signed.example.test/apartments/apt-1/photo.jpg" {
+		t.Fatalf("ImageURL = %q, want signed URL", apartments[0].ImageURL)
+	}
+	if signer.bucket != "Apartment_photos" {
+		t.Fatalf("bucket = %q, want Apartment_photos", signer.bucket)
+	}
+}
+
+func TestListApartmentsInRadiusInvalidLat(t *testing.T) {
+	svc := NewService(&fakeApartmentRepository{}, nil, nil, nil)
+
+	_, err := svc.ListApartmentsInRadius(context.Background(), 100, 0, 1.0)
+	if err == nil {
+		t.Fatal("ListApartmentsInRadius with lat=100 expected error, got nil")
+	}
+}
+
+func TestListApartmentsInRadiusInvalidLng(t *testing.T) {
+	svc := NewService(&fakeApartmentRepository{}, nil, nil, nil)
+
+	_, err := svc.ListApartmentsInRadius(context.Background(), 0, -200, 1.0)
+	if err == nil {
+		t.Fatal("ListApartmentsInRadius with lng=-200 expected error, got nil")
+	}
+}
+
+func TestListApartmentsInRadiusInvalidRadius(t *testing.T) {
+	svc := NewService(&fakeApartmentRepository{}, nil, nil, nil)
+
+	_, err := svc.ListApartmentsInRadius(context.Background(), 42.6, -5.57, 0)
+	if err == nil {
+		t.Fatal("ListApartmentsInRadius with radius=0 expected error, got nil")
+	}
+}
+
+func TestListApartmentsInRadiusNegativeRadius(t *testing.T) {
+	svc := NewService(&fakeApartmentRepository{}, nil, nil, nil)
+
+	_, err := svc.ListApartmentsInRadius(context.Background(), 42.6, -5.57, -1)
+	if err == nil {
+		t.Fatal("ListApartmentsInRadius with radius=-1 expected error, got nil")
 	}
 }
 
