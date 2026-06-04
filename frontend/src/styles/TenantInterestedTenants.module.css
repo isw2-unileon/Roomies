@@ -1,0 +1,463 @@
+.pageLayout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.content > * + * {
+  margin-top: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #eeeae5;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  background: var(--tenant-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tenant-text-soft);
+  font-size: 1.1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.cardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  margin: 0.15rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.compatibilityRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ring {
+  --ring-angle: calc(var(--compatibility, 0) * 1%);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: conic-gradient(#149f60 var(--ring-angle), #e7efe9 0);
+  flex-shrink: 0;
+}
+
+.ring::before {
+  position: absolute;
+  inset: 0.4rem;
+  content: '';
+  background: #fff;
+  border-radius: 999px;
+}
+
+.ringValue {
+  position: relative;
+  z-index: 1;
+  color: #149f60;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.compatibleLabel {
+  color: #149f60;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--tenant-text-soft);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.loading {
+  color: var(--tenant-text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.detailsButton {
+  width: 100%;
+  padding: 0.45rem 0;
+  background: none;
+  border: 1.5px solid var(--tenant-primary, #149f60);
+  border-radius: 0.6rem;
+  color: var(--tenant-primary, #149f60);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.detailsButton:hover {
+  background: var(--tenant-primary, #149f60);
+  color: #fff;
+}
+
+/* Modal */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modalCard {
+  position: relative;
+  background: var(--tenant-surface, #fff);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 2rem 1.75rem 1.75rem;
+  width: 100%;
+  max-width: 28rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--tenant-text-soft);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modalAvatar {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eeeae5;
+}
+
+.modalName {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--tenant-text);
+}
+
+.modalMeta {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+}
+
+.modalRing {
+  --ring-angle: calc(var(--compatibility, 0) * 1%);
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: conic-gradient(#149f60 var(--ring-angle), #e7efe9 0);
+  position: relative;
+}
+
+.modalRing::before {
+  position: absolute;
+  inset: 0.35rem;
+  content: '';
+  background: var(--tenant-surface, #fff);
+  border-radius: 999px;
+}
+
+.inviteButton {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0;
+  background: var(--tenant-primary, #149f60);
+  border: none;
+  border-radius: 0.7rem;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.inviteButton:hover {
+  opacity: 0.88;
+}
+
+.modalStatus {
+  text-align: center;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 1rem 0;
+}
+
+.modalFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.modalField dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tenant-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modalField dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tenant-text);
+}
+
+.modalGroupHint {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+  margin: 0 0 0.5rem;
+  line-height: 1.4;
+}
+
+/* My group panel */
+
+.myGroupPanel {
+  width: 18rem;
+  flex-shrink: 0;
+  padding: 1.5rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+  position: sticky;
+  top: 1.5rem;
+}
+
+.panelTitle {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--tenant-text);
+}
+
+.panelLoading {
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+}
+
+.panelEmpty {
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.panelGroupName {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--tenant-text);
+}
+
+.panelMemberCount {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+}
+
+.memberSlots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.memberSlot {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.slotAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eeeae5;
+}
+
+.slotName {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--tenant-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberSlotEmpty {
+  opacity: 0.45;
+}
+
+.slotAvatarEmpty {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  border: 2px dashed var(--tenant-border);
+  background: transparent;
+}
+
+.slotNameEmpty {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tenant-text-soft);
+  font-style: italic;
+}
+
+.panelButton {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0;
+  background: var(--tenant-primary, #149f60);
+  border: none;
+  border-radius: 0.7rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: opacity 0.15s;
+}
+
+.panelButton:hover {
+  opacity: 0.88;
+}

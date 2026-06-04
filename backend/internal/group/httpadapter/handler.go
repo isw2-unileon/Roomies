@@ -170,6 +170,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Servi
 	api.POST("/tenant/group-invitations/:id/accept", h.acceptGroupInvitation)
 	api.POST("/tenant/group-invitations/:id/reject", h.rejectGroupInvitation)
 	api.PATCH("/tenant/groups/:id/apartment", h.updateGroupApartment)
+	api.GET("/apartments/:id/my-group", h.getMyGroupForApartment)
 }
 
 func (h *handler) listTenantGroups(c *gin.Context) {
@@ -438,6 +439,28 @@ func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
 	return userID, role, true
 }
 
+func (h *handler) getMyGroupForApartment(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+	result, err := h.groupService.GetMyGroupForApartment(c.Request.Context(), userID, role, apartmentID)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+	if result == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no group found for this apartment"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"group": groupResponseFromDomain(*result)})
+}
+
 func (h *handler) handleServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, groupservice.ErrTenantRequired):
@@ -456,6 +479,8 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{"error": "group apartment already assigned"})
 	case errors.Is(err, groupservice.ErrGroupApartmentRemovalNotAllowed):
 		c.JSON(http.StatusConflict, gin.H{"error": "group apartment removal is not allowed"})
+	case errors.Is(err, groupservice.ErrGroupAlreadyExistsForApartment):
+		c.JSON(http.StatusConflict, gin.H{"error": "you already have a group for this apartment"})
 	case errors.Is(err, groupservice.ErrJoinRequestAlreadyPending):
 		c.JSON(http.StatusConflict, gin.H{"error": "join request already pending"})
 	case errors.Is(err, groupservice.ErrJoinRequestAlreadyRejected):

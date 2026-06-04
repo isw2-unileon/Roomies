@@ -7,9 +7,11 @@ import styles from '@/styles/TenantCreateGroup.module.css'
 
 interface TenantGroupFormProps {
   onSuccess: (groupId: string) => void
+  preselectedUserId?: string
+  preselectedApartmentId?: string
 }
 
-export default function TenantGroupForm({ onSuccess }: TenantGroupFormProps) {
+export default function TenantGroupForm({ onSuccess, preselectedUserId, preselectedApartmentId }: TenantGroupFormProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedCandidates, setSelectedCandidates] = useState<TenantGroupCandidate[]>([])
@@ -78,11 +80,13 @@ export default function TenantGroupForm({ onSuccess }: TenantGroupFormProps) {
       <TenantGroupCandidateSelector
         selected={selectedCandidates}
         onChange={setSelectedCandidates}
+        preselectedUserIds={preselectedUserId ? [preselectedUserId] : undefined}
       />
 
       <TenantGroupApartmentSelector
         selected={apartment}
         onChange={setApartment}
+        preselectedApartmentId={preselectedApartmentId}
       />
 
       <button type="submit" className={styles.submitButton} disabled={loading}>

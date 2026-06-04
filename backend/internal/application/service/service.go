@@ -41,7 +41,7 @@ type apartmentReader interface {
 }
 
 type profileReader interface {
-	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error)
+	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error)
 }
 
 // ErrTenantRequired is returned when a non-tenant requests tenant-only operations.
@@ -279,7 +279,7 @@ func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID, viewer
 	if err := authorizeInterestedTenantsViewer(apartmentRow, viewerID, role); err != nil {
 		return nil, err
 	}
-	rules, err := s.apartmentReader.GetApartmentRules(ctx, apartmentID)
+	viewerProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, viewerID)
 	if err != nil {
 		return nil, err
 	}
@@ -289,20 +289,23 @@ func (s *Service) ListInterestedTenants(ctx context.Context, apartmentID, viewer
 	}
 	result := make([]application.InterestedTenant, 0, len(candidates))
 	for _, candidate := range candidates {
-		tenantProfile := &profile.TenantProfile{
+		if candidate.UserID == viewerID {
+			continue
+		}
+		candidateProfile := &profile.TenantProfileInput{
 			UserID:        candidate.UserID,
-			BudgetMin:     candidate.BudgetMin,
 			BudgetMax:     candidate.BudgetMax,
 			PreferredArea: candidate.PreferredArea,
 			Pets:          candidate.Pets,
 			Smoking:       candidate.Smoking,
-			NoiseLevel:    candidate.NoiseLevel,
-			Cleanliness:   candidate.Cleanliness,
-			WorkSchedule:  candidate.WorkSchedule,
 			Age:           candidate.Age,
-			University:    candidate.Studies,
+			Situation:     candidate.Situation,
+			Degree:        candidate.Degree,
+			Profession:    candidate.Profession,
+			Socialization: candidate.Socialization,
+			Nightlife:     candidate.Nightlife,
 		}
-		score, _ := matching.CalculateCompatibility(*apartmentRow, rules, tenantProfile)
+		score := matching.CalculateTenantCompatibility(viewerProfile, candidateProfile)
 		result = append(result, application.InterestedTenant{
 			UserID:        candidate.UserID,
 			Name:          candidate.Name,
@@ -382,6 +385,7 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 				}
 			}
 		}
+
 		applications[idx].Status = application.MapStatus(applications[idx].Status)
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
 		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])

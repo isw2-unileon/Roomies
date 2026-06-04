@@ -61,20 +61,15 @@ func (r *Repository) NeedsTenantProfile(ctx context.Context, userID, role string
 	return !exists, nil
 }
 
-// GetTenantProfileByUserID returns tenant profile data for compatibility.
-func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error) {
+// GetTenantProfileByUserID returns tenant profile data for matching.
+func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error) {
 	const query = `SELECT
 		user_id,
-		COALESCE(budget_min, 0),
 		COALESCE(budget_max, 0),
 		COALESCE(preferred_area, ''),
 		COALESCE(pets, FALSE),
 		COALESCE(smoking, FALSE),
-		COALESCE(noise_level, ''),
-		COALESCE(cleanliness, ''),
-		COALESCE(work_schedule, ''),
 		COALESCE(age, 0),
-		COALESCE(university, ''),
 		COALESCE(sex, ''),
 		COALESCE(tenant_situation, ''),
 		COALESCE(degree, ''),
@@ -84,25 +79,20 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 	FROM public.tenant_profiles
 	WHERE user_id = $1`
 
-	var tenantProfile profile.TenantProfile
+	var p profile.TenantProfileInput
 	err := r.db.QueryRow(ctx, query, userID).Scan(
-		&tenantProfile.UserID,
-		&tenantProfile.BudgetMin,
-		&tenantProfile.BudgetMax,
-		&tenantProfile.PreferredArea,
-		&tenantProfile.Pets,
-		&tenantProfile.Smoking,
-		&tenantProfile.NoiseLevel,
-		&tenantProfile.Cleanliness,
-		&tenantProfile.WorkSchedule,
-		&tenantProfile.Age,
-		&tenantProfile.University,
-		&tenantProfile.Sex,
-		&tenantProfile.Situation,
-		&tenantProfile.Degree,
-		&tenantProfile.Profession,
-		&tenantProfile.Socialization,
-		&tenantProfile.Nightlife,
+		&p.UserID,
+		&p.BudgetMax,
+		&p.PreferredArea,
+		&p.Pets,
+		&p.Smoking,
+		&p.Age,
+		&p.Sex,
+		&p.Situation,
+		&p.Degree,
+		&p.Profession,
+		&p.Socialization,
+		&p.Nightlife,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -110,7 +100,7 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 		}
 		return nil, fmt.Errorf("get tenant profile by user id: %w", err)
 	}
-	return &tenantProfile, nil
+	return &p, nil
 }
 
 // GetTenantPersonalProfile returns editable account data from users table.

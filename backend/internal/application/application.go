@@ -12,17 +12,18 @@ type InterestedTenant struct {
 	Compatibility int
 }
 
-// InterestedTenantCandidate contains interested tenant data plus profile preferences.
+// InterestedTenantCandidate contains interested tenant data plus profile preferences for matching.
 type InterestedTenantCandidate struct {
 	InterestedTenant
-	BudgetMin     int
 	BudgetMax     int
 	PreferredArea string
 	Pets          bool
 	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
+	Situation     string
+	Degree        string
+	Profession    string
+	Socialization string
+	Nightlife     string
 }
 
 // TenantApplication contains tenant-facing application data.

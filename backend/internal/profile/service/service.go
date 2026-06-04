@@ -24,6 +24,7 @@ type repository interface {
 	LookupRoleByUserID(ctx context.Context, userID string) (string, error)
 	NeedsTenantProfile(ctx context.Context, userID, role string) (bool, error)
 	UpsertTenantProfile(ctx context.Context, userID string, input profile.TenantProfileInput) error
+	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error)
 	GetTenantPersonalProfile(ctx context.Context, userID string) (*profile.TenantPersonalProfile, error)
 	UpdateTenantPersonalProfile(ctx context.Context, userID string, input profile.TenantPersonalProfileInput) error
 	UpdateTenantAvatarURL(ctx context.Context, userID, avatarURL string) error
@@ -51,6 +52,11 @@ func (s *Service) LookupRoleByUserID(ctx context.Context, userID string) (string
 // NeedsTenantProfile checks if tenant onboarding is pending.
 func (s *Service) NeedsTenantProfile(ctx context.Context, userID, role string) (bool, error) {
 	return s.repo.NeedsTenantProfile(ctx, userID, role)
+}
+
+// GetTenantProfileByUserID returns the preference profile for any tenant user.
+func (s *Service) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error) {
+	return s.repo.GetTenantProfileByUserID(ctx, userID)
 }
 
 // SaveTenantProfile upserts tenant onboarding/profile data.

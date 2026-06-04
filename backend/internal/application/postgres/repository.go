@@ -104,14 +104,15 @@ func (r *Repository) ListInterestedTenants(ctx context.Context, apartmentID stri
 		COALESCE(tp.age, 0),
 		COALESCE(tp.university, ''),
 		COALESCE(u.avatar_url, ''),
-		COALESCE(tp.budget_min, 0),
 		COALESCE(tp.budget_max, 0),
 		COALESCE(tp.preferred_area, ''),
 		COALESCE(tp.pets, FALSE),
 		COALESCE(tp.smoking, FALSE),
-		COALESCE(tp.noise_level, ''),
-		COALESCE(tp.cleanliness, ''),
-		COALESCE(tp.work_schedule, '')
+		COALESCE(tp.tenant_situation, ''),
+		COALESCE(tp.degree, ''),
+		COALESCE(tp.profession, ''),
+		COALESCE(tp.socialization_level, ''),
+		COALESCE(tp.nightlife_level, '')
 	FROM public.applications app
 	INNER JOIN public.users u ON u.id = app.tenant_id
 	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
@@ -135,14 +136,15 @@ func (r *Repository) ListInterestedTenants(ctx context.Context, apartmentID stri
 			&item.Age,
 			&item.Studies,
 			&item.AvatarURL,
-			&item.BudgetMin,
 			&item.BudgetMax,
 			&item.PreferredArea,
 			&item.Pets,
 			&item.Smoking,
-			&item.NoiseLevel,
-			&item.Cleanliness,
-			&item.WorkSchedule,
+			&item.Situation,
+			&item.Degree,
+			&item.Profession,
+			&item.Socialization,
+			&item.Nightlife,
 		); err != nil {
 			return nil, fmt.Errorf("scan interested tenants: %w", err)
 		}
