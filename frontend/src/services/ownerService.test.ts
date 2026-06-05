@@ -65,7 +65,7 @@ describe('ownerService', () => {
       totalSpots: 3,
       bathrooms: 1,
       baseRent: 420,
-      availableFrom: '2026-06-01',
+
       imagePaths: ['apartments/apt-1/1.jpg', 'apartments/apt-1/2.jpg'],
     })).resolves.toEqual({ message: 'created', apartmentId: 'apt-1', imagesStored: 2 })
 
@@ -83,8 +83,14 @@ describe('ownerService', () => {
         total_spots: 3,
         bathrooms: 1,
         base_rent: 420,
-        available_from: '2026-06-01',
+
         image_paths: ['apartments/apt-1/1.jpg', 'apartments/apt-1/2.jpg'],
+        surface_m2: 0,
+        floor: 0,
+        smoking_allowed: null,
+        pets_allowed: null,
+        students_allowed: null,
+        notes: '',
       }),
     })
   })
@@ -148,7 +154,7 @@ describe('ownerService', () => {
       totalSpots: 4,
       bathrooms: 0,
       baseRent: 450,
-      availableFrom: '',
+
       imagePaths: ['apartments/apt-1/1.jpg'],
       latitude: 42.6,
       longitude: -5.57,
@@ -168,10 +174,16 @@ describe('ownerService', () => {
         total_spots: 4,
         bathrooms: 0,
         base_rent: 450,
-        available_from: '',
+
         image_paths: ['apartments/apt-1/1.jpg'],
         latitude: 42.6,
         longitude: -5.57,
+        surface_m2: 0,
+        floor: 0,
+        smoking_allowed: null,
+        pets_allowed: null,
+        students_allowed: null,
+        notes: '',
       }),
     })
   })
