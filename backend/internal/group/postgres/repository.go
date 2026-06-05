@@ -912,6 +912,10 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 		return rejectJoinRequestAs(ctx, tx, requestID, group.JoinRequestStatusRejected, "set join request rejected", "commit rejected join request")
 	}
 
+	return finalizePendingJoinRequest(ctx, tx, requestID, joinRequest.GroupID, joinRequest.RequesterUserID)
+}
+
+func finalizePendingJoinRequest(ctx context.Context, tx pgx.Tx, requestID, groupID, requesterUserID string) (string, bool, error) {
 	approvals, expected, err := countJoinRequestApprovals(ctx, tx, requestID)
 	if err != nil {
 		return "", false, err
@@ -928,7 +932,7 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE g.id = $1
-	FOR UPDATE OF g`, joinRequest.GroupID).Scan(&totalSpots); err != nil {
+	FOR UPDATE OF g`, groupID).Scan(&totalSpots); err != nil {
 		return "", false, fmt.Errorf("lock group for join request finalization: %w", err)
 	}
 
@@ -936,30 +940,37 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 	if err := tx.QueryRow(ctx, `SELECT COUNT(*)::int
 	FROM public.group_members
 	WHERE group_id = $1
-		AND status = 'ACCEPTED'`, joinRequest.GroupID).Scan(&acceptedMembers); err != nil {
+		AND status = 'ACCEPTED'`, groupID).Scan(&acceptedMembers); err != nil {
 		return "", false, fmt.Errorf("count accepted members for join request finalization: %w", err)
 	}
 
 	if totalSpots > 0 && acceptedMembers+1 > totalSpots {
-		if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'REJECTED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
-			return "", false, fmt.Errorf("reject full-capacity join request: %w", err)
-		}
-		if err := closePendingGroupAdmissionsTx(ctx, tx, joinRequest.GroupID, totalSpots); err != nil {
-			return "", false, err
-		}
-		if err := tx.Commit(ctx); err != nil {
-			return "", false, fmt.Errorf("commit full-capacity join request rejection: %w", err)
-		}
-		return group.JoinRequestStatusRejected, true, nil
+		return rejectJoinRequestByCapacity(ctx, tx, requestID, groupID, totalSpots)
 	}
+	return approveJoinRequest(ctx, tx, requestID, groupID, requesterUserID, totalSpots)
+}
 
+func rejectJoinRequestByCapacity(ctx context.Context, tx pgx.Tx, requestID, groupID string, totalSpots int) (string, bool, error) {
+	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'REJECTED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
+		return "", false, fmt.Errorf("reject full-capacity join request: %w", err)
+	}
+	if err := closePendingGroupAdmissionsTx(ctx, tx, groupID, totalSpots); err != nil {
+		return "", false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", false, fmt.Errorf("commit full-capacity join request rejection: %w", err)
+	}
+	return group.JoinRequestStatusRejected, true, nil
+}
+
+func approveJoinRequest(ctx context.Context, tx pgx.Tx, requestID, groupID, requesterUserID string, totalSpots int) (string, bool, error) {
 	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'APPROVED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
 		return "", false, fmt.Errorf("set join request approved: %w", err)
 	}
-	if err := addApprovedJoinRequestMember(ctx, tx, joinRequest.GroupID, joinRequest.RequesterUserID); err != nil {
+	if err := addApprovedJoinRequestMember(ctx, tx, groupID, requesterUserID); err != nil {
 		return "", false, err
 	}
-	if err := closePendingGroupAdmissionsTx(ctx, tx, joinRequest.GroupID, totalSpots); err != nil {
+	if err := closePendingGroupAdmissionsTx(ctx, tx, groupID, totalSpots); err != nil {
 		return "", false, err
 	}
 
