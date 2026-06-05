@@ -189,6 +189,7 @@ interface TenantGroupDto {
   accepted_members_count: number
   pending_invitations_count: number
   is_fully_accepted: boolean
+  average_budget_min?: number
   average_budget_max: number
   apartment: TenantGroupApartmentDto | null
   current_apartment_request?: TenantGroupApartmentRequestDto | null
@@ -244,6 +245,7 @@ interface TenantGroupProfileDto {
   age: number
   sex: string
   situation: string
+  university?: string
   degree: string
   profession: string
   budget_max: number
@@ -504,6 +506,7 @@ function tenantGroupProfileFromDto(dto: TenantGroupProfileDto): TenantGroupProfi
     age: dto.age,
     sex: dto.sex,
     situation: dto.situation,
+    university: dto.university ?? dto.degree ?? '',
     degree: dto.degree,
     profession: dto.profession,
     budgetMax: dto.budget_max,
@@ -564,6 +567,7 @@ function tenantGroupFromDto(dto: TenantGroupDto): TenantGroupListItem {
     acceptedMembersCount: dto.accepted_members_count,
     pendingInvitationsCount: dto.pending_invitations_count,
     isFullyAccepted: dto.is_fully_accepted,
+    averageBudgetMin: dto.average_budget_min ?? 0,
     averageBudgetMax: dto.average_budget_max,
     apartment: dto.apartment ? tenantGroupApartmentFromDto(dto.apartment) : null,
 	currentApartmentRequest: dto.current_apartment_request ? tenantGroupApartmentRequestFromDto(dto.current_apartment_request) : null,

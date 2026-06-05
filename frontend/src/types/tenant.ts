@@ -212,6 +212,7 @@ export interface TenantGroupListItem {
     acceptedMembersCount: number
     pendingInvitationsCount: number
     isFullyAccepted: boolean
+    averageBudgetMin: number
     averageBudgetMax: number
     apartment: TenantGroupApartment | null
 	currentApartmentRequest: TenantGroupApartmentRequest | null
@@ -226,6 +227,7 @@ export interface TenantGroupProfile {
     age: number
     sex: string
     situation: string
+    university?: string
     degree: string
     profession: string
     budgetMax: number
