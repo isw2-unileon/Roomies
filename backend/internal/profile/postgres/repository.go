@@ -243,6 +243,62 @@ func (r *Repository) UpsertUserProfile(ctx context.Context, userID, email, fullN
 	return nil
 }
 
+// GetOwnerProfile returns the full profile for an owner user.
+func (r *Repository) GetOwnerProfile(ctx context.Context, userID string) (*profile.OwnerProfile, error) {
+	const query = `SELECT
+		u.id,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, ''),
+		COALESCE(op.display_name, ''),
+		COALESCE(op.phone, '')
+	FROM public.users u
+	LEFT JOIN public.owner_profiles op ON op.user_id = u.id
+	WHERE u.id = $1`
+
+	var p profile.OwnerProfile
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&p.UserID,
+		&p.FullName,
+		&p.Email,
+		&p.AvatarURL,
+		&p.DisplayName,
+		&p.Phone,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get owner profile: %w", err)
+	}
+	return &p, nil
+}
+
+// UpdateOwnerProfile updates editable owner profile fields.
+func (r *Repository) UpdateOwnerProfile(ctx context.Context, userID string, input profile.OwnerProfileInput) error {
+	if _, err := r.db.Exec(ctx,
+		`UPDATE public.users SET full_name = $2, updated_at = NOW() WHERE id = $1`,
+		userID, strings.TrimSpace(input.FullName),
+	); err != nil {
+		return fmt.Errorf("update owner full name: %w", err)
+	}
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO public.owner_profiles (user_id, display_name, phone)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id) DO UPDATE SET
+			display_name = EXCLUDED.display_name,
+			phone = EXCLUDED.phone,
+			updated_at = NOW()`,
+		userID,
+		nullIfEmpty(input.DisplayName),
+		nullIfEmpty(input.Phone),
+	)
+	if err != nil {
+		return fmt.Errorf("update owner profile: %w", err)
+	}
+	return nil
+}
+
 // UpsertOwnerProfile inserts/updates owner profile data created during registration.
 func (r *Repository) UpsertOwnerProfile(ctx context.Context, userID, displayName string) error {
 	_, err := r.db.Exec(ctx,

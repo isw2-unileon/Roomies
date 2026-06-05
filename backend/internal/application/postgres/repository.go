@@ -102,7 +102,7 @@ func (r *Repository) ListInterestedTenants(ctx context.Context, apartmentID stri
 		u.id,
 		u.full_name,
 		COALESCE(tp.age, 0),
-		COALESCE(tp.university, ''),
+		COALESCE(tp.degree, ''),
 		COALESCE(u.avatar_url, ''),
 		COALESCE(tp.budget_max, 0),
 		COALESCE(tp.preferred_area, ''),

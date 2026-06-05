@@ -62,8 +62,12 @@ export const mockLikes: PropertyLike[] = [
 ]
 
 export const mockOwnerProfile: OwnerProfile = {
-    name: 'Carlos Martinez',
-    role: 'Propietario',
+    userId: 'owner-1',
+    fullName: 'Carlos Martinez',
+    email: 'carlos@mail.com',
+    avatarUrl: '',
+    displayName: 'Propietario',
+    phone: '',
 }
 
 export const mockOwnerProperties: OwnerDashboardProperty[] = [

@@ -225,16 +225,17 @@ export interface TenantGroupProfile {
     email: string
     avatarUrl: string
     age: number
-    university: string
-    budgetMin: number
+    sex: string
+    situation: string
+    university?: string
+    degree: string
+    profession: string
     budgetMax: number
     preferredArea: string
-    moveInDate: string
     pets: boolean
     smoking: boolean
-    noiseLevel: string
-    cleanliness: string
-    workSchedule: string
+    socializationLevel: string
+    nightlifeLevel: string
 }
 
 export interface TenantGroupAcceptedMember extends TenantGroupProfile {

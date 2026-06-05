@@ -81,8 +81,7 @@ type ListGroupsFilters struct {
 
 // CandidateFilters contains the filters used to search tenant candidates.
 type CandidateFilters struct {
-	Search     string
-	University string
+	Search string
 }
 
 // Group represents a tenant group with members, invitations and optional apartment.
@@ -98,7 +97,6 @@ type Group struct {
 	AcceptedMembersCount    int
 	PendingInvitationsCount int
 	IsFullyAccepted         bool
-	AverageBudgetMin        int
 	AverageBudgetMax        int
 	Apartment               *Apartment
 	CurrentApartmentRequest *ApartmentRequest
@@ -133,25 +131,25 @@ type ApartmentRequest struct {
 
 // Member represents an accepted group member.
 type Member struct {
-	UserID        string
-	Name          string
-	Email         string
-	AvatarURL     string
-	Role          string
-	Status        string
-	Age           int
-	University    string
-	BudgetMin     int
-	BudgetMax     int
-	PreferredArea string
-	MoveInDate    string
-	Pets          bool
-	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
-	HasAccepted   bool
-	IsCurrentUser bool
+	UserID            string
+	Name              string
+	Email             string
+	AvatarURL         string
+	Role              string
+	Status            string
+	Age               int
+	Sex               string
+	Situation         string
+	Degree            string
+	Profession        string
+	BudgetMax         int
+	PreferredArea     string
+	Pets              bool
+	Smoking           bool
+	SocializationLevel string
+	NightlifeLevel    string
+	HasAccepted       bool
+	IsCurrentUser     bool
 }
 
 // Invitation represents a pending or answered group invitation.
@@ -168,21 +166,21 @@ type Invitation struct {
 
 // Candidate represents a tenant profile that can be invited to a group.
 type Candidate struct {
-	UserID        string
-	Name          string
-	Email         string
-	AvatarURL     string
-	Age           int
-	University    string
-	BudgetMin     int
-	BudgetMax     int
-	PreferredArea string
-	MoveInDate    string
-	Pets          bool
-	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
+	UserID             string
+	Name               string
+	Email              string
+	AvatarURL          string
+	Age                int
+	Sex                string
+	Situation          string
+	Degree             string
+	Profession         string
+	BudgetMax          int
+	PreferredArea      string
+	Pets               bool
+	Smoking            bool
+	SocializationLevel string
+	NightlifeLevel     string
 }
 
 // JoinRequest represents a request from a viewer to join a group.

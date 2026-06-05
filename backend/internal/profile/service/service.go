@@ -28,10 +28,15 @@ type repository interface {
 	GetTenantPersonalProfile(ctx context.Context, userID string) (*profile.TenantPersonalProfile, error)
 	UpdateTenantPersonalProfile(ctx context.Context, userID string, input profile.TenantPersonalProfileInput) error
 	UpdateTenantAvatarURL(ctx context.Context, userID, avatarURL string) error
+	GetOwnerProfile(ctx context.Context, userID string) (*profile.OwnerProfile, error)
+	UpdateOwnerProfile(ctx context.Context, userID string, input profile.OwnerProfileInput) error
 }
 
 // ErrTenantRequired is returned when a non-tenant tries to save a tenant profile.
 var ErrTenantRequired = errors.New("tenant role is required")
+
+// ErrOwnerRequired is returned when a non-owner tries to access an owner profile.
+var ErrOwnerRequired = errors.New("owner role is required")
 
 // Service contains profile use cases.
 type Service struct {
@@ -109,6 +114,67 @@ func (s *Service) UploadTenantAvatar(ctx context.Context, userID, role, filename
 	objectPath := buildAvatarObjectPath(userID, ext)
 	if err := s.imageStorage.UploadObject(ctx, profileAvatarsBucket, objectPath, contentType, fileData); err != nil {
 		return "", fmt.Errorf("upload tenant avatar: %w", err)
+	}
+	if err := s.repo.UpdateTenantAvatarURL(ctx, userID, objectPath); err != nil {
+		return "", err
+	}
+	avatarURL, err := s.signedAvatarURL(ctx, objectPath)
+	if err != nil {
+		return "", err
+	}
+	return avatarURL, nil
+}
+
+// GetOwnerProfile returns the full profile for an owner user.
+func (s *Service) GetOwnerProfile(ctx context.Context, userID, role string) (*profile.OwnerProfile, error) {
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	p, err := s.repo.GetOwnerProfile(ctx, userID)
+	if err != nil || p == nil {
+		return p, err
+	}
+	result := *p
+	result.AvatarURL, err = s.signedAvatarURL(ctx, p.AvatarURL)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateOwnerProfile saves editable owner profile fields.
+func (s *Service) UpdateOwnerProfile(ctx context.Context, userID, role string, input profile.OwnerProfileInput) error {
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+	return s.repo.UpdateOwnerProfile(ctx, userID, input)
+}
+
+// UploadOwnerAvatar stores the avatar in storage and persists its path.
+func (s *Service) UploadOwnerAvatar(ctx context.Context, userID, role, filename, contentType string, fileData []byte) (string, error) {
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return "", ErrOwnerRequired
+	}
+	if s.imageStorage == nil {
+		return "", errors.New("image upload is not configured")
+	}
+	if len(fileData) == 0 {
+		return "", errors.New("avatar file is required")
+	}
+	if len(fileData) > 2_000_000 {
+		return "", errors.New("avatar file exceeds maximum size of 2MB")
+	}
+	ext, err := resolveAvatarExtension(filename, contentType)
+	if err != nil {
+		return "", err
+	}
+	contentType, err = resolveAvatarContentType(contentType, ext)
+	if err != nil {
+		return "", err
+	}
+	objectPath := buildAvatarObjectPath(userID, ext)
+	if err := s.imageStorage.UploadObject(ctx, profileAvatarsBucket, objectPath, contentType, fileData); err != nil {
+		return "", fmt.Errorf("upload owner avatar: %w", err)
 	}
 	if err := s.repo.UpdateTenantAvatarURL(ctx, userID, objectPath); err != nil {
 		return "", err

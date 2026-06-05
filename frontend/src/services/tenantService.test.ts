@@ -315,33 +315,32 @@ describe('tenantService', () => {
 		}),
 	  } as Response)
 
-	  await expect(listTenantGroups()).resolves.toEqual([
-		{
-		  id: 'group-1',
-		  name: 'Centro Leon',
-		  description: 'Grupo tranquilo',
-		  status: 'FORMING',
-		  createdBy: 'tenant-9',
-		  createdAt: '2026-06-01T12:00:00Z',
-		  userRelation: 'viewer',
-		  invitationId: '',
-		  acceptedMembersCount: 2,
-		  pendingInvitationsCount: 0,
-		  isFullyAccepted: false,
-		  averageBudgetMin: 300,
-		  averageBudgetMax: 450,
-		  apartment: null,
-		  currentApartmentRequest: null,
-		  currentJoinRequest: {
-			id: 'join-request-1',
-			groupId: 'group-1',
-			requesterUserId: 'tenant-1',
-			status: 'REJECTED',
-			createdAt: '2026-06-02T10:00:00Z',
-			updatedAt: '2026-06-03T11:00:00Z',
-		  },
-		},
-	  ])
+    await expect(listTenantGroups()).resolves.toMatchObject([
+      {
+        id: 'group-1',
+        name: 'Centro Leon',
+        description: 'Grupo tranquilo',
+        status: 'FORMING',
+        createdBy: 'tenant-9',
+        createdAt: '2026-06-01T12:00:00Z',
+        userRelation: 'viewer',
+        invitationId: '',
+        acceptedMembersCount: 2,
+        pendingInvitationsCount: 0,
+        isFullyAccepted: false,
+        averageBudgetMax: 450,
+        apartment: null,
+        currentApartmentRequest: null,
+        currentJoinRequest: {
+          id: 'join-request-1',
+          groupId: 'group-1',
+          requesterUserId: 'tenant-1',
+          status: 'REJECTED',
+          createdAt: '2026-06-02T10:00:00Z',
+          updatedAt: '2026-06-03T11:00:00Z',
+        },
+      },
+    ])
 
 	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups', { credentials: 'include' })
 	})

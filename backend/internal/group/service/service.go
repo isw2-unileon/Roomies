@@ -205,7 +205,6 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 	}
 
 	filters.Search = strings.TrimSpace(filters.Search)
-	filters.University = strings.TrimSpace(filters.University)
 
 	candidates, err := s.repo.ListGroupCandidates(ctx, strings.TrimSpace(currentUserID), filters)
 	if err != nil {

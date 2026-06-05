@@ -107,13 +107,6 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 			)
 		) AS is_fully_accepted,
 		COALESCE((
-			SELECT ROUND(AVG(tp.budget_min))::int
-			FROM public.group_members gm
-			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
-			WHERE gm.group_id = g.id
-				AND gm.status = 'ACCEPTED'
-		), 0)::int AS average_budget_min,
-		COALESCE((
 			SELECT ROUND(AVG(tp.budget_max))::int
 			FROM public.group_members gm
 			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
@@ -345,16 +338,16 @@ func (r *Repository) ListGroupCandidates(ctx context.Context, currentUserID stri
 			&item.Email,
 			&item.AvatarURL,
 			&item.Age,
-			&item.University,
-			&item.BudgetMin,
+			&item.Sex,
+			&item.Situation,
+			&item.Degree,
+			&item.Profession,
 			&item.BudgetMax,
 			&item.PreferredArea,
-			&item.MoveInDate,
 			&item.Pets,
 			&item.Smoking,
-			&item.NoiseLevel,
-			&item.Cleanliness,
-			&item.WorkSchedule,
+			&item.SocializationLevel,
+			&item.NightlifeLevel,
 		); err != nil {
 			return nil, fmt.Errorf("scan group candidate: %w", err)
 		}
@@ -713,16 +706,16 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 		u.email,
 		COALESCE(u.avatar_url, ''),
 		COALESCE(tp.age, 0),
-		COALESCE(tp.university, ''),
-		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.sex, ''),
+		COALESCE(tp.tenant_situation, ''),
+		COALESCE(tp.degree, ''),
+		COALESCE(tp.profession, ''),
 		COALESCE(tp.budget_max, 0),
 		COALESCE(tp.preferred_area, ''),
-		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
 		COALESCE(tp.pets, FALSE),
 		COALESCE(tp.smoking, FALSE),
-		COALESCE(tp.noise_level, ''),
-		COALESCE(tp.cleanliness, ''),
-		COALESCE(tp.work_schedule, '')
+		COALESCE(tp.socialization_level, ''),
+		COALESCE(tp.nightlife_level, '')
 	FROM public.group_join_requests gjr
 	INNER JOIN public.users u ON u.id = gjr.requester_user_id
 	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
@@ -751,16 +744,16 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 			&item.Requester.Email,
 			&item.Requester.AvatarURL,
 			&item.Requester.Age,
-			&item.Requester.University,
-			&item.Requester.BudgetMin,
+			&item.Requester.Sex,
+			&item.Requester.Situation,
+			&item.Requester.Degree,
+			&item.Requester.Profession,
 			&item.Requester.BudgetMax,
 			&item.Requester.PreferredArea,
-			&item.Requester.MoveInDate,
 			&item.Requester.Pets,
 			&item.Requester.Smoking,
-			&item.Requester.NoiseLevel,
-			&item.Requester.Cleanliness,
-			&item.Requester.WorkSchedule,
+			&item.Requester.SocializationLevel,
+			&item.Requester.NightlifeLevel,
 		); err != nil {
 			return nil, fmt.Errorf("scan join request: %w", err)
 		}
@@ -970,16 +963,16 @@ func (r *Repository) listGroupMembers(ctx context.Context, groupID, currentUserI
 		gm.role,
 		gm.status,
 		COALESCE(tp.age, 0),
-		COALESCE(tp.university, ''),
-		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.sex, ''),
+		COALESCE(tp.tenant_situation, ''),
+		COALESCE(tp.degree, ''),
+		COALESCE(tp.profession, ''),
 		COALESCE(tp.budget_max, 0),
 		COALESCE(tp.preferred_area, ''),
-		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
 		COALESCE(tp.pets, FALSE),
 		COALESCE(tp.smoking, FALSE),
-		COALESCE(tp.noise_level, ''),
-		COALESCE(tp.cleanliness, ''),
-		COALESCE(tp.work_schedule, ''),
+		COALESCE(tp.socialization_level, ''),
+		COALESCE(tp.nightlife_level, ''),
 		COALESCE(gm.member_accepted, FALSE),
 		(u.id = $2) AS is_current_user
 	FROM public.group_members gm
@@ -1009,16 +1002,16 @@ func (r *Repository) listGroupMembers(ctx context.Context, groupID, currentUserI
 			&item.Role,
 			&item.Status,
 			&item.Age,
-			&item.University,
-			&item.BudgetMin,
+			&item.Sex,
+			&item.Situation,
+			&item.Degree,
+			&item.Profession,
 			&item.BudgetMax,
 			&item.PreferredArea,
-			&item.MoveInDate,
 			&item.Pets,
 			&item.Smoking,
-			&item.NoiseLevel,
-			&item.Cleanliness,
-			&item.WorkSchedule,
+			&item.SocializationLevel,
+			&item.NightlifeLevel,
 			&item.HasAccepted,
 			&item.IsCurrentUser,
 		); err != nil {
@@ -1048,16 +1041,16 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 		u.email,
 		COALESCE(u.avatar_url, ''),
 		COALESCE(tp.age, 0),
-		COALESCE(tp.university, ''),
-		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.sex, ''),
+		COALESCE(tp.tenant_situation, ''),
+		COALESCE(tp.degree, ''),
+		COALESCE(tp.profession, ''),
 		COALESCE(tp.budget_max, 0),
 		COALESCE(tp.preferred_area, ''),
-		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
 		COALESCE(tp.pets, FALSE),
 		COALESCE(tp.smoking, FALSE),
-		COALESCE(tp.noise_level, ''),
-		COALESCE(tp.cleanliness, ''),
-		COALESCE(tp.work_schedule, '')
+		COALESCE(tp.socialization_level, ''),
+		COALESCE(tp.nightlife_level, '')
 	FROM public.group_invitations gi
 	INNER JOIN public.users u ON u.id = gi.invited_user_id
 	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
@@ -1087,16 +1080,16 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 			&item.User.Email,
 			&item.User.AvatarURL,
 			&item.User.Age,
-			&item.User.University,
-			&item.User.BudgetMin,
+			&item.User.Sex,
+			&item.User.Situation,
+			&item.User.Degree,
+			&item.User.Profession,
 			&item.User.BudgetMax,
 			&item.User.PreferredArea,
-			&item.User.MoveInDate,
 			&item.User.Pets,
 			&item.User.Smoking,
-			&item.User.NoiseLevel,
-			&item.User.Cleanliness,
-			&item.User.WorkSchedule,
+			&item.User.SocializationLevel,
+			&item.User.NightlifeLevel,
 		); err != nil {
 			return nil, fmt.Errorf("scan pending invitation: %w", err)
 		}
@@ -1168,13 +1161,6 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 					AND COALESCE(gm.member_accepted, FALSE) = FALSE
 			)
 		) AS is_fully_accepted,
-		COALESCE((
-			SELECT ROUND(AVG(tp.budget_min))::int
-			FROM public.group_members gm
-			LEFT JOIN public.tenant_profiles tp ON tp.user_id = gm.user_id
-			WHERE gm.group_id = g.id
-				AND gm.status = 'ACCEPTED'
-		), 0)::int AS average_budget_min,
 		COALESCE((
 			SELECT ROUND(AVG(tp.budget_max))::int
 			FROM public.group_members gm
@@ -1400,16 +1386,16 @@ func buildListGroupCandidatesQuery(currentUserID string, filters group.Candidate
 		u.email,
 		COALESCE(u.avatar_url, ''),
 		COALESCE(tp.age, 0),
-		COALESCE(tp.university, ''),
-		COALESCE(tp.budget_min, 0),
+		COALESCE(tp.sex, ''),
+		COALESCE(tp.tenant_situation, ''),
+		COALESCE(tp.degree, ''),
+		COALESCE(tp.profession, ''),
 		COALESCE(tp.budget_max, 0),
 		COALESCE(tp.preferred_area, ''),
-		COALESCE(TO_CHAR(tp.move_in_date, 'YYYY-MM-DD'), ''),
 		COALESCE(tp.pets, FALSE),
 		COALESCE(tp.smoking, FALSE),
-		COALESCE(tp.noise_level, ''),
-		COALESCE(tp.cleanliness, ''),
-		COALESCE(tp.work_schedule, '')
+		COALESCE(tp.socialization_level, ''),
+		COALESCE(tp.nightlife_level, '')
 	FROM public.users u
 	LEFT JOIN public.tenant_profiles tp ON tp.user_id = u.id
 	WHERE u.role = 'tenant'
@@ -1421,12 +1407,7 @@ func buildListGroupCandidatesQuery(currentUserID string, filters group.Candidate
 	if filters.Search != "" {
 		args = append(args, "%"+filters.Search+"%")
 		arg := fmt.Sprintf("$%d", len(args))
-		whereClauses = append(whereClauses, "(u.full_name ILIKE "+arg+" OR u.email ILIKE "+arg+" OR COALESCE(tp.university, '') ILIKE "+arg+" OR COALESCE(tp.preferred_area, '') ILIKE "+arg+")")
-	}
-
-	if filters.University != "" && strings.ToLower(filters.University) != "all" {
-		args = append(args, "%"+filters.University+"%")
-		whereClauses = append(whereClauses, fmt.Sprintf("COALESCE(tp.university, '') ILIKE $%d", len(args)))
+		whereClauses = append(whereClauses, "(u.full_name ILIKE "+arg+" OR u.email ILIKE "+arg+" OR COALESCE(tp.preferred_area, '') ILIKE "+arg+")")
 	}
 
 	query := baseQuery
@@ -1479,7 +1460,6 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 		&item.AcceptedMembersCount,
 		&item.PendingInvitationsCount,
 		&item.IsFullyAccepted,
-		&item.AverageBudgetMin,
 		&item.AverageBudgetMax,
 		&apartmentID,
 		&apartmentTitle,
