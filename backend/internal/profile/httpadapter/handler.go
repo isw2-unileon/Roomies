@@ -40,9 +40,11 @@ func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service
 	h := &handler{profileService: profileService}
 	api.GET("/profile/status", h.status)
 	api.POST("/tenant-profile", h.saveTenantProfile)
+	api.PUT("/tenant-profile", h.updateTenantProfile)
 	api.GET("/tenant-profile/personal", h.getTenantPersonalProfile)
 	api.PUT("/tenant-profile/personal", h.saveTenantPersonalProfile)
 	api.POST("/tenant-profile/avatar", h.uploadTenantAvatar)
+	api.GET("/tenant-profile/me", h.getMyTenantProfile)
 	api.GET("/tenant-profile/:userId", h.getTenantProfileByUserID)
 }
 
@@ -85,6 +87,56 @@ func (h *handler) saveTenantProfile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "tenant profile saved", "onboarding_complete": true})
+}
+
+func (h *handler) updateTenantProfile(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	input, ok := bindAndValidateTenantProfile(c)
+	if !ok {
+		return
+	}
+	normalizeTenantProfileInput(&input)
+	if err := h.profileService.SaveTenantProfile(c.Request.Context(), userID, role, input); err != nil {
+		if errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update tenant profile"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "tenant profile updated"})
+}
+
+func (h *handler) getMyTenantProfile(c *gin.Context) {
+	userID, _, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	p, err := h.profileService.GetTenantProfileByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load tenant profile"})
+		return
+	}
+	if p == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tenant profile not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"budget_max":          p.BudgetMax,
+		"preferred_area":      p.PreferredArea,
+		"pets":                p.Pets,
+		"smoking":             p.Smoking,
+		"age":                 p.Age,
+		"sex":                 p.Sex,
+		"situation":           p.Situation,
+		"degree":              p.Degree,
+		"profession":          p.Profession,
+		"socialization_level": p.Socialization,
+		"nightlife_level":     p.Nightlife,
+	})
 }
 
 func (h *handler) getTenantPersonalProfile(c *gin.Context) {
