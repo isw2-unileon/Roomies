@@ -15,6 +15,7 @@ import {
     createTenantGroupApartmentApplication,
     acceptTenantGroupInvitation,
     createTenantGroupJoinRequest,
+    deleteTenantGroup,
     getTenantGroup,
     listTenantGroupJoinRequests,
     listTenantGroups,
@@ -58,6 +59,7 @@ export default function TenantGroupsPage() {
     const [creatingJoinRequestGroupId, setCreatingJoinRequestGroupId] = useState<string | null>(null)
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
     const [linkingApartmentGroupId, setLinkingApartmentGroupId] = useState<string | null>(null)
+    const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null)
 
     const loadGroups = useCallback(async () => {
         setLoading(true)
@@ -243,6 +245,29 @@ export default function TenantGroupsPage() {
 		}
 	}
 
+    async function handleDeleteGroup(group: TenantGroupDetailItem) {
+        const confirmed = window.confirm('Eliminar grupo\n\n¿Seguro que quieres eliminar este grupo? Esta accion no se puede deshacer.')
+        if (!confirmed) {
+            return
+        }
+
+        setDeletingGroupId(group.id)
+        setError('')
+        setNotice('')
+
+        try {
+            await deleteTenantGroup(group.id)
+            setSelectedGroup(null)
+            setNotice('Grupo eliminado correctamente.')
+            await loadGroups()
+            navigate(paths.tenantGroups)
+        } catch (deleteError) {
+            setError(deleteError instanceof Error ? deleteError.message : 'No se pudo eliminar el grupo.')
+        } finally {
+            setDeletingGroupId(null)
+        }
+    }
+
     async function handleVoteJoinRequest(groupID: string, requestID: string, decision: 'APPROVE' | 'REJECT') {
         setVotingJoinRequestKey(`${requestID}:${decision}`)
         setError('')
@@ -376,10 +401,12 @@ export default function TenantGroupsPage() {
                                     <p>Cargando detalle del grupo...</p>
                                 ) : (
                                     <TenantGroupDetail
-                                        group={selectedGroup}
-                                        onAcceptGroup={handleAcceptGroup}
-                                        isAcceptingGroup={acceptingGroupId === selectedGroup.id}
-                                        onCreateApartmentApplication={handleCreateApartmentApplication}
+                                         group={selectedGroup}
+                                         onAcceptGroup={handleAcceptGroup}
+                                         isAcceptingGroup={acceptingGroupId === selectedGroup.id}
+                                         onDeleteGroup={handleDeleteGroup}
+                                         isDeletingGroup={deletingGroupId === selectedGroup.id}
+                                         onCreateApartmentApplication={handleCreateApartmentApplication}
                                         isCreatingApartmentApplication={creatingApartmentApplicationGroupId === selectedGroup.id}
                                         onCreateJoinRequest={handleCreateJoinRequest}
                                         isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}

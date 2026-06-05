@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
 	getTenantApartmentDetail,
 	getTenantPersonalProfile,
+	deleteTenantGroup,
 	listTenantGroups,
 	listTenantApplications,
 	listTenantApartments,
@@ -363,5 +364,19 @@ describe('tenantService', () => {
 		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members',
 		{ credentials: 'include' },
 	  )
+	})
+
+	test('deletes tenant group with delete method', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		status: 204,
+	  } as Response)
+
+	  await expect(deleteTenantGroup('group-1')).resolves.toBeUndefined()
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups/group-1', {
+		credentials: 'include',
+		method: 'DELETE',
+	  })
 	})
 })

@@ -12,6 +12,8 @@ interface TenantGroupDetailProps {
   group: TenantGroupDetailItem
   onAcceptGroup?: (group: TenantGroupDetailItem) => void
   isAcceptingGroup?: boolean
+  onDeleteGroup?: (group: TenantGroupDetailItem) => void
+  isDeletingGroup?: boolean
   onCreateApartmentApplication?: (group: TenantGroupDetailItem) => void
   isCreatingApartmentApplication?: boolean
   onCreateJoinRequest?: (group: TenantGroupDetailItem) => void
@@ -49,6 +51,8 @@ export default function TenantGroupDetail({
   group,
   onAcceptGroup,
   isAcceptingGroup = false,
+  onDeleteGroup,
+  isDeletingGroup = false,
   onCreateApartmentApplication,
   isCreatingApartmentApplication = false,
   onCreateJoinRequest,
@@ -67,8 +71,11 @@ export default function TenantGroupDetail({
     setSelectedApartment(null)
   }, [group.id])
 
+  const isOwner = group.userRelation === 'creator'
+  const isOnlyMember = group.members.length === 1
   const canAcceptGroup =
-    !group.isFullyAccepted
+     !group.isFullyAccepted
+    && !(isOwner && isOnlyMember)
     && (group.userRelation === 'creator'
       || (group.userRelation === 'member' && group.members.some((member) => member.isCurrentUser && !member.hasAccepted)))
 
@@ -93,6 +100,17 @@ export default function TenantGroupDetail({
           disabled={isAcceptingGroup}
         >
           {isAcceptingGroup ? 'Aceptando grupo...' : 'Aceptar grupo'}
+        </button>
+      ) : null}
+
+      {isOwner ? (
+        <button
+          type="button"
+          className={styles.deleteGroupButton}
+          onClick={() => onDeleteGroup?.(group)}
+          disabled={isDeletingGroup}
+        >
+          {isDeletingGroup ? 'Eliminando grupo...' : 'Eliminar grupo'}
         </button>
       ) : null}
 

@@ -14,8 +14,12 @@ type fakeGroupRepository struct {
 	hasRejectedJoinRequest bool
 	createdJoinRequestID   string
 	createdJoinRequest     bool
+	createdGroupID         string
 	isGroupCreator         bool
 	updatedApartmentID     *string
+	ownerMemberAdded       bool
+	acceptedGroupForUserID string
+	deletedGroupID         string
 }
 
 func (f *fakeGroupRepository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
@@ -27,10 +31,19 @@ func (f *fakeGroupRepository) GetTenantGroupByID(ctx context.Context, groupID, u
 }
 
 func (f *fakeGroupRepository) CreateGroup(ctx context.Context, creatorID string, input group.CreateGroupInput) (string, error) {
-	return "", nil
+	if f.createdGroupID == "" {
+		f.createdGroupID = "group-1"
+	}
+	return f.createdGroupID, nil
 }
 
 func (f *fakeGroupRepository) AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error {
+	f.ownerMemberAdded = true
+	return nil
+}
+
+func (f *fakeGroupRepository) DeleteGroup(ctx context.Context, groupID string) error {
+	f.deletedGroupID = groupID
 	return nil
 }
 
@@ -71,6 +84,7 @@ func (f *fakeGroupRepository) CanUserAcceptGroup(ctx context.Context, groupID, u
 }
 
 func (f *fakeGroupRepository) AcceptGroupForUser(ctx context.Context, groupID, userID string) error {
+	f.acceptedGroupForUserID = userID
 	return nil
 }
 
@@ -152,6 +166,25 @@ func TestCreateJoinRequestRejectsPreviouslyRejectedRequest(t *testing.T) {
 	}
 	if repo.createdJoinRequest {
 		t.Fatalf("CreateJoinRequest should not be called when a rejected request already exists")
+	}
+}
+
+func TestCreateGroupAutoAcceptsOwner(t *testing.T) {
+	repo := &fakeGroupRepository{createdGroupID: "group-42"}
+	svc := NewService(repo, nil)
+
+	groupID, err := svc.CreateGroup(context.Background(), "tenant-1", "tenant", group.CreateGroupInput{Name: "Centro Leon"})
+	if err != nil {
+		t.Fatalf("CreateGroup returned error: %v", err)
+	}
+	if groupID != "group-42" {
+		t.Fatalf("groupID = %q, want group-42", groupID)
+	}
+	if !repo.ownerMemberAdded {
+		t.Fatalf("AddGroupOwnerMember should be called")
+	}
+	if repo.acceptedGroupForUserID != "tenant-1" {
+		t.Fatalf("acceptedGroupForUserID = %q, want tenant-1", repo.acceptedGroupForUserID)
 	}
 }
 
@@ -240,5 +273,47 @@ func TestUpdateGroupApartmentRejectsNonCreator(t *testing.T) {
 	err := svc.UpdateGroupApartment(context.Background(), "group-1", "tenant-2", "tenant", group.UpdateGroupApartmentInput{ApartmentID: "apt-2"})
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("err = %v, want %v", err, ErrForbidden)
+	}
+}
+
+func TestDeleteGroupAllowsCreator(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail:    &group.Group{ID: "group-1", UserRelation: group.UserRelationCreator},
+		isGroupCreator: true,
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.DeleteGroup(context.Background(), "group-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("DeleteGroup returned error: %v", err)
+	}
+	if repo.deletedGroupID != "group-1" {
+		t.Fatalf("deletedGroupID = %q, want group-1", repo.deletedGroupID)
+	}
+}
+
+func TestDeleteGroupRejectsNonCreator(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail:    &group.Group{ID: "group-1", UserRelation: group.UserRelationMember},
+		isGroupCreator: false,
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.DeleteGroup(context.Background(), "group-1", "tenant-2", "tenant")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrForbidden)
+	}
+	if repo.deletedGroupID != "" {
+		t.Fatalf("DeleteGroup should not be called for non creators")
+	}
+}
+
+func TestDeleteGroupRejectsMissingGroup(t *testing.T) {
+	repo := &fakeGroupRepository{}
+	svc := NewService(repo, nil)
+
+	err := svc.DeleteGroup(context.Background(), "group-404", "tenant-1", "tenant")
+	if !errors.Is(err, ErrGroupNotFound) {
+		t.Fatalf("err = %v, want %v", err, ErrGroupNotFound)
 	}
 }

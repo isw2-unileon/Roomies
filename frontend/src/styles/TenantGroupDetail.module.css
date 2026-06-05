@@ -76,7 +76,21 @@
   border-radius: 0.6rem;
 }
 
+.deleteGroupButton {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  color: #b42318;
+  font-weight: 800;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 0.6rem;
+}
+
 .acceptGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.deleteGroupButton:disabled {
   opacity: 0.65;
 }
 

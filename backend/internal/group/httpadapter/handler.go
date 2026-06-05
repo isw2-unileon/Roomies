@@ -160,6 +160,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Servi
 	api.GET("/tenant/groups", h.listTenantGroups)
 	api.GET("/tenant/groups/:id", h.getTenantGroup)
 	api.POST("/tenant/groups", h.createTenantGroup)
+	api.DELETE("/tenant/groups/:id", h.deleteTenantGroup)
 	api.POST("/tenant/groups/:id/accept", h.acceptTenantGroup)
 	api.POST("/tenant/groups/:id/join-request", h.createJoinRequest)
 	api.GET("/tenant/groups/:id/join-requests", h.listJoinRequests)
@@ -256,7 +257,7 @@ func (h *handler) listGroupCandidates(c *gin.Context) {
 	}
 
 	filters := group.CandidateFilters{
-		Search:     strings.TrimSpace(c.Query("search")),
+		Search: strings.TrimSpace(c.Query("search")),
 	}
 
 	candidates, err := h.groupService.ListGroupCandidates(c.Request.Context(), userID, role, filters)
@@ -357,6 +358,26 @@ func (h *handler) acceptTenantGroup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "group accepted"})
+}
+
+func (h *handler) deleteTenantGroup(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	if err := h.groupService.DeleteGroup(c.Request.Context(), groupID, userID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *handler) createJoinRequest(c *gin.Context) {
@@ -605,12 +626,12 @@ func memberResponses(items []group.Member) []memberResponse {
 	result := make([]memberResponse, 0, len(items))
 	for _, item := range items {
 		result = append(result, memberResponse{
-			UserID:        item.UserID,
-			Name:          item.Name,
-			Email:         item.Email,
-			AvatarURL:     item.AvatarURL,
-			Role:          item.Role,
-			Status:        item.Status,
+			UserID:             item.UserID,
+			Name:               item.Name,
+			Email:              item.Email,
+			AvatarURL:          item.AvatarURL,
+			Role:               item.Role,
+			Status:             item.Status,
 			Age:                item.Age,
 			Sex:                item.Sex,
 			Situation:          item.Situation,
@@ -656,10 +677,10 @@ func candidateResponses(items []group.Candidate) []candidateResponse {
 
 func candidateResponseFromDomain(item group.Candidate) candidateResponse {
 	return candidateResponse{
-		UserID:        item.UserID,
-		Name:          item.Name,
-		Email:         item.Email,
-		AvatarURL:     item.AvatarURL,
+		UserID:             item.UserID,
+		Name:               item.Name,
+		Email:              item.Email,
+		AvatarURL:          item.AvatarURL,
 		Age:                item.Age,
 		Sex:                item.Sex,
 		Situation:          item.Situation,

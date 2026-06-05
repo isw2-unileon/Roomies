@@ -291,7 +291,38 @@ func (r *Repository) CreateGroup(ctx context.Context, creatorID string, input gr
 
 // AddGroupOwnerMember adds the group creator as accepted owner.
 func (r *Repository) AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error {
-	return r.AddGroupMember(ctx, groupID, creatorID, group.MemberRoleOwner)
+	const query = `INSERT INTO public.group_members
+		(group_id, user_id, role, status, joined_at, member_accepted)
+	VALUES
+		($1, $2, 'owner', 'ACCEPTED', NOW(), TRUE)
+	ON CONFLICT (group_id, user_id)
+	DO UPDATE SET
+		role = 'owner',
+		status = 'ACCEPTED',
+		joined_at = COALESCE(public.group_members.joined_at, NOW()),
+		member_accepted = TRUE`
+
+	if _, err := r.db.Exec(ctx, query, groupID, creatorID); err != nil {
+		return fmt.Errorf("add group owner member: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteGroup deletes a tenant group and relies on database cascades for related records.
+func (r *Repository) DeleteGroup(ctx context.Context, groupID string) error {
+	const query = `DELETE FROM public.groups
+	WHERE id = $1`
+
+	result, err := r.db.Exec(ctx, query, groupID)
+	if err != nil {
+		return fmt.Errorf("delete group: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("group not found")
+	}
+
+	return nil
 }
 
 // CreatePendingInvitations creates pending invitations for selected tenants.

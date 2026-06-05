@@ -1076,6 +1076,19 @@ export async function acceptTenantGroup(groupID: string): Promise<string> {
   return data.message ?? 'group accepted'
 }
 
+export async function deleteTenantGroup(groupID: string): Promise<void> {
+	const response = await apiFetch(`/api/tenant/groups/${groupID}`, {
+		method: 'DELETE',
+	})
+
+	if (response.ok) {
+		return
+	}
+
+	const data = (await response.json()) as TenantGroupMessageResponseDto
+	throw new Error(resolveTenantErrorMessage(response, 'No se pudo eliminar el grupo.', data.error))
+}
+
 export async function createTenantGroupJoinRequest(groupID: string): Promise<string> {
   const response = await apiFetch(`/api/tenant/groups/${groupID}/join-request`, {
     method: 'POST',

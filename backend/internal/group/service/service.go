@@ -20,6 +20,7 @@ type repository interface {
 	GetTenantGroupByID(ctx context.Context, groupID, userID string) (*group.Group, error)
 	CreateGroup(ctx context.Context, creatorID string, input group.CreateGroupInput) (string, error)
 	AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error
+	DeleteGroup(ctx context.Context, groupID string) error
 	CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error
 	ListGroupCandidates(ctx context.Context, currentUserID string, filters group.CandidateFilters) ([]group.Candidate, error)
 	GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error)
@@ -189,6 +190,10 @@ func (s *Service) CreateGroup(ctx context.Context, creatorID, role string, input
 		return "", err
 	}
 
+	if err := s.repo.AcceptGroupForUser(ctx, groupID, strings.TrimSpace(creatorID)); err != nil {
+		return "", err
+	}
+
 	if len(input.InvitedUserIDs) > 0 {
 		if err := s.repo.CreatePendingInvitations(ctx, groupID, strings.TrimSpace(creatorID), input.InvitedUserIDs); err != nil {
 			return "", err
@@ -302,6 +307,36 @@ func (s *Service) AcceptGroup(ctx context.Context, groupID, userID, role string)
 	}
 
 	return s.repo.AcceptGroupForUser(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
+}
+
+// DeleteGroup deletes a tenant group. Only the creator can delete it.
+func (s *Service) DeleteGroup(ctx context.Context, groupID, userID, role string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return errors.New("group id is required")
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+
+	isCreator, err := s.repo.IsGroupCreator(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if !isCreator {
+		return ErrForbidden
+	}
+
+	return s.repo.DeleteGroup(ctx, groupID)
 }
 
 // CreateJoinRequest creates a join request from a viewer to a group.
