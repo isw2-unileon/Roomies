@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     ArrowRightIcon,
-    BanknotesIcon,
     CalendarDaysIcon,
     CheckCircleIcon,
     CurrencyEuroIcon,
@@ -122,7 +121,6 @@ export default function TenantGroupDetailPanel({
   const locale = i18n.language ?? 'es'
   const formattedDate = group.createdAt ? formatDate(group.createdAt, locale) : ''
   const hasImage = Boolean(group.apartment?.imageUrl)
-  const hasBudget = group.averageBudgetMax > 0
   const statusKey = isGroupFull
     ? 'tenantGroups.detail.statusFull'
     : group.isFullyAccepted
@@ -309,31 +307,6 @@ export default function TenantGroupDetailPanel({
           </div>
         </div>
 
-        {group.apartment ? (
-          <div className={styles.apartmentMiniCard}>
-            {group.apartment.imageUrl ? (
-              <img
-                className={styles.apartmentMiniThumb}
-                src={group.apartment.imageUrl}
-                alt={group.apartment.title}
-                loading="lazy"
-              />
-            ) : (
-              <div className={styles.apartmentMiniPlaceholder}>
-                <HomeModernIcon className={styles.apartmentMiniPlaceholderIcon} aria-hidden="true" />
-              </div>
-            )}
-            <div className={styles.apartmentMiniBody}>
-              <p className={styles.apartmentMiniTitle}>{group.apartment.title}</p>
-              {group.apartment.area || group.apartment.address ? (
-                <p className={styles.apartmentMiniAddress}>
-                  <MapPinIcon className={styles.apartmentMiniAddressIcon} aria-hidden="true" />
-                  {group.apartment.area}{group.apartment.area && group.apartment.address ? ' · ' : ''}{group.apartment.address}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
       </section>
 
       {group.userRelation === 'viewer' && currentJoinRequestLabel ? (
@@ -449,15 +422,7 @@ export default function TenantGroupDetailPanel({
         </section>
       ) : null}
 
-      <section className={styles.budgetSection}>
-        <h3 className={styles.sectionTitle}>{t('tenantGroups.detail.sections.budget')}</h3>
-        <p className={styles.budgetValue}>
-          <BanknotesIcon className={styles.budgetIcon} aria-hidden="true" />
-          {hasBudget
-            ? t('tenantGroups.detail.budget.averageRange', { min: group.averageBudgetMin, max: group.averageBudgetMax })
-            : t('tenantGroups.detail.budget.notAvailable')}
-        </p>
-      </section>
+
 
       {(group.userRelation === 'creator' || group.userRelation === 'member') && group.joinRequests.length > 0 ? (
         <section className={styles.invitationsSection}>
