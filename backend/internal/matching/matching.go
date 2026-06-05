@@ -8,8 +8,8 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 )
 
-// CalculateCompatibility scores how well a tenant profile matches an apartment and its rules.
-func CalculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.Rules, tenantProfile *profile.TenantProfileInput) (int, []string) {
+// CalculateCompatibility scores how well a tenant profile matches an apartment.
+func CalculateCompatibility(apartmentRow apartment.Apartment, tenantProfile *profile.TenantProfileInput) (int, []string) {
 	if tenantProfile == nil {
 		return 0, nil
 	}
@@ -31,8 +31,8 @@ func CalculateCompatibility(apartmentRow apartment.Apartment, rules *apartment.R
 
 	addScore(0.20, budgetCompatibility(apartmentRow.BaseRent, tenantProfile.BudgetMax), "Presupuesto alineado")
 	addScore(0.15, textEqualityScore(tenantProfile.PreferredArea, apartmentRow.Area), "Zona preferida similar")
-	addScore(0.15, boolRuleScore(rules, tenantProfile.Pets, true), "Preferencias de mascotas compatibles")
-	addScore(0.15, boolRuleScore(rules, tenantProfile.Smoking, false), "Normas de convivencia compatibles")
+	addScore(0.15, boolPtrScore(apartmentRow.PetsAllowed, tenantProfile.Pets), "Preferencias de mascotas compatibles")
+	addScore(0.15, boolPtrScore(apartmentRow.SmokingAllowed, tenantProfile.Smoking), "Normas de convivencia compatibles")
 
 	if totalWeight == 0 {
 		return 0, nil
@@ -223,26 +223,11 @@ func textEqualityScore(a, b string) float64 {
 	return 25
 }
 
-func boolRuleScore(rules *apartment.Rules, tenantValue bool, forPets bool) float64 {
-	if rules == nil {
+func boolPtrScore(allowed *bool, tenantValue bool) float64 {
+	if allowed == nil {
 		return -1
 	}
-	if forPets {
-		if rules.PetsAllowed == nil {
-			return -1
-		}
-		if *rules.PetsAllowed == tenantValue {
-			return 100
-		}
-		if !tenantValue {
-			return 80
-		}
-		return 10
-	}
-	if rules.SmokingAllowed == nil {
-		return -1
-	}
-	if *rules.SmokingAllowed == tenantValue {
+	if *allowed == tenantValue {
 		return 100
 	}
 	if !tenantValue {

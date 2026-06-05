@@ -138,17 +138,10 @@ func (f fakeApartmentReader) GetApartmentByID(ctx context.Context, apartmentID s
 	if f.apartment != nil {
 		return f.apartment, nil
 	}
-	return &apartment.Apartment{ID: apartmentID, OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1, Status: apartment.StatusAvailable}, nil
-}
-
-func (f fakeApartmentReader) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error) {
-	allowed := false
-	return &apartment.Rules{
-		SmokingAllowed:         &allowed,
-		PetsAllowed:            &allowed,
-		MaxNoiseLevel:          "moderate",
-		CleanlinessExpectation: "normal",
-		PreferredSchedule:      "flexible",
+	notAllowed := false
+	return &apartment.Apartment{
+		ID: apartmentID, OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1, Status: apartment.StatusAvailable,
+		SmokingAllowed: &notAllowed, PetsAllowed: &notAllowed,
 	}, nil
 }
 

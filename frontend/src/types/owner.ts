@@ -54,6 +54,13 @@ export interface OwnerDashboardProperty {
     imagePaths?: string[]
     latitude?: number
     longitude?: number
+    bathrooms?: number
+    surfaceM2?: number
+    floor?: number
+    smokingAllowed?: boolean | null
+    petsAllowed?: boolean | null
+    studentsAllowed?: boolean | null
+    notes?: string
 }
 
 export interface OwnerDashboardRequest {

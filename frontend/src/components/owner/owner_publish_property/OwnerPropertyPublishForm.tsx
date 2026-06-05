@@ -24,9 +24,14 @@ interface PublishValues {
   bathrooms: string
   baseRent: string
   description: string
-  availableFrom: string
   latitude?: number
   longitude?: number
+  surfaceM2: string
+  floor: string
+  smokingAllowed: boolean
+  petsAllowed: boolean
+  studentsAllowed: boolean
+  notes: string
 }
 
 const initialValues: PublishValues = {
@@ -37,7 +42,12 @@ const initialValues: PublishValues = {
   bathrooms: '1',
   baseRent: '350',
   description: '',
-  availableFrom: '',
+  surfaceM2: '0',
+  floor: '0',
+  smokingAllowed: false,
+  petsAllowed: false,
+  studentsAllowed: false,
+  notes: '',
 }
 
 interface OwnerPropertyPublishFormProps {
@@ -51,12 +61,17 @@ function valuesFromProperty(property: OwnerDashboardProperty): PublishValues {
     address: property.address,
     area: property.area ?? '',
     totalSpots: String(property.totalSpots),
-    bathrooms: '0',
+    bathrooms: String(property.bathrooms ?? 1),
     baseRent: String(property.rent ?? ''),
     description: property.description ?? '',
-    availableFrom: '',
     latitude: property.latitude,
     longitude: property.longitude,
+    surfaceM2: String(property.surfaceM2 ?? 0),
+    floor: String(property.floor ?? 0),
+    smokingAllowed: property.smokingAllowed === true,
+    petsAllowed: property.petsAllowed === true,
+    studentsAllowed: property.studentsAllowed === true,
+    notes: property.notes ?? '',
   }
 }
 
@@ -149,7 +164,7 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
       showError(t('ownerDashboard.publish.errors.totalSpots'))
       return
     }
-    if (!isEditMode && (!Number.isFinite(parsedBathrooms) || parsedBathrooms <= 0)) {
+    if (!Number.isFinite(parsedBathrooms) || parsedBathrooms <= 0) {
       showError(t('ownerDashboard.publish.errors.bathrooms'))
       return
     }
@@ -175,12 +190,17 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
         address: values.address.trim(),
         area: values.area.trim(),
         totalSpots: parsedTotalSpots,
-        bathrooms: Number.isFinite(parsedBathrooms) ? parsedBathrooms : 0,
+        bathrooms: parsedBathrooms,
         baseRent: parsedBaseRent,
-        availableFrom: values.availableFrom || '',
         imagePaths: uploadedPaths,
         latitude: values.latitude,
         longitude: values.longitude,
+        surfaceM2: Number.parseInt(values.surfaceM2, 10) || 0,
+        floor: Number.parseInt(values.floor, 10) || 0,
+        smokingAllowed: values.smokingAllowed,
+        petsAllowed: values.petsAllowed,
+        studentsAllowed: values.studentsAllowed,
+        notes: values.notes.trim(),
       }
       const result = isEditMode && propertyId
         ? await updateOwnerApartment(propertyId, payload)
@@ -256,19 +276,17 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
             />
           </label>
 
-          {!isEditMode ? (
-            <label className={styles.field}>
-              <span className={styles.label}>{t('ownerDashboard.publish.fields.bathrooms')}</span>
-              <input
-                type="number"
-                min={1}
-                className={styles.input}
-                value={values.bathrooms}
-                onChange={(event) => updateField('bathrooms', event.target.value)}
-                required
-              />
-            </label>
-          ) : null}
+          <label className={styles.field}>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.bathrooms')}</span>
+            <input
+              type="number"
+              min={1}
+              className={styles.input}
+              value={values.bathrooms}
+              onChange={(event) => updateField('bathrooms', event.target.value)}
+              required
+            />
+          </label>
 
           <label className={styles.field}>
             <span className={styles.label}>{t('ownerDashboard.publish.fields.baseRent')}</span>
@@ -282,17 +300,68 @@ export default function OwnerPropertyPublishForm({ propertyId, property }: Owner
             />
           </label>
 
-          {!isEditMode ? (
-            <label className={styles.field}>
-              <span className={styles.label}>{t('ownerDashboard.publish.fields.availableFrom')}</span>
-              <input
-                type="date"
-                className={styles.input}
-                value={values.availableFrom}
-                onChange={(event) => updateField('availableFrom', event.target.value)}
-              />
-            </label>
-          ) : null}
+          <label className={styles.field}>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.surfaceM2')}</span>
+            <input
+              type="number"
+              min={0}
+              className={styles.input}
+              value={values.surfaceM2}
+              onChange={(event) => updateField('surfaceM2', event.target.value)}
+            />
+          </label>
+
+          <label className={styles.field}>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.floor')}</span>
+            <input
+              type="number"
+              min={0}
+              className={styles.input}
+              value={values.floor}
+              onChange={(event) => updateField('floor', event.target.value)}
+            />
+          </label>
+
+          <div className={`${styles.field} ${styles.full}`}>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.rules')}</span>
+            <div className={styles.grid}>
+              <label className={styles.field}>
+                <input
+                  type="checkbox"
+                  checked={values.smokingAllowed}
+                  onChange={(event) => updateField('smokingAllowed', event.target.checked)}
+                />
+                <span className={styles.label}>{t('ownerDashboard.publish.fields.smokingAllowed')}</span>
+              </label>
+              <label className={styles.field}>
+                <input
+                  type="checkbox"
+                  checked={values.petsAllowed}
+                  onChange={(event) => updateField('petsAllowed', event.target.checked)}
+                />
+                <span className={styles.label}>{t('ownerDashboard.publish.fields.petsAllowed')}</span>
+              </label>
+              <label className={styles.field}>
+                <input
+                  type="checkbox"
+                  checked={values.studentsAllowed}
+                  onChange={(event) => updateField('studentsAllowed', event.target.checked)}
+                />
+                <span className={styles.label}>{t('ownerDashboard.publish.fields.studentsAllowed')}</span>
+              </label>
+            </div>
+          </div>
+
+          <label className={`${styles.field} ${styles.full}`}>
+            <span className={styles.label}>{t('ownerDashboard.publish.fields.notes')}</span>
+            <textarea
+              className={styles.textarea}
+              rows={3}
+              value={values.notes}
+              onChange={(event) => updateField('notes', event.target.value)}
+              placeholder={t('ownerDashboard.publish.placeholders.notes')}
+            />
+          </label>
 
           <div className={`${styles.field} ${styles.full}`}>
             <span className={styles.label}>{t('ownerDashboard.publish.fields.photos')}</span>

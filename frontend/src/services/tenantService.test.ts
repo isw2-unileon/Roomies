@@ -54,6 +54,9 @@ describe('tenantService', () => {
         status: 'available',
         images: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
         createdAt: '2026-05-21T10:00:00Z',
+        bathrooms: 0,
+        surfaceM2: 0,
+        floor: 0,
       },
     ])
 

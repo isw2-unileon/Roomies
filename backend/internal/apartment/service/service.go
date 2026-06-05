@@ -23,7 +23,6 @@ type repository interface {
 	UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
-	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error)
 }
 
 type profileReader interface {
@@ -113,10 +112,9 @@ func (s *Service) CreateApartment(ctx context.Context, ownerID, role string, inp
 	}
 
 	input.Title = strings.TrimSpace(input.Title)
-	input.Description = buildDescription(input.Description, input.Bathrooms, input.AvailableFrom)
+	input.Description = strings.TrimSpace(input.Description)
 	input.Address = strings.TrimSpace(input.Address)
 	input.Area = strings.TrimSpace(input.Area)
-	input.AvailableFrom = strings.TrimSpace(input.AvailableFrom)
 	input.Status = apartment.StatusAvailable
 
 	apartmentID, imagesStored, err := s.repo.CreateApartment(ctx, ownerID, input)
@@ -128,18 +126,6 @@ func (s *Service) CreateApartment(ctx context.Context, ownerID, role string, inp
 		ApartmentID:  apartmentID,
 		ImagesStored: imagesStored,
 	}, nil
-}
-
-func buildDescription(description string, bathrooms int, availableFrom string) string {
-	descriptionParts := make([]string, 0, 3)
-	if strings.TrimSpace(description) != "" {
-		descriptionParts = append(descriptionParts, strings.TrimSpace(description))
-	}
-	descriptionParts = append(descriptionParts, fmt.Sprintf("Banos: %d", bathrooms))
-	if strings.TrimSpace(availableFrom) != "" {
-		descriptionParts = append(descriptionParts, fmt.Sprintf("Disponible desde: %s", strings.TrimSpace(availableFrom)))
-	}
-	return strings.Join(descriptionParts, "\n\n")
 }
 
 // ListOwnerApartments returns published apartments for an owner.
@@ -324,17 +310,12 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 		return nil, ErrApartmentNotFound
 	}
 
-	rules, err := s.repo.GetApartmentRules(ctx, apartmentID)
-	if err != nil {
-		return nil, err
-	}
-
 	tenantProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	compatibilityScore, compatibilityReason := matching.CalculateCompatibility(*apartmentRow, rules, tenantProfile)
+	compatibilityScore, compatibilityReason := matching.CalculateCompatibility(*apartmentRow, tenantProfile)
 	apartmentsWithImage, err := s.signApartmentImages(ctx, []apartment.Apartment{*apartmentRow})
 	if err != nil {
 		return nil, err
@@ -350,7 +331,6 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 
 	return &apartment.Detail{
 		Apartment:                apartmentsWithImage[0],
-		Rules:                    derefRules(rules),
 		CompatibilityScore:       compatibilityScore,
 		CompatibilityReason:      compatibilityReason,
 		CurrentApplicationID:     applicationID,
@@ -407,13 +387,6 @@ func (s *Service) signedImageURL(ctx context.Context, imagePath string) (string,
 
 func isAbsoluteHTTPURL(value string) bool {
 	return strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://")
-}
-
-func derefRules(rules *apartment.Rules) apartment.Rules {
-	if rules == nil {
-		return apartment.Rules{}
-	}
-	return *rules
 }
 
 const (

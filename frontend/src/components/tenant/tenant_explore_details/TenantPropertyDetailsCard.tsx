@@ -9,12 +9,19 @@ interface TenantPropertyDetailsCardProps {
 
 export default function TenantPropertyDetailsCard({ property }: TenantPropertyDetailsCardProps) {
   const { t } = useTranslation()
+  const occupiedSpots = property.totalRooms - property.availableRooms
+
   const details = [
     { label: t('tenantDashboard.detail.details.pricePerSpot'), value: t('tenantDashboard.detail.details.rentPerMonth', { rent: property.rent }) },
     { label: t('tenantDashboard.detail.details.rooms'), value: property.totalRooms },
+    { label: t('tenantDashboard.detail.details.bathrooms'), value: property.bathrooms || null },
     { label: t('tenantDashboard.detail.details.available'), value: t('tenantDashboard.detail.details.availableSpots', { count: property.availableRooms }) },
+    { label: t('tenantDashboard.detail.details.occupied'), value: t('tenantDashboard.detail.details.occupiedSpots', { count: occupiedSpots }) },
+    { label: t('tenantDashboard.detail.details.surface'), value: property.surfaceM2 ? t('tenantDashboard.detail.details.surfaceValue', { m2: property.surfaceM2 }) : null },
+    { label: t('tenantDashboard.detail.details.floor'), value: property.floor != null ? property.floor : null },
     { label: t('tenantDashboard.detail.details.area'), value: t(property.areaKey) },
-  ]
+    { label: t('tenantDashboard.detail.details.location'), value: t(property.addressKey) },
+  ].filter((d) => d.value !== null && d.value !== 0 && d.value !== '')
 
   return (
     <section className={styles.detailsCard}>
@@ -27,13 +34,9 @@ export default function TenantPropertyDetailsCard({ property }: TenantPropertyDe
           </div>
         ))}
       </div>
-      <p className={styles.description}>
-        {t('tenantDashboard.detail.details.description', {
-          area: t(property.areaKey),
-          rooms: property.totalRooms,
-          available: property.availableRooms,
-        })}
-      </p>
+      {property.description && (
+        <p className={styles.description}>{property.description}</p>
+      )}
     </section>
   )
 }
