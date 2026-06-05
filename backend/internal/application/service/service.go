@@ -37,7 +37,6 @@ type repository interface {
 
 type apartmentReader interface {
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
-	GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error)
 }
 
 type profileReader interface {
@@ -137,15 +136,11 @@ func (s *Service) ApplyToApartment(ctx context.Context, apartmentID, tenantID, r
 		return "", ErrApplicationAlreadyExists
 	}
 
-	rules, err := s.apartmentReader.GetApartmentRules(ctx, apartmentID)
-	if err != nil {
-		return "", err
-	}
 	tenantProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, tenantID)
 	if err != nil {
 		return "", err
 	}
-	compatibilityScore, _ := matching.CalculateCompatibility(*apartmentRow, rules, tenantProfile)
+	compatibilityScore, _ := matching.CalculateCompatibility(*apartmentRow, tenantProfile)
 
 	return s.repo.CreateTenantApplication(ctx, apartmentID, tenantID, compatibilityScore)
 }
@@ -378,11 +373,8 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		if applications[idx].CompatibilityScore <= 0 {
 			apartmentRow, apartmentErr := s.apartmentReader.GetApartmentByID(ctx, applications[idx].ApartmentID)
 			if apartmentErr == nil && apartmentRow != nil {
-				rules, rulesErr := s.apartmentReader.GetApartmentRules(ctx, applications[idx].ApartmentID)
-				if rulesErr == nil {
-					score, _ := matching.CalculateCompatibility(*apartmentRow, rules, tenantProfile)
-					applications[idx].CompatibilityScore = score
-				}
+				score, _ := matching.CalculateCompatibility(*apartmentRow, tenantProfile)
+				applications[idx].CompatibilityScore = score
 			}
 		}
 
