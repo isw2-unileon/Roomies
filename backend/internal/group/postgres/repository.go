@@ -820,7 +820,7 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 	result := make([]group.JoinRequest, 0)
 	for rows.Next() {
 		var item group.JoinRequest
-		if err := rows.Scan(
+		if err := rows.Scan(append([]any{
 			&item.ID,
 			&item.GroupID,
 			&item.RequesterUserID,
@@ -828,22 +828,7 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 			&item.Status,
 			&item.CreatedAt,
 			&item.UpdatedAt,
-			&item.Requester.UserID,
-			&item.Requester.Name,
-			&item.Requester.Email,
-			&item.Requester.AvatarURL,
-			&item.Requester.Age,
-			&item.Requester.Sex,
-			&item.Requester.Situation,
-			&item.Requester.Degree,
-			&item.Requester.Profession,
-			&item.Requester.BudgetMax,
-			&item.Requester.PreferredArea,
-			&item.Requester.Pets,
-			&item.Requester.Smoking,
-			&item.Requester.SocializationLevel,
-			&item.Requester.NightlifeLevel,
-		); err != nil {
+		}, candidateProfileDests(&item.Requester)...)...); err != nil {
 			return nil, fmt.Errorf("scan join request: %w", err)
 		}
 
@@ -1330,7 +1315,7 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 	result := make([]group.Invitation, 0)
 	for rows.Next() {
 		var item group.Invitation
-		if err := rows.Scan(
+		if err := rows.Scan(append([]any{
 			&item.ID,
 			&item.GroupID,
 			&item.InvitedBy,
@@ -1338,22 +1323,7 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 			&item.Status,
 			&item.CreatedAt,
 			&item.RespondedAt,
-			&item.User.UserID,
-			&item.User.Name,
-			&item.User.Email,
-			&item.User.AvatarURL,
-			&item.User.Age,
-			&item.User.Sex,
-			&item.User.Situation,
-			&item.User.Degree,
-			&item.User.Profession,
-			&item.User.BudgetMax,
-			&item.User.PreferredArea,
-			&item.User.Pets,
-			&item.User.Smoking,
-			&item.User.SocializationLevel,
-			&item.User.NightlifeLevel,
-		); err != nil {
+		}, candidateProfileDests(&item.User)...)...); err != nil {
 			return nil, fmt.Errorf("scan pending invitation: %w", err)
 		}
 		result = append(result, item)
@@ -1712,6 +1682,26 @@ func buildListGroupCandidatesQuery(currentUserID string, filters group.Candidate
 
 type groupScanner interface {
 	Scan(dest ...interface{}) error
+}
+
+func candidateProfileDests(user *group.Candidate) []any {
+	return []any{
+		&user.UserID,
+		&user.Name,
+		&user.Email,
+		&user.AvatarURL,
+		&user.Age,
+		&user.Sex,
+		&user.Situation,
+		&user.Degree,
+		&user.Profession,
+		&user.BudgetMax,
+		&user.PreferredArea,
+		&user.Pets,
+		&user.Smoking,
+		&user.SocializationLevel,
+		&user.NightlifeLevel,
+	}
 }
 
 func scanGroupSummary(row groupScanner) (group.Group, error) {
