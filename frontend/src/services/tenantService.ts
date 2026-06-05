@@ -189,7 +189,6 @@ interface TenantGroupDto {
   accepted_members_count: number
   pending_invitations_count: number
   is_fully_accepted: boolean
-  average_budget_min: number
   average_budget_max: number
   apartment: TenantGroupApartmentDto | null
   current_apartment_request?: TenantGroupApartmentRequestDto | null
@@ -243,16 +242,16 @@ interface TenantGroupProfileDto {
   email: string
   avatar_url: string
   age: number
-  university: string
-  budget_min: number
+  sex: string
+  situation: string
+  degree: string
+  profession: string
   budget_max: number
   preferred_area: string
-  move_in_date: string
   pets: boolean
   smoking: boolean
-  noise_level: string
-  cleanliness: string
-  work_schedule: string
+  socialization_level: string
+  nightlife_level: string
 }
 
 interface TenantGroupMemberDto extends TenantGroupProfileDto {
@@ -333,7 +332,6 @@ export interface TenantGroupListFilters {
 
 export interface TenantGroupCandidateFilters {
   search?: string
-  university?: string
 }
 
 export interface CreateTenantGroupInput {
@@ -504,16 +502,16 @@ function tenantGroupProfileFromDto(dto: TenantGroupProfileDto): TenantGroupProfi
     email: dto.email,
     avatarUrl: dto.avatar_url,
     age: dto.age,
-    university: dto.university,
-    budgetMin: dto.budget_min,
+    sex: dto.sex,
+    situation: dto.situation,
+    degree: dto.degree,
+    profession: dto.profession,
     budgetMax: dto.budget_max,
     preferredArea: dto.preferred_area,
-    moveInDate: dto.move_in_date,
     pets: dto.pets,
     smoking: dto.smoking,
-    noiseLevel: dto.noise_level,
-    cleanliness: dto.cleanliness,
-    workSchedule: dto.work_schedule,
+    socializationLevel: dto.socialization_level,
+    nightlifeLevel: dto.nightlife_level,
   }
 }
 
@@ -566,7 +564,6 @@ function tenantGroupFromDto(dto: TenantGroupDto): TenantGroupListItem {
     acceptedMembersCount: dto.accepted_members_count,
     pendingInvitationsCount: dto.pending_invitations_count,
     isFullyAccepted: dto.is_fully_accepted,
-    averageBudgetMin: dto.average_budget_min,
     averageBudgetMax: dto.average_budget_max,
     apartment: dto.apartment ? tenantGroupApartmentFromDto(dto.apartment) : null,
 	currentApartmentRequest: dto.current_apartment_request ? tenantGroupApartmentRequestFromDto(dto.current_apartment_request) : null,
@@ -747,9 +744,6 @@ function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) 
   if (filters.search?.trim()) {
     params.set('search', filters.search.trim())
   }
-  if (filters.university?.trim()) {
-    params.set('university', filters.university.trim())
-  }
 
   const query = params.toString()
   return query ? `?${query}` : ''
@@ -860,6 +854,57 @@ export async function getTenantProfileByUserId(userId: string): Promise<TenantPu
     socializationLevel: data.socialization_level ?? '',
     nightlifeLevel: data.nightlife_level ?? '',
   }
+}
+
+export async function getMyTenantProfile(): Promise<TenantPublicProfile> {
+  const response = await apiFetch('/api/tenant-profile/me')
+  const data = (await response.json()) as TenantProfileByUserIdResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo cargar el perfil.')
+  }
+  return {
+    budgetMax: data.budget_max ?? 0,
+    preferredArea: data.preferred_area ?? '',
+    pets: data.pets ?? false,
+    smoking: data.smoking ?? false,
+    age: data.age ?? 0,
+    sex: data.sex ?? '',
+    situation: data.situation ?? '',
+    degree: data.degree ?? '',
+    profession: data.profession ?? '',
+    socializationLevel: data.socialization_level ?? '',
+    nightlifeLevel: data.nightlife_level ?? '',
+  }
+}
+
+interface UpdateTenantProfileResponseDto {
+  message?: string
+  error?: string
+}
+
+export async function updateTenantProfile(input: SaveTenantProfileInput) {
+  const response = await apiFetch('/api/tenant-profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      budget_max: input.budgetMax,
+      preferred_area: input.preferredArea,
+      pets: input.pets,
+      smoking: input.smoking,
+      age: input.age,
+      sex: input.sex,
+      situation: input.situation,
+      degree: input.degree?.trim() || undefined,
+      profession: input.profession?.trim() || undefined,
+      socialization_level: input.socializationLevel,
+      nightlife_level: input.nightlifeLevel,
+    }),
+  })
+  const data = (await response.json()) as UpdateTenantProfileResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo actualizar el perfil.')
+  }
+  return data.message
 }
 
 export async function cancelTenantApplication(applicationID: string) {
