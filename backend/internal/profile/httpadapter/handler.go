@@ -46,6 +46,9 @@ func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service
 	api.POST("/tenant-profile/avatar", h.uploadTenantAvatar)
 	api.GET("/tenant-profile/me", h.getMyTenantProfile)
 	api.GET("/tenant-profile/:userId", h.getTenantProfileByUserID)
+	api.GET("/owner-profile/me", h.getOwnerProfile)
+	api.PUT("/owner-profile", h.updateOwnerProfile)
+	api.POST("/owner-profile/avatar", h.uploadOwnerAvatar)
 }
 
 func (h *handler) status(c *gin.Context) {
@@ -265,6 +268,105 @@ func (h *handler) getTenantProfileByUserID(c *gin.Context) {
 		"socialization_level": p.Socialization,
 		"nightlife_level":     p.Nightlife,
 	})
+}
+
+func (h *handler) getOwnerProfile(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	p, err := h.profileService.GetOwnerProfile(c.Request.Context(), userID, role)
+	if err != nil {
+		if errors.Is(err, profileservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "owner profile is only available for owner users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load owner profile"})
+		return
+	}
+	if p == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "owner profile not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"user_id":      p.UserID,
+		"full_name":    p.FullName,
+		"email":        p.Email,
+		"avatar_url":   p.AvatarURL,
+		"display_name": p.DisplayName,
+		"phone":        p.Phone,
+	})
+}
+
+func (h *handler) updateOwnerProfile(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		FullName    string `json:"full_name"`
+		DisplayName string `json:"display_name"`
+		Phone       string `json:"phone"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if len(strings.TrimSpace(req.FullName)) < 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "full_name must be at least 2 characters"})
+		return
+	}
+	input := profile.OwnerProfileInput{
+		FullName:    strings.TrimSpace(req.FullName),
+		DisplayName: strings.TrimSpace(req.DisplayName),
+		Phone:       strings.TrimSpace(req.Phone),
+	}
+	if err := h.profileService.UpdateOwnerProfile(c.Request.Context(), userID, role, input); err != nil {
+		if errors.Is(err, profileservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "owner profile is only available for owner users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update owner profile"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "owner profile updated"})
+}
+
+func (h *handler) uploadOwnerAvatar(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	fileHeader, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "avatar file is required"})
+		return
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fileHeader.Filename)})
+		return
+	}
+	fileData, readErr := io.ReadAll(file)
+	closeErr := file.Close()
+	if readErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fileHeader.Filename)})
+		return
+	}
+	if closeErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fileHeader.Filename)})
+		return
+	}
+	avatarURL, err := h.profileService.UploadOwnerAvatar(c.Request.Context(), userID, role, fileHeader.Filename, fileHeader.Header.Get("Content-Type"), fileData)
+	if err != nil {
+		if errors.Is(err, profileservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "owner profile is only available for owner users"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "owner avatar uploaded", "avatar_url": avatarURL})
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {

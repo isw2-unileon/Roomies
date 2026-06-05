@@ -30,3 +30,20 @@ type TenantPersonalProfile struct {
 	Email     string
 	AvatarURL string
 }
+
+// OwnerProfileInput contains the editable fields for an owner profile.
+type OwnerProfileInput struct {
+	FullName    string
+	DisplayName string
+	Phone       string
+}
+
+// OwnerProfile contains all viewable/editable data for an owner user.
+type OwnerProfile struct {
+	UserID      string
+	FullName    string
+	Email       string
+	AvatarURL   string
+	DisplayName string
+	Phone       string
+}

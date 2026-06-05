@@ -1,5 +1,5 @@
 import { apiFetch } from '@/api'
-import type { OwnerDashboardProperty, OwnerDashboardRequest } from '@/types/owner'
+import type { OwnerDashboardProperty, OwnerDashboardRequest, OwnerProfile } from '@/types/owner'
 
 interface OwnerApartmentDto {
   id: string
@@ -270,6 +270,75 @@ export async function updateOwnerApartment(propertyId: string, input: CreateApar
   }
 }
 
+interface OwnerProfileDto {
+  user_id: string
+  full_name: string
+  email: string
+  avatar_url: string
+  display_name: string
+  phone: string
+  error?: string
+}
+
+interface OwnerProfileResponseDto {
+  message?: string
+  avatar_url?: string
+  error?: string
+}
+
+export interface UpdateOwnerProfileInput {
+  fullName: string
+  displayName: string
+  phone: string
+}
+
+export async function getOwnerProfile(): Promise<OwnerProfile> {
+  const response = await apiFetch('/api/owner-profile/me')
+  const data = (await response.json()) as OwnerProfileDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo cargar el perfil.')
+  }
+  return {
+    userId: data.user_id,
+    fullName: data.full_name,
+    email: data.email,
+    avatarUrl: data.avatar_url,
+    displayName: data.display_name,
+    phone: data.phone,
+  }
+}
+
+export async function updateOwnerProfile(input: UpdateOwnerProfileInput) {
+  const response = await apiFetch('/api/owner-profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      full_name: input.fullName,
+      display_name: input.displayName,
+      phone: input.phone,
+    }),
+  })
+  const data = (await response.json()) as OwnerProfileResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo guardar el perfil.')
+  }
+  return data.message
+}
+
+export async function uploadOwnerAvatar(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  const response = await apiFetch('/api/owner-profile/avatar', {
+    method: 'POST',
+    body: formData,
+  })
+  const data = (await response.json()) as OwnerProfileResponseDto
+  if (!response.ok || !data.avatar_url) {
+    throw new Error(data.error ?? 'No se pudo subir la foto de perfil.')
+  }
+  return data.avatar_url
+}
+
 export interface UploadedPhoto {
   path: string
   signed_url: string
@@ -296,3 +365,4 @@ export async function uploadApartmentPhotos(files: File[], apartmentId?: string,
   }
   return data.photos ?? []
 }
+

@@ -26,8 +26,12 @@ export interface PropertyLike {
 }
 
 export interface OwnerProfile {
-    name: string
-    role: string
+    userId: string
+    fullName: string
+    email: string
+    avatarUrl: string
+    displayName: string
+    phone: string
 }
 
 export interface OwnerDashboardProperty {
