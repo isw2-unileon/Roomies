@@ -200,40 +200,7 @@ func (h *handler) saveTenantPersonalProfile(c *gin.Context) {
 }
 
 func (h *handler) uploadTenantAvatar(c *gin.Context) {
-	userID, role, ok := h.resolveUserAndRole(c)
-	if !ok {
-		return
-	}
-	fileHeader, err := c.FormFile("avatar")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "avatar file is required"})
-		return
-	}
-	file, err := fileHeader.Open()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fileHeader.Filename)})
-		return
-	}
-	fileData, readErr := io.ReadAll(file)
-	closeErr := file.Close()
-	if readErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fileHeader.Filename)})
-		return
-	}
-	if closeErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fileHeader.Filename)})
-		return
-	}
-	avatarURL, err := h.profileService.UploadTenantAvatar(c.Request.Context(), userID, role, fileHeader.Filename, fileHeader.Header.Get("Content-Type"), fileData)
-	if err != nil {
-		if errors.Is(err, profileservice.ErrTenantRequired) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, gin.H{"message": "tenant avatar uploaded", "avatar_url": avatarURL})
+	h.handleAvatarUpload(c, true)
 }
 
 func (h *handler) getTenantProfileByUserID(c *gin.Context) {
@@ -333,6 +300,13 @@ func (h *handler) updateOwnerProfile(c *gin.Context) {
 }
 
 func (h *handler) uploadOwnerAvatar(c *gin.Context) {
+	h.handleAvatarUpload(c, false)
+}
+
+// handleAvatarUpload consolidates the avatar upload flow for tenant and owner.
+// If asTenant is true the tenant upload path will be used, otherwise the owner
+// path is used. This reduces duplicated code while preserving distinct errors.
+func (h *handler) handleAvatarUpload(c *gin.Context, asTenant bool) {
 	userID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
 		return
@@ -357,16 +331,30 @@ func (h *handler) uploadOwnerAvatar(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fileHeader.Filename)})
 		return
 	}
-	avatarURL, err := h.profileService.UploadOwnerAvatar(c.Request.Context(), userID, role, fileHeader.Filename, fileHeader.Header.Get("Content-Type"), fileData)
+
+	var avatarURL string
+	if asTenant {
+		avatarURL, err = h.profileService.UploadTenantAvatar(c.Request.Context(), userID, role, fileHeader.Filename, fileHeader.Header.Get("Content-Type"), fileData)
+	} else {
+		avatarURL, err = h.profileService.UploadOwnerAvatar(c.Request.Context(), userID, role, fileHeader.Filename, fileHeader.Header.Get("Content-Type"), fileData)
+	}
 	if err != nil {
-		if errors.Is(err, profileservice.ErrOwnerRequired) {
+		if asTenant && errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
+		if !asTenant && errors.Is(err, profileservice.ErrOwnerRequired) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "owner profile is only available for owner users"})
 			return
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "owner avatar uploaded", "avatar_url": avatarURL})
+	if asTenant {
+		c.JSON(http.StatusCreated, gin.H{"message": "tenant avatar uploaded", "avatar_url": avatarURL})
+	} else {
+		c.JSON(http.StatusCreated, gin.H{"message": "owner avatar uploaded", "avatar_url": avatarURL})
+	}
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {
