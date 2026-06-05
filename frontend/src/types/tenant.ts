@@ -39,6 +39,9 @@ export interface TenantProperty {
     status: PropertyAvailability
     images: string[]
     createdAt: string
+    bathrooms: number
+    surfaceM2: number
+    floor: number
 }
 
 export type PropertyAvailability = 'available' | 'occupied' | 'full'
@@ -128,9 +131,8 @@ export interface TenantMessage {
 export interface TenantPropertyRules {
     smokingAllowed: boolean | null
     petsAllowed: boolean | null
-    maxNoiseLevel: string
-    cleanlinessExpectation: string
-    preferredSchedule: string
+    studentsAllowed: boolean | null
+    notes: string
 }
 
 export interface TenantPropertyDetail {

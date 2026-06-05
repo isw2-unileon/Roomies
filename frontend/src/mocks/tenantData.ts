@@ -32,6 +32,9 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-10',
+        bathrooms: 1,
+        surfaceM2: 75,
+        floor: 2,
     },
     {
         id: 'prop2',
@@ -45,6 +48,9 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-08',
+        bathrooms: 1,
+        surfaceM2: 60,
+        floor: 1,
     },
     {
         id: 'prop3',
@@ -58,6 +64,9 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-12',
+        bathrooms: 2,
+        surfaceM2: 90,
+        floor: 3,
     },
     {
         id: 'prop4',
@@ -71,6 +80,9 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-15',
+        bathrooms: 1,
+        surfaceM2: 80,
+        floor: 0,
     },
     {
         id: 'prop5',
@@ -84,6 +96,9 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-11',
+        bathrooms: 1,
+        surfaceM2: 55,
+        floor: 4,
     },
     {
         id: 'prop6',
@@ -97,6 +112,9 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-09',
+        bathrooms: 1,
+        surfaceM2: 70,
+        floor: 1,
     },
 ]
 

@@ -22,7 +22,6 @@ type fakeApartmentRepository struct {
 	ownerApartment   *apartment.Apartment
 	tenantApartments []apartment.Apartment
 	apartmentByID    *apartment.Apartment
-	apartmentRules   *apartment.Rules
 	tenantProfile    *profile.TenantProfileInput
 }
 
@@ -60,20 +59,10 @@ func (f *fakeApartmentRepository) GetApartmentByID(ctx context.Context, apartmen
 	if f.apartmentByID != nil {
 		return f.apartmentByID, nil
 	}
-	return &apartment.Apartment{ID: apartmentID, BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1}, nil
-}
-
-func (f *fakeApartmentRepository) GetApartmentRules(ctx context.Context, apartmentID string) (*apartment.Rules, error) {
-	if f.apartmentRules != nil {
-		return f.apartmentRules, nil
-	}
-	allowed := false
-	return &apartment.Rules{
-		SmokingAllowed:         &allowed,
-		PetsAllowed:            &allowed,
-		MaxNoiseLevel:          "moderate",
-		CleanlinessExpectation: "normal",
-		PreferredSchedule:      "flexible",
+	notAllowed := false
+	return &apartment.Apartment{
+		ID: apartmentID, BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 1,
+		SmokingAllowed: &notAllowed, PetsAllowed: &notAllowed,
 	}, nil
 }
 
@@ -126,7 +115,7 @@ func TestCreateApartmentAcceptsRepositoryInterfaceAndPreparesPersistenceData(t *
 		TotalSpots:    2,
 		Bathrooms:     1,
 		BaseRent:      400,
-		AvailableFrom: "2026-06-01",
+
 		ImagePaths:    []string{"https://example.test/flat.jpg"},
 	})
 	if err != nil {
@@ -138,9 +127,8 @@ func TestCreateApartmentAcceptsRepositoryInterfaceAndPreparesPersistenceData(t *
 	if repo.createdStatus != apartment.StatusAvailable {
 		t.Fatalf("createdStatus = %q, want %q", repo.createdStatus, apartment.StatusAvailable)
 	}
-	wantDescription := "Nice place\n\nBanos: 1\n\nDisponible desde: 2026-06-01"
-	if repo.createdDescription != wantDescription {
-		t.Fatalf("createdDescription = %q, want %q", repo.createdDescription, wantDescription)
+	if repo.createdDescription != "Nice place" {
+		t.Fatalf("createdDescription = %q, want %q", repo.createdDescription, "Nice place")
 	}
 }
 
@@ -267,7 +255,7 @@ func TestUpdateOwnerApartmentStoresTrimmedInputWithoutPublishOnlyDescriptionPart
 		TotalSpots:    3,
 		Bathrooms:     9,
 		BaseRent:      500,
-		AvailableFrom: "2026-06-01",
+
 	})
 	if err != nil {
 		t.Fatalf("UpdateOwnerApartment returned error: %v", err)

@@ -76,20 +76,18 @@ interface TenantApartmentDto {
   description?: string
   owner_name?: string
   compatibility_score?: number
-}
-
-interface TenantApartmentRulesDto {
-  smoking_allowed: boolean | null
-  pets_allowed: boolean | null
-  max_noise_level: string
-  cleanliness_expectation: string
-  preferred_schedule: string
+  bathrooms?: number
+  surface_m2?: number
+  floor?: number
+  smoking_allowed?: boolean | null
+  pets_allowed?: boolean | null
+  students_allowed?: boolean | null
+  notes?: string
 }
 
 interface TenantApartmentDetailResponseDto {
   apartment?: TenantApartmentDto
   compatibility_reasons?: string[]
-  rules?: TenantApartmentRulesDto
   current_application_id?: string
   current_application_status?: string
   can_apply?: boolean | string | number | null
@@ -407,16 +405,18 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     status: tenantApartmentStatusFromDto(dto),
     images: imageUrls,
     createdAt: dto.created_at,
+    bathrooms: dto.bathrooms ?? 0,
+    surfaceM2: dto.surface_m2 ?? 0,
+    floor: dto.floor ?? 0,
   }
 }
 
-function tenantPropertyRulesFromDto(dto: TenantApartmentRulesDto | undefined): TenantPropertyRules {
+function tenantPropertyRulesFromApartmentDto(dto: TenantApartmentDto | undefined): TenantPropertyRules {
   return {
     smokingAllowed: dto?.smoking_allowed ?? null,
     petsAllowed: dto?.pets_allowed ?? null,
-    maxNoiseLevel: dto?.max_noise_level ?? '',
-    cleanlinessExpectation: dto?.cleanliness_expectation ?? '',
-    preferredSchedule: dto?.preferred_schedule ?? '',
+    studentsAllowed: dto?.students_allowed ?? null,
+    notes: dto?.notes ?? '',
   }
 }
 
@@ -786,7 +786,7 @@ export async function getTenantApartmentDetail(apartmentID: string): Promise<Ten
   return {
     property: tenantApartmentFromDto(apartment),
     compatibilityReasons: data.compatibility_reasons ?? [],
-    rules: tenantPropertyRulesFromDto(data.rules),
+    rules: tenantPropertyRulesFromApartmentDto(apartment),
     currentApplicationId: data.current_application_id ?? '',
     currentApplicationStatus: data.current_application_status ?? '',
     canApply: toBoolean(data.can_apply, true),

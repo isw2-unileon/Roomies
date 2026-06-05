@@ -17,6 +17,13 @@ interface OwnerApartmentDto {
   image_paths?: string[] | null
   latitude?: number
   longitude?: number
+  bathrooms?: number
+  surface_m2?: number
+  floor?: number
+  smoking_allowed?: boolean | null
+  pets_allowed?: boolean | null
+  students_allowed?: boolean | null
+  notes?: string
 }
 
 interface OwnerApartmentsResponseDto {
@@ -80,10 +87,15 @@ export interface CreateApartmentInput {
   totalSpots: number
   bathrooms: number
   baseRent: number
-  availableFrom: string
   imagePaths: string[]
   latitude?: number
   longitude?: number
+  surfaceM2?: number
+  floor?: number
+  smokingAllowed?: boolean | null
+  petsAllowed?: boolean | null
+  studentsAllowed?: boolean | null
+  notes?: string
 }
 
 export interface CreateApartmentResult {
@@ -120,6 +132,27 @@ function ownerApartmentFromDto(dto: OwnerApartmentDto): OwnerDashboardProperty {
   }
   if (dto.longitude !== undefined) {
     property.longitude = dto.longitude
+  }
+  if (dto.bathrooms !== undefined) {
+    property.bathrooms = dto.bathrooms
+  }
+  if (dto.surface_m2 !== undefined) {
+    property.surfaceM2 = dto.surface_m2
+  }
+  if (dto.floor !== undefined) {
+    property.floor = dto.floor
+  }
+  if (dto.smoking_allowed !== undefined) {
+    property.smokingAllowed = dto.smoking_allowed
+  }
+  if (dto.pets_allowed !== undefined) {
+    property.petsAllowed = dto.pets_allowed
+  }
+  if (dto.students_allowed !== undefined) {
+    property.studentsAllowed = dto.students_allowed
+  }
+  if (dto.notes !== undefined) {
+    property.notes = dto.notes
   }
   return property
 }
@@ -161,10 +194,15 @@ function apartmentPayload(input: CreateApartmentInput) {
     total_spots: input.totalSpots,
     bathrooms: input.bathrooms,
     base_rent: input.baseRent,
-    available_from: input.availableFrom,
     image_paths: input.imagePaths,
     latitude: input.latitude,
     longitude: input.longitude,
+    surface_m2: input.surfaceM2 ?? 0,
+    floor: input.floor ?? 0,
+    smoking_allowed: input.smokingAllowed ?? null,
+    pets_allowed: input.petsAllowed ?? null,
+    students_allowed: input.studentsAllowed ?? null,
+    notes: input.notes ?? '',
   }
 }
 

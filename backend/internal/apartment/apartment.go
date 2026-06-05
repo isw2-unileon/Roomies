@@ -5,18 +5,24 @@ const StatusAvailable = "AVAILABLE"
 
 // CreateApartmentInput contains data needed to publish an apartment.
 type CreateApartmentInput struct {
-	Title         string
-	Description   string
-	Address       string
-	Area          string
-	TotalSpots    int
-	Bathrooms     int
-	BaseRent      int
-	AvailableFrom string
-	ImagePaths    []string
-	Status        string
-	Latitude      float64
-	Longitude     float64
+	Title           string
+	Description     string
+	Address         string
+	Area            string
+	TotalSpots      int
+	Bathrooms       int
+	BaseRent        int
+
+	ImagePaths      []string
+	Status          string
+	Latitude        float64
+	Longitude       float64
+	SurfaceM2       int
+	Floor           int
+	SmokingAllowed  *bool
+	PetsAllowed     *bool
+	StudentsAllowed *bool
+	Notes           string
 }
 
 // CreateApartmentResult returns basic publication metadata.
@@ -27,21 +33,28 @@ type CreateApartmentResult struct {
 
 // Apartment contains apartment data shown in listing views.
 type Apartment struct {
-	ID            string
-	Title         string
-	Description   string
-	OwnerID       string
-	Address       string
-	Area          string
-	TotalSpots    int
-	OccupiedSpots int
-	BaseRent      int
-	Status        string
-	CreatedAt     string
-	ImagePaths    []string
-	ImageURLs     []string
-	Latitude      float64
-	Longitude     float64
+	ID              string
+	Title           string
+	Description     string
+	OwnerID         string
+	Address         string
+	Area            string
+	TotalSpots      int
+	OccupiedSpots   int
+	BaseRent        int
+	Status          string
+	CreatedAt       string
+	ImagePaths      []string
+	ImageURLs       []string
+	Latitude        float64
+	Longitude       float64
+	Bathrooms       int
+	SurfaceM2       int
+	Floor           int
+	SmokingAllowed  *bool
+	PetsAllowed     *bool
+	StudentsAllowed *bool
+	Notes           string
 }
 
 // ListApartmentsFilters defines server-side filters for tenant explore listings.
@@ -58,19 +71,9 @@ type ListApartmentsFilters struct {
 	SortBy            string
 }
 
-// Rules contains apartment coexistence preferences.
-type Rules struct {
-	SmokingAllowed         *bool
-	PetsAllowed            *bool
-	MaxNoiseLevel          string
-	CleanlinessExpectation string
-	PreferredSchedule      string
-}
-
 // Detail contains tenant-facing apartment detail information.
 type Detail struct {
 	Apartment                Apartment
-	Rules                    Rules
 	CompatibilityScore       int
 	CompatibilityReason      []string
 	CurrentApplicationID     string
