@@ -99,6 +99,8 @@ export default function TenantGroupDetail({
 	const acceptedMembers = group.members.filter(
 		(member) => member.status === 'ACCEPTED',
 	)
+	const apartmentCapacity = group.apartment?.totalSpots ?? 0
+	const isGroupFull = apartmentCapacity > 0 && acceptedMembers.length >= apartmentCapacity
 
 	async function handleInviteMembers() {
 		if (!onInviteMembers || selectedCandidates.length === 0) {
@@ -242,16 +244,22 @@ export default function TenantGroupDetail({
 			<p className={styles.sectionHint}>
 			  Invita a nuevos perfiles compatibles para que se unan a este grupo.
 			</p>
+			{isGroupFull ? (
+			  <p className={styles.pendingText}>
+				El grupo ya ha alcanzado la capacidad maxima del piso.
+			  </p>
+			) : null}
 			<TenantGroupCandidateSelector
 			  selected={selectedCandidates}
 			  onChange={setSelectedCandidates}
 			  groupId={group.id}
+			  disabled={isGroupFull || isInvitingMembers}
 			/>
 			<button
 			  type="button"
 			  className={styles.acceptGroupButton}
 			  onClick={() => void handleInviteMembers()}
-			  disabled={selectedCandidates.length === 0 || isInvitingMembers}
+			  disabled={isGroupFull || selectedCandidates.length === 0 || isInvitingMembers}
 			>
 			  {isInvitingMembers ? 'Enviando invitaciones...' : 'Invitar miembros'}
 			</button>

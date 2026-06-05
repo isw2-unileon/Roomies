@@ -132,7 +132,10 @@ export default function TenantGroupsPage() {
             }
             await loadGroups()
         } catch (acceptError) {
-            setError(acceptError instanceof Error ? acceptError.message : 'No se pudo aceptar la invitación.')
+            const message = acceptError instanceof Error ? acceptError.message : 'No se pudo aceptar la invitación.'
+            setError(message === 'group exceeds apartment available spots'
+                ? 'El grupo ya ha alcanzado la capacidad máxima del piso. No puedes unirte.'
+                : message)
         } finally {
             setRespondingInvitationId(null)
         }
@@ -243,7 +246,10 @@ export default function TenantGroupsPage() {
             setSelectedGroup(detail)
             await loadGroups()
         } catch (inviteError) {
-            setError(inviteError instanceof Error ? inviteError.message : 'No se pudo invitar a los nuevos miembros.')
+            const message = inviteError instanceof Error ? inviteError.message : 'No se pudo invitar a los nuevos miembros.'
+            setError(message === 'group exceeds apartment available spots'
+                ? 'El grupo ya ha alcanzado la capacidad máxima del piso.'
+                : message)
             throw inviteError
         } finally {
             setInvitingGroupId(null)

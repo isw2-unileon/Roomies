@@ -100,6 +100,11 @@ select {
   background: #fff;
 }
 
+.candidateItem:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .selectedCandidate {
   background: var(--tenant-primary-soft);
   border-color: var(--tenant-primary);

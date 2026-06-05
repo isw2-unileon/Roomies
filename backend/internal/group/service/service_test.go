@@ -288,6 +288,34 @@ func TestAcceptInvitationAllowsInvitationConsensusFlowWhenApartmentHasThreeTotal
 	}
 }
 
+func TestAcceptInvitationRejectsWhenGroupIsFull(t *testing.T) {
+	repo := &fakeGroupRepository{
+		invitation: &group.Invitation{
+			ID:            "inv-full",
+			GroupID:       "group-1",
+			InvitedUserID: "tenant-4",
+			Status:        group.InvitationStatusPending,
+		},
+		groupDetail: &group.Group{
+			ID:        "group-1",
+			Apartment: &group.Apartment{ID: "apt-1", TotalSpots: 3},
+			Members:   []group.Member{{UserID: "tenant-1"}, {UserID: "tenant-2"}, {UserID: "tenant-3"}},
+		},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.AcceptInvitation(context.Background(), "inv-full", "tenant-4", "tenant")
+	if !errors.Is(err, ErrApartmentFull) {
+		t.Fatalf("err = %v, want %v", err, ErrApartmentFull)
+	}
+	if repo.acceptedInvitationID != "" {
+		t.Fatalf("AcceptInvitation should not be called when group is full")
+	}
+	if repo.createdJoinRequest {
+		t.Fatalf("CreateJoinRequest should not be called when group is full")
+	}
+}
+
 func TestInviteUsersRejectsNonMember(t *testing.T) {
 	repo := &fakeGroupRepository{
 		groupDetail:           &group.Group{ID: "group-1"},
@@ -301,6 +329,27 @@ func TestInviteUsersRejectsNonMember(t *testing.T) {
 	}
 	if len(repo.createdPendingUserIDs) > 0 {
 		t.Fatalf("CreatePendingInvitations should not be called for non members")
+	}
+}
+
+func TestInviteUsersRejectsWhenGroupIsFull(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail: &group.Group{
+			ID:        "group-1",
+			Apartment: &group.Apartment{ID: "apt-1", TotalSpots: 3},
+			Members:   []group.Member{{UserID: "tenant-1"}, {UserID: "tenant-2"}, {UserID: "tenant-3"}},
+		},
+		canReviewJoinRequests: true,
+		invitableTenantIDs:    []string{"tenant-4"},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.InviteUsers(context.Background(), "group-1", "tenant-2", "tenant", []string{"tenant-4"})
+	if !errors.Is(err, ErrApartmentFull) {
+		t.Fatalf("err = %v, want %v", err, ErrApartmentFull)
+	}
+	if len(repo.createdPendingUserIDs) > 0 {
+		t.Fatalf("CreatePendingInvitations should not be called when group is full")
 	}
 }
 

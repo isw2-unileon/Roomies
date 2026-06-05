@@ -265,6 +265,9 @@ func (s *Service) InviteUsers(ctx context.Context, groupID, userID, role string,
 	if len(validInvitedUserIDs) == 0 {
 		return ErrNoValidInvitedUsers
 	}
+	if groupDetail.Apartment != nil && len(groupDetail.Members) >= groupDetail.Apartment.TotalSpots {
+		return ErrApartmentFull
+	}
 
 	return s.repo.CreatePendingInvitations(ctx, groupID, userID, validInvitedUserIDs)
 }
@@ -295,6 +298,9 @@ func (s *Service) AcceptInvitation(ctx context.Context, invitationID, userID, ro
 	}
 	if groupDetail == nil {
 		return ErrGroupNotFound
+	}
+	if groupDetail.Apartment != nil && len(groupDetail.Members) >= groupDetail.Apartment.TotalSpots {
+		return ErrApartmentFull
 	}
 
 	if err := s.repo.AcceptInvitation(ctx, strings.TrimSpace(invitationID), strings.TrimSpace(userID)); err != nil {
