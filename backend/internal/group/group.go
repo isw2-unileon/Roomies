@@ -55,6 +55,11 @@ const (
 	JoinRequestVoteApprove = "APPROVE"
 	// JoinRequestVoteReject represents a rejection vote.
 	JoinRequestVoteReject = "REJECT"
+
+	// JoinRequestSourceDirectRequest identifies a regular join request created by the requester.
+	JoinRequestSourceDirectRequest = "DIRECT_REQUEST"
+	// JoinRequestSourceGroupInvitation identifies a request created after accepting a group invitation.
+	JoinRequestSourceGroupInvitation = "GROUP_INVITATION"
 )
 
 // CreateGroupInput contains the data required to create a tenant group.
@@ -81,7 +86,8 @@ type ListGroupsFilters struct {
 
 // CandidateFilters contains the filters used to search tenant candidates.
 type CandidateFilters struct {
-	Search string
+	Search  string
+	GroupID string
 }
 
 // Group represents a tenant group with members, invitations and optional apartment.
@@ -131,25 +137,25 @@ type ApartmentRequest struct {
 
 // Member represents an accepted group member.
 type Member struct {
-	UserID            string
-	Name              string
-	Email             string
-	AvatarURL         string
-	Role              string
-	Status            string
-	Age               int
-	Sex               string
-	Situation         string
-	Degree            string
-	Profession        string
-	BudgetMax         int
-	PreferredArea     string
-	Pets              bool
-	Smoking           bool
+	UserID             string
+	Name               string
+	Email              string
+	AvatarURL          string
+	Role               string
+	Status             string
+	Age                int
+	Sex                string
+	Situation          string
+	Degree             string
+	Profession         string
+	BudgetMax          int
+	PreferredArea      string
+	Pets               bool
+	Smoking            bool
 	SocializationLevel string
-	NightlifeLevel    string
-	HasAccepted       bool
-	IsCurrentUser     bool
+	NightlifeLevel     string
+	HasAccepted        bool
+	IsCurrentUser      bool
 }
 
 // Invitation represents a pending or answered group invitation.
@@ -188,6 +194,7 @@ type JoinRequest struct {
 	ID              string
 	GroupID         string
 	RequesterUserID string
+	Source          string
 	Status          string
 	CreatedAt       string
 	UpdatedAt       string
@@ -200,6 +207,7 @@ type UserJoinRequest struct {
 	ID              string
 	GroupID         string
 	RequesterUserID string
+	Source          string
 	Status          string
 	CreatedAt       string
 	UpdatedAt       string

@@ -23,6 +23,10 @@ type createGroupRequest struct {
 	InvitedUserIDs []string `json:"invited_user_ids"`
 }
 
+type inviteUsersRequest struct {
+	InvitedUserIDs []string `json:"invited_user_ids"`
+}
+
 type updateGroupApartmentRequest struct {
 	ApartmentID *string `json:"apartment_id"`
 }
@@ -65,6 +69,7 @@ type joinRequestResponse struct {
 	ID              string             `json:"id"`
 	GroupID         string             `json:"group_id"`
 	RequesterUserID string             `json:"requester_user_id"`
+	Source          string             `json:"source"`
 	Status          string             `json:"status"`
 	CreatedAt       string             `json:"created_at"`
 	UpdatedAt       string             `json:"updated_at"`
@@ -76,6 +81,7 @@ type currentJoinRequestResponse struct {
 	ID              string `json:"id"`
 	GroupID         string `json:"group_id"`
 	RequesterUserID string `json:"requester_user_id"`
+	Source          string `json:"source"`
 	Status          string `json:"status"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`
@@ -160,6 +166,8 @@ func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Servi
 	api.GET("/tenant/groups", h.listTenantGroups)
 	api.GET("/tenant/groups/:id", h.getTenantGroup)
 	api.POST("/tenant/groups", h.createTenantGroup)
+	api.DELETE("/tenant/groups/:id", h.deleteTenantGroup)
+	api.POST("/tenant/groups/:id/invitations", h.inviteUsersToGroup)
 	api.POST("/tenant/groups/:id/accept", h.acceptTenantGroup)
 	api.POST("/tenant/groups/:id/join-request", h.createJoinRequest)
 	api.GET("/tenant/groups/:id/join-requests", h.listJoinRequests)
@@ -249,6 +257,32 @@ func (h *handler) createTenantGroup(c *gin.Context) {
 	})
 }
 
+func (h *handler) inviteUsersToGroup(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	var request inviteUsersRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.groupService.InviteUsers(c.Request.Context(), groupID, userID, role, request.InvitedUserIDs); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "group invitations created"})
+}
+
 func (h *handler) listGroupCandidates(c *gin.Context) {
 	userID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
@@ -256,7 +290,8 @@ func (h *handler) listGroupCandidates(c *gin.Context) {
 	}
 
 	filters := group.CandidateFilters{
-		Search:     strings.TrimSpace(c.Query("search")),
+		Search:  strings.TrimSpace(c.Query("search")),
+		GroupID: strings.TrimSpace(c.Query("group_id")),
 	}
 
 	candidates, err := h.groupService.ListGroupCandidates(c.Request.Context(), userID, role, filters)
@@ -357,6 +392,26 @@ func (h *handler) acceptTenantGroup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "group accepted"})
+}
+
+func (h *handler) deleteTenantGroup(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	if err := h.groupService.DeleteGroup(c.Request.Context(), groupID, userID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *handler) createJoinRequest(c *gin.Context) {
@@ -545,6 +600,7 @@ func currentJoinRequestResponseFromDomain(item *group.UserJoinRequest) *currentJ
 		ID:              item.ID,
 		GroupID:         item.GroupID,
 		RequesterUserID: item.RequesterUserID,
+		Source:          item.Source,
 		Status:          item.Status,
 		CreatedAt:       item.CreatedAt,
 		UpdatedAt:       item.UpdatedAt,
@@ -558,6 +614,7 @@ func joinRequestResponses(items []group.JoinRequest) []joinRequestResponse {
 			ID:              item.ID,
 			GroupID:         item.GroupID,
 			RequesterUserID: item.RequesterUserID,
+			Source:          item.Source,
 			Status:          item.Status,
 			CreatedAt:       item.CreatedAt,
 			UpdatedAt:       item.UpdatedAt,
@@ -605,12 +662,12 @@ func memberResponses(items []group.Member) []memberResponse {
 	result := make([]memberResponse, 0, len(items))
 	for _, item := range items {
 		result = append(result, memberResponse{
-			UserID:        item.UserID,
-			Name:          item.Name,
-			Email:         item.Email,
-			AvatarURL:     item.AvatarURL,
-			Role:          item.Role,
-			Status:        item.Status,
+			UserID:             item.UserID,
+			Name:               item.Name,
+			Email:              item.Email,
+			AvatarURL:          item.AvatarURL,
+			Role:               item.Role,
+			Status:             item.Status,
 			Age:                item.Age,
 			Sex:                item.Sex,
 			Situation:          item.Situation,
@@ -656,10 +713,10 @@ func candidateResponses(items []group.Candidate) []candidateResponse {
 
 func candidateResponseFromDomain(item group.Candidate) candidateResponse {
 	return candidateResponse{
-		UserID:        item.UserID,
-		Name:          item.Name,
-		Email:         item.Email,
-		AvatarURL:     item.AvatarURL,
+		UserID:             item.UserID,
+		Name:               item.Name,
+		Email:              item.Email,
+		AvatarURL:          item.AvatarURL,
 		Age:                item.Age,
 		Sex:                item.Sex,
 		Situation:          item.Situation,

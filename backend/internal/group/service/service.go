@@ -9,7 +9,11 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/group"
 )
 
-const signedAvatarURLTTLSeconds = 3600
+const (
+	signedAvatarURLTTLSeconds = 3600
+	apartmentPhotosBucket     = "Apartment_photos"
+	signedImageURLTTLSeconds  = 3600
+)
 
 type imageStorage interface {
 	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
@@ -20,8 +24,10 @@ type repository interface {
 	GetTenantGroupByID(ctx context.Context, groupID, userID string) (*group.Group, error)
 	CreateGroup(ctx context.Context, creatorID string, input group.CreateGroupInput) (string, error)
 	AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error
+	DeleteGroup(ctx context.Context, groupID string) error
 	CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error
 	ListGroupCandidates(ctx context.Context, currentUserID string, filters group.CandidateFilters) ([]group.Candidate, error)
+	FilterInvitableTenantIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error)
 	GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error)
 	CountAcceptedMembersAndPendingInvitations(ctx context.Context, groupID string) (int, error)
 	GetInvitationForUser(ctx context.Context, invitationID, userID string) (*group.Invitation, error)
@@ -32,13 +38,12 @@ type repository interface {
 	AcceptGroupForUser(ctx context.Context, groupID, userID string) error
 	HasPendingJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
 	HasRejectedJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
-	CreateJoinRequest(ctx context.Context, groupID, requesterUserID string) (string, error)
+	CreateJoinRequest(ctx context.Context, groupID, requesterUserID, source string) (string, error)
 	ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error)
 	CanUserReviewJoinRequests(ctx context.Context, groupID, userID string) (bool, error)
 	CanUserVoteJoinRequest(ctx context.Context, requestID, voterUserID string) (bool, error)
 	VoteJoinRequest(ctx context.Context, requestID, voterUserID, decision string) error
-	ResolveJoinRequestStatus(ctx context.Context, requestID string) (string, bool, error)
-	GetJoinRequest(ctx context.Context, requestID string) (*group.JoinRequest, error)
+	FinalizeJoinRequestApproval(ctx context.Context, requestID string) (string, bool, error)
 	CancelJoinRequest(ctx context.Context, requestID, requesterUserID string) error
 	IsGroupCreator(ctx context.Context, groupID, userID string) (bool, error)
 	UpdateGroupApartment(ctx context.Context, groupID string, apartmentID *string) error
@@ -174,8 +179,7 @@ func (s *Service) CreateGroup(ctx context.Context, creatorID, role string, input
 		if alreadyHas {
 			return "", ErrGroupAlreadyExistsForApartment
 		}
-		requiredPlaces := 1 + len(input.InvitedUserIDs)
-		if err := s.ensureApartmentHasCapacity(ctx, input.ApartmentID, requiredPlaces); err != nil {
+		if err := s.ensureApartmentHasCapacity(ctx, input.ApartmentID, 1); err != nil {
 			return "", err
 		}
 	}
@@ -186,6 +190,10 @@ func (s *Service) CreateGroup(ctx context.Context, creatorID, role string, input
 	}
 
 	if err := s.repo.AddGroupOwnerMember(ctx, groupID, strings.TrimSpace(creatorID)); err != nil {
+		return "", err
+	}
+
+	if err := s.repo.AcceptGroupForUser(ctx, groupID, strings.TrimSpace(creatorID)); err != nil {
 		return "", err
 	}
 
@@ -205,6 +213,16 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 	}
 
 	filters.Search = strings.TrimSpace(filters.Search)
+	filters.GroupID = strings.TrimSpace(filters.GroupID)
+	if filters.GroupID != "" {
+		canInvite, err := s.repo.CanUserReviewJoinRequests(ctx, filters.GroupID, strings.TrimSpace(currentUserID))
+		if err != nil {
+			return nil, err
+		}
+		if !canInvite {
+			return nil, ErrForbidden
+		}
+	}
 
 	candidates, err := s.repo.ListGroupCandidates(ctx, strings.TrimSpace(currentUserID), filters)
 	if err != nil {
@@ -214,6 +232,48 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 		return nil, err
 	}
 	return candidates, nil
+}
+
+// InviteUsers invites tenant candidates to an existing group.
+func (s *Service) InviteUsers(ctx context.Context, groupID, userID, role string, invitedUserIDs []string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return errors.New("group id is required")
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+
+	canInvite, err := s.repo.CanUserReviewJoinRequests(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if !canInvite {
+		return ErrForbidden
+	}
+
+	invitedUserIDs = normalizeUserIDs(invitedUserIDs, userID)
+	validInvitedUserIDs, err := s.repo.FilterInvitableTenantIDs(ctx, groupID, invitedUserIDs)
+	if err != nil {
+		return err
+	}
+	if len(validInvitedUserIDs) == 0 {
+		return ErrNoValidInvitedUsers
+	}
+	if groupDetail.Apartment != nil && len(groupDetail.Members) >= groupDetail.Apartment.TotalSpots {
+		return ErrApartmentFull
+	}
+
+	return s.repo.CreatePendingInvitations(ctx, groupID, userID, validInvitedUserIDs)
 }
 
 // AcceptInvitation accepts a pending group invitation and adds the tenant as member.
@@ -243,22 +303,24 @@ func (s *Service) AcceptInvitation(ctx context.Context, invitationID, userID, ro
 	if groupDetail == nil {
 		return ErrGroupNotFound
 	}
-
-	if groupDetail.Apartment != nil {
-		currentPeople, err := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, invitation.GroupID)
-		if err != nil {
-			return err
-		}
-		if currentPeople > groupDetail.Apartment.AvailableSpots {
-			return ErrApartmentFull
-		}
+	if groupDetail.Apartment != nil && len(groupDetail.Members) >= groupDetail.Apartment.TotalSpots {
+		return ErrApartmentFull
 	}
 
 	if err := s.repo.AcceptInvitation(ctx, strings.TrimSpace(invitationID), strings.TrimSpace(userID)); err != nil {
 		return err
 	}
 
-	return s.repo.AddGroupMember(ctx, invitation.GroupID, strings.TrimSpace(userID), group.MemberRoleMember)
+	hasPending, err := s.repo.HasPendingJoinRequest(ctx, invitation.GroupID, strings.TrimSpace(userID))
+	if err != nil {
+		return err
+	}
+	if hasPending {
+		return ErrJoinRequestAlreadyPending
+	}
+
+	_, err = s.repo.CreateJoinRequest(ctx, invitation.GroupID, strings.TrimSpace(userID), group.JoinRequestSourceGroupInvitation)
+	return err
 }
 
 // RejectInvitation rejects a pending group invitation.
@@ -304,6 +366,36 @@ func (s *Service) AcceptGroup(ctx context.Context, groupID, userID, role string)
 	return s.repo.AcceptGroupForUser(ctx, strings.TrimSpace(groupID), strings.TrimSpace(userID))
 }
 
+// DeleteGroup deletes a tenant group. Only the creator can delete it.
+func (s *Service) DeleteGroup(ctx context.Context, groupID, userID, role string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return errors.New("group id is required")
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+
+	isCreator, err := s.repo.IsGroupCreator(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if !isCreator {
+		return ErrForbidden
+	}
+
+	return s.repo.DeleteGroup(ctx, groupID)
+}
+
 // CreateJoinRequest creates a join request from a viewer to a group.
 func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role string) (string, error) {
 	if err := validateTenant(userID, role); err != nil {
@@ -342,7 +434,7 @@ func (s *Service) CreateJoinRequest(ctx context.Context, groupID, userID, role s
 		return "", ErrJoinRequestAlreadyRejected
 	}
 
-	return s.repo.CreateJoinRequest(ctx, groupID, userID)
+	return s.repo.CreateJoinRequest(ctx, groupID, userID, group.JoinRequestSourceDirectRequest)
 }
 
 // ListJoinRequests returns pending join requests for a group. Only accepted members can list them.
@@ -405,6 +497,13 @@ func (s *Service) signGroup(ctx context.Context, item *group.Group) error {
 		}
 		item.JoinRequests[idx].Requester.AvatarURL = signedURL
 	}
+	if item.Apartment != nil {
+		signedURL, err := s.signApartmentImageURL(ctx, item.Apartment.ImageURL)
+		if err != nil {
+			return err
+		}
+		item.Apartment.ImageURL = signedURL
+	}
 	return nil
 }
 
@@ -445,6 +544,24 @@ func (s *Service) signAvatarURL(ctx context.Context, avatarURL string) (string, 
 	return signedURL, nil
 }
 
+func (s *Service) signApartmentImageURL(ctx context.Context, imagePath string) (string, error) {
+	imagePath = strings.TrimSpace(imagePath)
+	if imagePath == "" {
+		return "", nil
+	}
+	if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
+		return imagePath, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, apartmentPhotosBucket, imagePath, signedImageURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign group apartment image: %w", err)
+	}
+	return signedURL, nil
+}
+
 // VoteJoinRequest casts a member vote on a pending join request.
 func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, decision string) error {
 	if err := validateTenant(userID, role); err != nil {
@@ -472,52 +589,13 @@ func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, 
 		return err
 	}
 
-	return s.finalizeApprovedJoinRequestIfNeeded(ctx, requestID, userID)
+	return s.finalizeApprovedJoinRequestIfNeeded(ctx, requestID)
 }
 
 // finalizeApprovedJoinRequestIfNeeded resolves the request status and, if approved, adds the requester as member.
-func (s *Service) finalizeApprovedJoinRequestIfNeeded(ctx context.Context, requestID, voterUserID string) error {
-	status, completed, err := s.repo.ResolveJoinRequestStatus(ctx, requestID)
-	if err != nil {
-		return err
-	}
-	if !completed || status != group.JoinRequestStatusApproved {
-		return nil
-	}
-
-	joinRequest, err := s.repo.GetJoinRequest(ctx, requestID)
-	if err != nil {
-		return err
-	}
-	if joinRequest == nil {
-		return ErrJoinRequestNotFound
-	}
-
-	if err := s.ensureGroupHasCapacityForNewMember(ctx, joinRequest.GroupID, voterUserID); err != nil {
-		return err
-	}
-
-	return s.repo.AddGroupMember(ctx, joinRequest.GroupID, joinRequest.RequesterUserID, group.MemberRoleMember)
-}
-
-// ensureGroupHasCapacityForNewMember checks apartment capacity before adding a member.
-func (s *Service) ensureGroupHasCapacityForNewMember(ctx context.Context, groupID, callerUserID string) error {
-	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, callerUserID)
-	if err != nil {
-		return err
-	}
-	if groupDetail == nil || groupDetail.Apartment == nil {
-		return nil
-	}
-
-	currentPeople, err := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, groupID)
-	if err != nil {
-		return err
-	}
-	if currentPeople+1 > groupDetail.Apartment.AvailableSpots {
-		return ErrApartmentFull
-	}
-	return nil
+func (s *Service) finalizeApprovedJoinRequestIfNeeded(ctx context.Context, requestID string) error {
+	_, _, err := s.repo.FinalizeJoinRequestApproval(ctx, requestID)
+	return err
 }
 
 // CancelJoinRequest cancels a pending join request owned by the requester.
@@ -647,11 +725,11 @@ func (s *Service) GetMyGroupForApartment(ctx context.Context, userID, role, apar
 }
 
 func (s *Service) ensureApartmentHasCapacity(ctx context.Context, apartmentID string, requiredPlaces int) error {
-	availableSpots, err := s.repo.GetApartmentCapacity(ctx, strings.TrimSpace(apartmentID))
+	totalSpots, err := s.repo.GetApartmentCapacity(ctx, strings.TrimSpace(apartmentID))
 	if err != nil {
 		return err
 	}
-	if requiredPlaces > availableSpots {
+	if requiredPlaces > totalSpots {
 		return ErrApartmentFull
 	}
 	return nil

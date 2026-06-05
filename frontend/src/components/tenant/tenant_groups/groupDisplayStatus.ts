@@ -2,12 +2,17 @@ import type { TenantGroupCurrentJoinRequest, TenantGroupListItem } from '@/types
 
 export type TenantGroupDisplayStatus = 'all' | 'request_sent' | 'accepted' | 'rejected' | 'closed'
 
-export const tenantGroupStatusFilterOptions: Array<{ value: TenantGroupDisplayStatus; label: string }> = [
-	{ value: 'all', label: 'Todos' },
-	{ value: 'request_sent', label: 'Solicitud enviada' },
-	{ value: 'accepted', label: 'Aceptado' },
-	{ value: 'rejected', label: 'Rechazado' },
-	{ value: 'closed', label: 'Cerrado' },
+export interface TenantGroupStatusFilterOption {
+	value: TenantGroupDisplayStatus
+	labelKey: string
+}
+
+export const tenantGroupStatusFilterOptions: TenantGroupStatusFilterOption[] = [
+	{ value: 'all', labelKey: 'tenantGroups.filters.all' },
+	{ value: 'request_sent', labelKey: 'tenantGroups.status.pending' },
+	{ value: 'accepted', labelKey: 'tenantGroups.status.approved' },
+	{ value: 'rejected', labelKey: 'tenantGroups.status.rejected' },
+	{ value: 'closed', labelKey: 'tenantGroups.filters.statusOptions.forming' },
 ]
 
 function isAcceptedJoinRequest(currentJoinRequest: TenantGroupCurrentJoinRequest | null) {

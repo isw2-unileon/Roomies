@@ -210,6 +210,7 @@ interface TenantGroupCurrentJoinRequestDto {
 	id: string
 	group_id: string
 	requester_user_id: string
+	source: 'DIRECT_REQUEST' | 'GROUP_INVITATION'
 	status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
 	created_at: string
 	updated_at: string
@@ -228,6 +229,7 @@ interface TenantGroupJoinRequestDto {
   id: string
   group_id: string
   requester_user_id: string
+  source: 'DIRECT_REQUEST' | 'GROUP_INVITATION'
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
   created_at: string
   updated_at: string
@@ -332,6 +334,7 @@ export interface TenantGroupListFilters {
 
 export interface TenantGroupCandidateFilters {
   search?: string
+  groupId?: string
 }
 
 export interface CreateTenantGroupInput {
@@ -491,6 +494,7 @@ function tenantGroupCurrentJoinRequestFromDto(dto: TenantGroupCurrentJoinRequest
 		id: dto.id,
 		groupId: dto.group_id,
 		requesterUserId: dto.requester_user_id,
+		source: dto.source,
 		status: dto.status,
 		createdAt: dto.created_at,
 		updatedAt: dto.updated_at,
@@ -591,6 +595,7 @@ function tenantGroupJoinRequestFromDto(dto: TenantGroupJoinRequestDto): TenantGr
     id: dto.id,
     groupId: dto.group_id,
     requesterUserId: dto.requester_user_id,
+	 source: dto.source,
     status: dto.status,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
@@ -747,6 +752,10 @@ function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) 
 
   if (filters.search?.trim()) {
     params.set('search', filters.search.trim())
+  }
+
+  if (filters.groupId?.trim()) {
+    params.set('group_id', filters.groupId.trim())
   }
 
   const query = params.toString()
@@ -1010,6 +1019,23 @@ export async function listTenantGroupCandidates(
   return (data.candidates ?? []).map(tenantGroupCandidateFromDto)
 }
 
+export async function inviteUsersToTenantGroup(groupID: string, invitedUserIDs: string[]): Promise<string> {
+	const response = await apiFetch(`/api/tenant/groups/${groupID}/invitations`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			invited_user_ids: invitedUserIDs,
+		}),
+	})
+
+	const data = (await response.json()) as TenantGroupMessageResponseDto
+	if (!response.ok) {
+		throw new Error(resolveTenantErrorMessage(response, 'No se pudo invitar a los nuevos miembros.', data.error))
+	}
+
+	return data.message ?? 'group invitations created'
+}
+
 export async function acceptTenantGroupInvitation(invitationID: string): Promise<string> {
   const response = await apiFetch(`/api/tenant/group-invitations/${invitationID}/accept`, {
     method: 'POST',
@@ -1074,6 +1100,19 @@ export async function acceptTenantGroup(groupID: string): Promise<string> {
   }
 
   return data.message ?? 'group accepted'
+}
+
+export async function deleteTenantGroup(groupID: string): Promise<void> {
+	const response = await apiFetch(`/api/tenant/groups/${groupID}`, {
+		method: 'DELETE',
+	})
+
+	if (response.ok) {
+		return
+	}
+
+	const data = (await response.json()) as TenantGroupMessageResponseDto
+	throw new Error(resolveTenantErrorMessage(response, 'No se pudo eliminar el grupo.', data.error))
 }
 
 export async function createTenantGroupJoinRequest(groupID: string): Promise<string> {

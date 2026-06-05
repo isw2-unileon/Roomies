@@ -201,6 +201,14 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 			LIMIT 1
 		), '') AS current_join_request_requester_user_id,
 		COALESCE((
+			SELECT COALESCE(gjr.source, 'DIRECT_REQUEST')
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $2
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_source,
+		COALESCE((
 			SELECT gjr.status
 			FROM public.group_join_requests gjr
 			WHERE gjr.group_id = g.id
@@ -291,7 +299,38 @@ func (r *Repository) CreateGroup(ctx context.Context, creatorID string, input gr
 
 // AddGroupOwnerMember adds the group creator as accepted owner.
 func (r *Repository) AddGroupOwnerMember(ctx context.Context, groupID, creatorID string) error {
-	return r.AddGroupMember(ctx, groupID, creatorID, group.MemberRoleOwner)
+	const query = `INSERT INTO public.group_members
+		(group_id, user_id, role, status, joined_at, member_accepted)
+	VALUES
+		($1, $2, 'owner', 'ACCEPTED', NOW(), TRUE)
+	ON CONFLICT (group_id, user_id)
+	DO UPDATE SET
+		role = 'owner',
+		status = 'ACCEPTED',
+		joined_at = COALESCE(public.group_members.joined_at, NOW()),
+		member_accepted = TRUE`
+
+	if _, err := r.db.Exec(ctx, query, groupID, creatorID); err != nil {
+		return fmt.Errorf("add group owner member: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteGroup deletes a tenant group and relies on database cascades for related records.
+func (r *Repository) DeleteGroup(ctx context.Context, groupID string) error {
+	const query = `DELETE FROM public.groups
+	WHERE id = $1`
+
+	result, err := r.db.Exec(ctx, query, groupID)
+	if err != nil {
+		return fmt.Errorf("delete group: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("group not found")
+	}
+
+	return nil
 }
 
 // CreatePendingInvitations creates pending invitations for selected tenants.
@@ -361,22 +400,70 @@ func (r *Repository) ListGroupCandidates(ctx context.Context, currentUserID stri
 	return result, nil
 }
 
-// GetApartmentCapacity returns the available spots for an apartment.
+// FilterInvitableTenantIDs keeps only tenant IDs that are not already accepted members and do not have a pending invitation.
+func (r *Repository) FilterInvitableTenantIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error) {
+	if len(userIDs) == 0 {
+		return []string{}, nil
+	}
+
+	const query = `SELECT u.id::text
+	FROM public.users u
+	WHERE u.id::text = ANY($1)
+		AND u.role = 'tenant'
+		AND NOT EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = $2
+				AND gm.user_id = u.id
+				AND gm.status = 'ACCEPTED'
+		)
+		AND NOT EXISTS (
+			SELECT 1
+			FROM public.group_invitations gi
+			WHERE gi.group_id = $2
+				AND gi.invited_user_id = u.id
+				AND gi.status = 'PENDING'
+		)
+	ORDER BY u.full_name ASC`
+
+	rows, err := r.db.Query(ctx, query, userIDs, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("filter invitable tenant ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]string, 0, len(userIDs))
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("scan invitable tenant id: %w", err)
+		}
+		result = append(result, userID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate invitable tenant ids: %w", err)
+	}
+
+	return result, nil
+}
+
+// GetApartmentCapacity returns the total spots for an apartment.
 func (r *Repository) GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error) {
-	const query = `SELECT available_spots
+	const query = `SELECT total_spots
 	FROM public.apartments
 	WHERE id = $1
 		AND status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED')`
 
-	var availableSpots int
-	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&availableSpots); err != nil {
+	var totalSpots int
+	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&totalSpots); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, fmt.Errorf("apartment not found or not available")
 		}
 		return 0, fmt.Errorf("get apartment capacity: %w", err)
 	}
 
-	return availableSpots, nil
+	return totalSpots, nil
 }
 
 // CountAcceptedMembersAndPendingInvitations counts accepted members and pending invitations.
@@ -659,15 +746,15 @@ func (r *Repository) HasRejectedJoinRequest(ctx context.Context, groupID, reques
 }
 
 // CreateJoinRequest creates a pending join request for a group.
-func (r *Repository) CreateJoinRequest(ctx context.Context, groupID, requesterUserID string) (string, error) {
+func (r *Repository) CreateJoinRequest(ctx context.Context, groupID, requesterUserID, source string) (string, error) {
 	const query = `INSERT INTO public.group_join_requests
-		(group_id, requester_user_id, status)
+		(group_id, requester_user_id, source, status)
 	VALUES
-		($1, $2, 'PENDING')
+		($1, $2, $3, 'PENDING')
 	RETURNING id::text`
 
 	var requestID string
-	if err := r.db.QueryRow(ctx, query, groupID, requesterUserID).Scan(&requestID); err != nil {
+	if err := r.db.QueryRow(ctx, query, groupID, requesterUserID, source).Scan(&requestID); err != nil {
 		return "", fmt.Errorf("create join request: %w", err)
 	}
 
@@ -698,6 +785,7 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 		gjr.id::text,
 		gjr.group_id::text,
 		gjr.requester_user_id::text,
+		COALESCE(gjr.source, 'DIRECT_REQUEST'),
 		gjr.status,
 		TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
 		TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at,
@@ -732,29 +820,15 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 	result := make([]group.JoinRequest, 0)
 	for rows.Next() {
 		var item group.JoinRequest
-		if err := rows.Scan(
+		if err := rows.Scan(append([]any{
 			&item.ID,
 			&item.GroupID,
 			&item.RequesterUserID,
+			&item.Source,
 			&item.Status,
 			&item.CreatedAt,
 			&item.UpdatedAt,
-			&item.Requester.UserID,
-			&item.Requester.Name,
-			&item.Requester.Email,
-			&item.Requester.AvatarURL,
-			&item.Requester.Age,
-			&item.Requester.Sex,
-			&item.Requester.Situation,
-			&item.Requester.Degree,
-			&item.Requester.Profession,
-			&item.Requester.BudgetMax,
-			&item.Requester.PreferredArea,
-			&item.Requester.Pets,
-			&item.Requester.Smoking,
-			&item.Requester.SocializationLevel,
-			&item.Requester.NightlifeLevel,
-		); err != nil {
+		}, candidateProfileDests(&item.Requester)...)...); err != nil {
 			return nil, fmt.Errorf("scan join request: %w", err)
 		}
 
@@ -808,6 +882,218 @@ func (r *Repository) VoteJoinRequest(ctx context.Context, requestID, voterUserID
 		return fmt.Errorf("vote join request: %w", err)
 	}
 
+	return nil
+}
+
+// FinalizeJoinRequestApproval updates request status when it reaches a terminal consensus and adds the member atomically.
+func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID string) (string, bool, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return "", false, fmt.Errorf("begin finalize join request approval: %w", err)
+	}
+	defer rollbackTx(ctx, tx)
+
+	joinRequest, err := loadJoinRequestForUpdate(ctx, tx, requestID)
+	if err != nil {
+		return "", false, err
+	}
+	if joinRequest == nil {
+		return "", false, nil
+	}
+	if joinRequest.Status != group.JoinRequestStatusPending {
+		return joinRequest.Status, false, tx.Commit(ctx)
+	}
+
+	hasReject, err := hasRejectVote(ctx, tx, requestID)
+	if err != nil {
+		return "", false, err
+	}
+	if hasReject {
+		return rejectJoinRequestAs(ctx, tx, requestID, group.JoinRequestStatusRejected, "set join request rejected", "commit rejected join request")
+	}
+
+	return finalizePendingJoinRequest(ctx, tx, requestID, joinRequest.GroupID, joinRequest.RequesterUserID)
+}
+
+func finalizePendingJoinRequest(ctx context.Context, tx pgx.Tx, requestID, groupID, requesterUserID string) (string, bool, error) {
+	approvals, expected, err := countJoinRequestApprovals(ctx, tx, requestID)
+	if err != nil {
+		return "", false, err
+	}
+	if expected == 0 || approvals < expected {
+		if err := tx.Commit(ctx); err != nil {
+			return "", false, fmt.Errorf("commit pending join request: %w", err)
+		}
+		return group.JoinRequestStatusPending, false, nil
+	}
+
+	var totalSpots int
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(a.total_spots, 0)
+	FROM public.groups g
+	LEFT JOIN public.apartments a ON a.id = g.apartment_id
+	WHERE g.id = $1
+	FOR UPDATE OF g`, groupID).Scan(&totalSpots); err != nil {
+		return "", false, fmt.Errorf("lock group for join request finalization: %w", err)
+	}
+
+	var acceptedMembers int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*)::int
+	FROM public.group_members
+	WHERE group_id = $1
+		AND status = 'ACCEPTED'`, groupID).Scan(&acceptedMembers); err != nil {
+		return "", false, fmt.Errorf("count accepted members for join request finalization: %w", err)
+	}
+
+	if totalSpots > 0 && acceptedMembers+1 > totalSpots {
+		return rejectJoinRequestByCapacity(ctx, tx, requestID, groupID, totalSpots)
+	}
+	return approveJoinRequest(ctx, tx, requestID, groupID, requesterUserID, totalSpots)
+}
+
+func rejectJoinRequestByCapacity(ctx context.Context, tx pgx.Tx, requestID, groupID string, totalSpots int) (string, bool, error) {
+	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'REJECTED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
+		return "", false, fmt.Errorf("reject full-capacity join request: %w", err)
+	}
+	if err := closePendingGroupAdmissionsTx(ctx, tx, groupID, totalSpots); err != nil {
+		return "", false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", false, fmt.Errorf("commit full-capacity join request rejection: %w", err)
+	}
+	return group.JoinRequestStatusRejected, true, nil
+}
+
+func approveJoinRequest(ctx context.Context, tx pgx.Tx, requestID, groupID, requesterUserID string, totalSpots int) (string, bool, error) {
+	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'APPROVED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
+		return "", false, fmt.Errorf("set join request approved: %w", err)
+	}
+	if err := addApprovedJoinRequestMember(ctx, tx, groupID, requesterUserID); err != nil {
+		return "", false, err
+	}
+	if err := closePendingGroupAdmissionsTx(ctx, tx, groupID, totalSpots); err != nil {
+		return "", false, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", false, fmt.Errorf("commit approved join request: %w", err)
+	}
+	return group.JoinRequestStatusApproved, true, nil
+}
+
+func loadJoinRequestForUpdate(ctx context.Context, tx pgx.Tx, requestID string) (*group.JoinRequest, error) {
+	const query = `SELECT
+		gjr.id::text,
+		gjr.group_id::text,
+		gjr.requester_user_id::text,
+		COALESCE(gjr.source, 'DIRECT_REQUEST'),
+		gjr.status,
+		TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
+	FROM public.group_join_requests gjr
+	WHERE gjr.id = $1
+	FOR UPDATE`
+
+	var item group.JoinRequest
+	if err := tx.QueryRow(ctx, query, requestID).Scan(
+		&item.ID,
+		&item.GroupID,
+		&item.RequesterUserID,
+		&item.Source,
+		&item.Status,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("load join request for finalization: %w", err)
+	}
+	return &item, nil
+}
+
+func hasRejectVote(ctx context.Context, tx pgx.Tx, requestID string) (bool, error) {
+	var hasReject bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM public.group_join_request_votes WHERE request_id = $1 AND decision = 'REJECT')`,
+		requestID,
+	).Scan(&hasReject); err != nil {
+		return false, fmt.Errorf("check reject votes: %w", err)
+	}
+	return hasReject, nil
+}
+
+func countJoinRequestApprovals(ctx context.Context, tx pgx.Tx, requestID string) (approvals int, expected int, err error) {
+	const query = `SELECT
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = $1
+				AND gjrv.decision = 'APPROVE'
+		), 0)::int,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			INNER JOIN public.group_join_requests gjr ON gjr.group_id = gm.group_id
+			WHERE gjr.id = $1
+				AND gm.status = 'ACCEPTED'
+		), 0)::int`
+	if err := tx.QueryRow(ctx, query, requestID).Scan(&approvals, &expected); err != nil {
+		return 0, 0, fmt.Errorf("count join request approvals: %w", err)
+	}
+	return approvals, expected, nil
+}
+
+func rejectJoinRequestAs(ctx context.Context, tx pgx.Tx, requestID, status, updateWrap, commitWrap string) (string, bool, error) {
+	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = $2, updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID, status); err != nil {
+		return "", false, fmt.Errorf("%s: %w", updateWrap, err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", false, fmt.Errorf("%s: %w", commitWrap, err)
+	}
+	return status, true, nil
+}
+
+func addApprovedJoinRequestMember(ctx context.Context, tx pgx.Tx, groupID, requesterUserID string) error {
+	if _, err := tx.Exec(ctx, `INSERT INTO public.group_members
+		(group_id, user_id, role, status, joined_at, member_accepted)
+	VALUES
+		($1, $2, $3, 'ACCEPTED', NOW(), TRUE)
+	ON CONFLICT (group_id, user_id)
+	DO UPDATE SET
+		role = EXCLUDED.role,
+		status = 'ACCEPTED',
+		joined_at = COALESCE(public.group_members.joined_at, NOW()),
+		member_accepted = TRUE`, groupID, requesterUserID, group.MemberRoleMember); err != nil {
+		return fmt.Errorf("add approved join request member: %w", err)
+	}
+	return nil
+}
+
+func closePendingGroupAdmissionsTx(ctx context.Context, tx pgx.Tx, groupID string, totalSpots int) error {
+	if totalSpots <= 0 {
+		return nil
+	}
+
+	var acceptedMembers int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*)::int FROM public.group_members WHERE group_id = $1 AND status = 'ACCEPTED'`, groupID).Scan(&acceptedMembers); err != nil {
+		return fmt.Errorf("count accepted members while closing pending admissions: %w", err)
+	}
+	if acceptedMembers < totalSpots {
+		return nil
+	}
+
+	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests
+	SET status = 'REJECTED', updated_at = NOW()
+	WHERE group_id = $1
+		AND status = 'PENDING'`, groupID); err != nil {
+		return fmt.Errorf("close pending join requests for full group: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE public.group_invitations
+	SET status = 'EXPIRED', responded_at = NOW()
+	WHERE group_id = $1
+		AND status = 'PENDING'`, groupID); err != nil {
+		return fmt.Errorf("expire pending invitations for full group: %w", err)
+	}
 	return nil
 }
 
@@ -868,6 +1154,7 @@ func (r *Repository) GetJoinRequest(ctx context.Context, requestID string) (*gro
 		id::text,
 		group_id::text,
 		requester_user_id::text,
+		COALESCE(source, 'DIRECT_REQUEST'),
 		status,
 		TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
 		TO_CHAR(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
@@ -879,6 +1166,7 @@ func (r *Repository) GetJoinRequest(ctx context.Context, requestID string) (*gro
 		&item.ID,
 		&item.GroupID,
 		&item.RequesterUserID,
+		&item.Source,
 		&item.Status,
 		&item.CreatedAt,
 		&item.UpdatedAt,
@@ -1067,7 +1355,7 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 	result := make([]group.Invitation, 0)
 	for rows.Next() {
 		var item group.Invitation
-		if err := rows.Scan(
+		if err := rows.Scan(append([]any{
 			&item.ID,
 			&item.GroupID,
 			&item.InvitedBy,
@@ -1075,22 +1363,7 @@ func (r *Repository) listPendingInvitations(ctx context.Context, groupID string)
 			&item.Status,
 			&item.CreatedAt,
 			&item.RespondedAt,
-			&item.User.UserID,
-			&item.User.Name,
-			&item.User.Email,
-			&item.User.AvatarURL,
-			&item.User.Age,
-			&item.User.Sex,
-			&item.User.Situation,
-			&item.User.Degree,
-			&item.User.Profession,
-			&item.User.BudgetMax,
-			&item.User.PreferredArea,
-			&item.User.Pets,
-			&item.User.Smoking,
-			&item.User.SocializationLevel,
-			&item.User.NightlifeLevel,
-		); err != nil {
+		}, candidateProfileDests(&item.User)...)...); err != nil {
 			return nil, fmt.Errorf("scan pending invitation: %w", err)
 		}
 		result = append(result, item)
@@ -1256,6 +1529,14 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 			LIMIT 1
 		), '') AS current_join_request_requester_user_id,
 		COALESCE((
+			SELECT COALESCE(gjr.source, 'DIRECT_REQUEST')
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+			LIMIT 1
+		), '') AS current_join_request_source,
+		COALESCE((
 			SELECT gjr.status
 			FROM public.group_join_requests gjr
 			WHERE gjr.group_id = g.id
@@ -1410,6 +1691,25 @@ func buildListGroupCandidatesQuery(currentUserID string, filters group.Candidate
 		whereClauses = append(whereClauses, "(u.full_name ILIKE "+arg+" OR u.email ILIKE "+arg+" OR COALESCE(tp.preferred_area, '') ILIKE "+arg+")")
 	}
 
+	if filters.GroupID != "" {
+		args = append(args, filters.GroupID)
+		arg := fmt.Sprintf("$%d", len(args))
+		whereClauses = append(whereClauses, `NOT EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = `+arg+`
+				AND gm.user_id = u.id
+				AND gm.status = 'ACCEPTED'
+		)`)
+		whereClauses = append(whereClauses, `NOT EXISTS (
+			SELECT 1
+			FROM public.group_invitations gi
+			WHERE gi.group_id = `+arg+`
+				AND gi.invited_user_id = u.id
+				AND gi.status = 'PENDING'
+		)`)
+	}
+
 	query := baseQuery
 	if len(whereClauses) > 0 {
 		query += " AND " + strings.Join(whereClauses, " AND ")
@@ -1422,6 +1722,26 @@ func buildListGroupCandidatesQuery(currentUserID string, filters group.Candidate
 
 type groupScanner interface {
 	Scan(dest ...interface{}) error
+}
+
+func candidateProfileDests(user *group.Candidate) []any {
+	return []any{
+		&user.UserID,
+		&user.Name,
+		&user.Email,
+		&user.AvatarURL,
+		&user.Age,
+		&user.Sex,
+		&user.Situation,
+		&user.Degree,
+		&user.Profession,
+		&user.BudgetMax,
+		&user.PreferredArea,
+		&user.Pets,
+		&user.Smoking,
+		&user.SocializationLevel,
+		&user.NightlifeLevel,
+	}
 }
 
 func scanGroupSummary(row groupScanner) (group.Group, error) {
@@ -1444,6 +1764,7 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 	var currentJoinRequestID string
 	var currentJoinRequestGroupID string
 	var currentJoinRequestRequesterUserID string
+	var currentJoinRequestSource string
 	var currentJoinRequestStatus string
 	var currentJoinRequestCreatedAt string
 	var currentJoinRequestUpdatedAt string
@@ -1479,6 +1800,7 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 		&currentJoinRequestID,
 		&currentJoinRequestGroupID,
 		&currentJoinRequestRequesterUserID,
+		&currentJoinRequestSource,
 		&currentJoinRequestStatus,
 		&currentJoinRequestCreatedAt,
 		&currentJoinRequestUpdatedAt,
@@ -1514,6 +1836,7 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 			ID:              currentJoinRequestID,
 			GroupID:         currentJoinRequestGroupID,
 			RequesterUserID: currentJoinRequestRequesterUserID,
+			Source:          currentJoinRequestSource,
 			Status:          currentJoinRequestStatus,
 			CreatedAt:       currentJoinRequestCreatedAt,
 			UpdatedAt:       currentJoinRequestUpdatedAt,
@@ -1569,4 +1892,11 @@ func nullIfEmpty(value string) interface{} {
 		return nil
 	}
 	return value
+}
+
+func rollbackTx(ctx context.Context, tx pgx.Tx) {
+	if tx == nil {
+		return
+	}
+	_ = tx.Rollback(ctx)
 }

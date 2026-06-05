@@ -7,9 +7,11 @@ interface Props {
   selected: TenantGroupCandidate[]
   onChange: (candidates: TenantGroupCandidate[]) => void
   preselectedUserIds?: string[]
+  groupId?: string
+  disabled?: boolean
 }
 
-export default function TenantGroupCandidateSelector({ selected, onChange, preselectedUserIds }: Props) {
+export default function TenantGroupCandidateSelector({ selected, onChange, preselectedUserIds, groupId, disabled = false }: Props) {
   const [search, setSearch] = useState('')
   const [candidates, setCandidates] = useState<TenantGroupCandidate[]>([])
   const [loading, setLoading] = useState(false)
@@ -21,7 +23,7 @@ export default function TenantGroupCandidateSelector({ selected, onChange, prese
       setLoading(true)
       setError('')
       try {
-        const list = await listTenantGroupCandidates({ search })
+	        const list = await listTenantGroupCandidates({ search, groupId })
         setCandidates(list)
       } catch (err) {
         setCandidates([])
@@ -31,7 +33,7 @@ export default function TenantGroupCandidateSelector({ selected, onChange, prese
       }
     }
     void loadCandidates()
-  }, [search])
+  }, [groupId, search])
 
   useEffect(() => {
     if (!preselectedUserIds?.length || didAutoSelect || candidates.length === 0) return
@@ -79,6 +81,7 @@ export default function TenantGroupCandidateSelector({ selected, onChange, prese
                     className={`${styles.candidateItem} ${isSelected ? styles.selectedCandidate : ''}`}
                     onClick={() => toggleCandidate(candidate)}
                     aria-pressed={isSelected}
+                    disabled={disabled}
                   >
                     <span className={styles.itemTitle}>{candidate.name}</span>
                     <span className={styles.itemMeta}>{candidate.email}</span>
