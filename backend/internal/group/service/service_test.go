@@ -9,35 +9,35 @@ import (
 )
 
 type fakeGroupRepository struct {
-	groupDetail               *group.Group
-	invitation                *group.Invitation
-	hasPendingJoinRequest     bool
-	hasRejectedJoinRequest    bool
-	createdJoinRequestID      string
-	createdJoinRequest        bool
-	createdGroupID            string
-	isGroupCreator            bool
-	canReviewJoinRequests     bool
-	updatedApartmentID        *string
-	ownerMemberAdded          bool
-	acceptedGroupForUserID    string
-	deletedGroupID            string
-	acceptedInvitationID      string
-	acceptedInvitationUserID  string
-	addedGroupMemberUserID    string
-	invitableTenantIDs        []string
-	createdPendingGroupID     string
-	createdPendingInvitedBy   string
-	createdPendingUserIDs     []string
-	apartmentCapacity         int
-	currentPeopleCount        int
-	joinRequestDetail         *group.JoinRequest
-	resolvedJoinRequestStatus string
-	resolvedJoinRequestDone   bool
-	canVoteJoinRequest        bool
-	votedRequestID            string
-	votedUserID               string
-	votedDecision             string
+	groupDetail                *group.Group
+	invitation                 *group.Invitation
+	hasPendingJoinRequest      bool
+	hasRejectedJoinRequest     bool
+	createdJoinRequestID       string
+	createdJoinRequest         bool
+	createdJoinRequestSource   string
+	createdGroupID             string
+	isGroupCreator             bool
+	canReviewJoinRequests      bool
+	updatedApartmentID         *string
+	ownerMemberAdded           bool
+	acceptedGroupForUserID     string
+	deletedGroupID             string
+	acceptedInvitationID       string
+	acceptedInvitationUserID   string
+	addedGroupMemberUserID     string
+	invitableTenantIDs         []string
+	createdPendingGroupID      string
+	createdPendingInvitedBy    string
+	createdPendingUserIDs      []string
+	apartmentCapacity          int
+	currentPeopleCount         int
+	finalizedJoinRequestStatus string
+	finalizedJoinRequestDone   bool
+	canVoteJoinRequest         bool
+	votedRequestID             string
+	votedUserID                string
+	votedDecision              string
 }
 
 func (f *fakeGroupRepository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
@@ -127,8 +127,9 @@ func (f *fakeGroupRepository) HasRejectedJoinRequest(ctx context.Context, groupI
 	return f.hasRejectedJoinRequest, nil
 }
 
-func (f *fakeGroupRepository) CreateJoinRequest(ctx context.Context, groupID, requesterUserID string) (string, error) {
+func (f *fakeGroupRepository) CreateJoinRequest(ctx context.Context, groupID, requesterUserID, source string) (string, error) {
 	f.createdJoinRequest = true
+	f.createdJoinRequestSource = source
 	if f.createdJoinRequestID == "" {
 		f.createdJoinRequestID = "join-request-1"
 	}
@@ -154,12 +155,8 @@ func (f *fakeGroupRepository) VoteJoinRequest(ctx context.Context, requestID, vo
 	return nil
 }
 
-func (f *fakeGroupRepository) ResolveJoinRequestStatus(ctx context.Context, requestID string) (string, bool, error) {
-	return f.resolvedJoinRequestStatus, f.resolvedJoinRequestDone, nil
-}
-
-func (f *fakeGroupRepository) GetJoinRequest(ctx context.Context, requestID string) (*group.JoinRequest, error) {
-	return f.joinRequestDetail, nil
+func (f *fakeGroupRepository) FinalizeJoinRequestApproval(ctx context.Context, requestID string) (string, bool, error) {
+	return f.finalizedJoinRequestStatus, f.finalizedJoinRequestDone, nil
 }
 
 func (f *fakeGroupRepository) CancelJoinRequest(ctx context.Context, requestID, requesterUserID string) error {
@@ -235,7 +232,7 @@ func TestAcceptInvitationRejectsMissingInvitation(t *testing.T) {
 	}
 }
 
-func TestAcceptInvitationAddsMemberOnlyForInvitedUser(t *testing.T) {
+func TestAcceptInvitationCreatesInvitationSourcedJoinRequest(t *testing.T) {
 	repo := &fakeGroupRepository{
 		invitation: &group.Invitation{
 			ID:            "inv-1",
@@ -254,15 +251,15 @@ func TestAcceptInvitationAddsMemberOnlyForInvitedUser(t *testing.T) {
 	if repo.acceptedInvitationID != "inv-1" || repo.acceptedInvitationUserID != "tenant-2" {
 		t.Fatalf("accept invitation called with unexpected values: %q %q", repo.acceptedInvitationID, repo.acceptedInvitationUserID)
 	}
-	if repo.addedGroupMemberUserID != "tenant-2" {
-		t.Fatalf("addedGroupMemberUserID = %q, want tenant-2", repo.addedGroupMemberUserID)
+	if !repo.createdJoinRequest {
+		t.Fatalf("CreateJoinRequest should be called after accepting the invitation")
 	}
-	if repo.acceptedGroupForUserID != "tenant-2" {
-		t.Fatalf("acceptedGroupForUserID = %q, want tenant-2", repo.acceptedGroupForUserID)
+	if repo.createdJoinRequestSource != group.JoinRequestSourceGroupInvitation {
+		t.Fatalf("createdJoinRequestSource = %q, want %q", repo.createdJoinRequestSource, group.JoinRequestSourceGroupInvitation)
 	}
 }
 
-func TestAcceptInvitationAllowsThirdMemberWhenApartmentHasThreeTotalSpots(t *testing.T) {
+func TestAcceptInvitationAllowsInvitationConsensusFlowWhenApartmentHasThreeTotalSpots(t *testing.T) {
 	repo := &fakeGroupRepository{
 		invitation: &group.Invitation{
 			ID:            "inv-3",
@@ -286,11 +283,8 @@ func TestAcceptInvitationAllowsThirdMemberWhenApartmentHasThreeTotalSpots(t *tes
 	if err != nil {
 		t.Fatalf("AcceptInvitation returned error: %v", err)
 	}
-	if repo.addedGroupMemberUserID != "tenant-3" {
-		t.Fatalf("addedGroupMemberUserID = %q, want tenant-3", repo.addedGroupMemberUserID)
-	}
-	if repo.acceptedGroupForUserID != "tenant-3" {
-		t.Fatalf("acceptedGroupForUserID = %q, want tenant-3", repo.acceptedGroupForUserID)
+	if repo.createdJoinRequestSource != group.JoinRequestSourceGroupInvitation {
+		t.Fatalf("createdJoinRequestSource = %q, want %q", repo.createdJoinRequestSource, group.JoinRequestSourceGroupInvitation)
 	}
 }
 
@@ -372,14 +366,9 @@ func TestInviteUsersRejectsWhenNoValidCandidatesRemain(t *testing.T) {
 
 func TestVoteJoinRequestAllowsThirdMemberWhenApartmentHasThreeTotalSpots(t *testing.T) {
 	repo := &fakeGroupRepository{
-		canVoteJoinRequest:        true,
-		resolvedJoinRequestStatus: group.JoinRequestStatusApproved,
-		resolvedJoinRequestDone:   true,
-		joinRequestDetail: &group.JoinRequest{
-			ID:              "request-1",
-			GroupID:         "group-1",
-			RequesterUserID: "tenant-3",
-		},
+		canVoteJoinRequest:         true,
+		finalizedJoinRequestStatus: group.JoinRequestStatusApproved,
+		finalizedJoinRequestDone:   true,
 		groupDetail: &group.Group{
 			ID: "group-1",
 			Apartment: &group.Apartment{
@@ -396,8 +385,8 @@ func TestVoteJoinRequestAllowsThirdMemberWhenApartmentHasThreeTotalSpots(t *test
 	if err != nil {
 		t.Fatalf("VoteJoinRequest returned error: %v", err)
 	}
-	if repo.addedGroupMemberUserID != "tenant-3" {
-		t.Fatalf("addedGroupMemberUserID = %q, want tenant-3", repo.addedGroupMemberUserID)
+	if repo.votedDecision != group.JoinRequestVoteApprove {
+		t.Fatalf("votedDecision = %q, want %q", repo.votedDecision, group.JoinRequestVoteApprove)
 	}
 }
 
@@ -417,6 +406,9 @@ func TestCreateJoinRequestAllowsViewerWithoutPreviousRequest(t *testing.T) {
 	}
 	if !repo.createdJoinRequest {
 		t.Fatalf("CreateJoinRequest should be called when no previous rejected request exists")
+	}
+	if repo.createdJoinRequestSource != group.JoinRequestSourceDirectRequest {
+		t.Fatalf("createdJoinRequestSource = %q, want %q", repo.createdJoinRequestSource, group.JoinRequestSourceDirectRequest)
 	}
 }
 

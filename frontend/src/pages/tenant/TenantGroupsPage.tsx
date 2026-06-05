@@ -125,7 +125,7 @@ export default function TenantGroupsPage() {
 
         try {
             await acceptTenantGroupInvitation(group.invitationId)
-            setNotice('Invitación aceptada correctamente.')
+            setNotice('Invitación aceptada. Pendiente de aprobación del grupo.')
             if (selectedGroup?.id === group.id) {
                 const detail = await getTenantGroup(group.id)
                 setSelectedGroup(detail)

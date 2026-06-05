@@ -212,6 +212,7 @@ interface TenantGroupCurrentJoinRequestDto {
 	id: string
 	group_id: string
 	requester_user_id: string
+	source: 'DIRECT_REQUEST' | 'GROUP_INVITATION'
 	status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
 	created_at: string
 	updated_at: string
@@ -230,6 +231,7 @@ interface TenantGroupJoinRequestDto {
   id: string
   group_id: string
   requester_user_id: string
+  source: 'DIRECT_REQUEST' | 'GROUP_INVITATION'
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
   created_at: string
   updated_at: string
@@ -492,6 +494,7 @@ function tenantGroupCurrentJoinRequestFromDto(dto: TenantGroupCurrentJoinRequest
 		id: dto.id,
 		groupId: dto.group_id,
 		requesterUserId: dto.requester_user_id,
+		source: dto.source,
 		status: dto.status,
 		createdAt: dto.created_at,
 		updatedAt: dto.updated_at,
@@ -592,6 +595,7 @@ function tenantGroupJoinRequestFromDto(dto: TenantGroupJoinRequestDto): TenantGr
     id: dto.id,
     groupId: dto.group_id,
     requesterUserId: dto.requester_user_id,
+	 source: dto.source,
     status: dto.status,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,

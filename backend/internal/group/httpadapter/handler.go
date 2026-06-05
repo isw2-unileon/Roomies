@@ -69,6 +69,7 @@ type joinRequestResponse struct {
 	ID              string             `json:"id"`
 	GroupID         string             `json:"group_id"`
 	RequesterUserID string             `json:"requester_user_id"`
+	Source          string             `json:"source"`
 	Status          string             `json:"status"`
 	CreatedAt       string             `json:"created_at"`
 	UpdatedAt       string             `json:"updated_at"`
@@ -80,6 +81,7 @@ type currentJoinRequestResponse struct {
 	ID              string `json:"id"`
 	GroupID         string `json:"group_id"`
 	RequesterUserID string `json:"requester_user_id"`
+	Source          string `json:"source"`
 	Status          string `json:"status"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`
@@ -598,6 +600,7 @@ func currentJoinRequestResponseFromDomain(item *group.UserJoinRequest) *currentJ
 		ID:              item.ID,
 		GroupID:         item.GroupID,
 		RequesterUserID: item.RequesterUserID,
+		Source:          item.Source,
 		Status:          item.Status,
 		CreatedAt:       item.CreatedAt,
 		UpdatedAt:       item.UpdatedAt,
@@ -611,6 +614,7 @@ func joinRequestResponses(items []group.JoinRequest) []joinRequestResponse {
 			ID:              item.ID,
 			GroupID:         item.GroupID,
 			RequesterUserID: item.RequesterUserID,
+			Source:          item.Source,
 			Status:          item.Status,
 			CreatedAt:       item.CreatedAt,
 			UpdatedAt:       item.UpdatedAt,

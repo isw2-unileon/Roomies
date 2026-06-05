@@ -46,6 +46,14 @@ function canResubmitApartmentRequest(status: string) {
 	return status === 'REJECTED_BY_OWNER' || status === 'CANCELLED'
 }
 
+function getJoinRequestSourceLabel(source: string) {
+	if (source === 'GROUP_INVITATION') {
+		return 'Invitado por el grupo'
+	}
+
+	return ''
+}
+
 export default function TenantGroupDetail({
   group,
   onAcceptGroup,
@@ -259,6 +267,9 @@ export default function TenantGroupDetail({
                 <div className={styles.invitationInfo}>
                   <p>{request.requester.name}</p>
                   <p>{request.requester.email}</p>
+				  {getJoinRequestSourceLabel(request.source) ? (
+					<p className={styles.requestSourceBadge}>{getJoinRequestSourceLabel(request.source)}</p>
+				  ) : null}
                   <p>
                     Aprobaciones: {request.votes.filter((vote) => vote.decision === 'APPROVE').length}/{group.members.length}
                   </p>

@@ -169,6 +169,7 @@ export type TenantGroupMemberStatus = 'ACCEPTED' | 'LEFT'
 export type TenantGroupInvitationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
 export type TenantGroupJoinRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
 export type TenantGroupJoinVoteDecision = 'APPROVE' | 'REJECT'
+export type TenantGroupJoinRequestSource = 'DIRECT_REQUEST' | 'GROUP_INVITATION'
 
 export interface TenantGroupApartment {
     id: string
@@ -195,6 +196,7 @@ export interface TenantGroupCurrentJoinRequest {
 	id: string
 	groupId: string
 	requesterUserId: string
+	source: TenantGroupJoinRequestSource
 	status: TenantGroupJoinRequestStatus
 	createdAt: string
 	updatedAt: string
@@ -271,6 +273,7 @@ export interface TenantGroupJoinRequest {
     id: string
     groupId: string
     requesterUserId: string
+    source: TenantGroupJoinRequestSource
     status: TenantGroupJoinRequestStatus
     createdAt: string
     updatedAt: string

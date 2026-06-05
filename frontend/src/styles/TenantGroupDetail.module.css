@@ -362,6 +362,17 @@
   border-radius: 0.5rem;
 }
 
+.requestSourceBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.2rem 0.5rem;
+  color: #6941c6;
+  font-size: 0.7rem;
+  font-weight: 900;
+  background: #f4ebff;
+  border-radius: 999px;
+}
+
 .memberData {
   min-width: 0;
 }

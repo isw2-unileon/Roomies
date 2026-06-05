@@ -55,6 +55,11 @@ const (
 	JoinRequestVoteApprove = "APPROVE"
 	// JoinRequestVoteReject represents a rejection vote.
 	JoinRequestVoteReject = "REJECT"
+
+	// JoinRequestSourceDirectRequest identifies a regular join request created by the requester.
+	JoinRequestSourceDirectRequest = "DIRECT_REQUEST"
+	// JoinRequestSourceGroupInvitation identifies a request created after accepting a group invitation.
+	JoinRequestSourceGroupInvitation = "GROUP_INVITATION"
 )
 
 // CreateGroupInput contains the data required to create a tenant group.
@@ -189,6 +194,7 @@ type JoinRequest struct {
 	ID              string
 	GroupID         string
 	RequesterUserID string
+	Source          string
 	Status          string
 	CreatedAt       string
 	UpdatedAt       string
@@ -201,6 +207,7 @@ type UserJoinRequest struct {
 	ID              string
 	GroupID         string
 	RequesterUserID string
+	Source          string
 	Status          string
 	CreatedAt       string
 	UpdatedAt       string
