@@ -1,23 +1,27 @@
+import { TFunction } from 'i18next'
 import type { TenantGroupCurrentJoinRequest } from '@/types/tenant'
 
-export function getCurrentJoinRequestLabel(currentJoinRequest: TenantGroupCurrentJoinRequest | null) {
+export function getCurrentJoinRequestLabel(
+	currentJoinRequest: TenantGroupCurrentJoinRequest | null,
+	t: TFunction,
+): string {
 	if (!currentJoinRequest) {
 		return ''
 	}
 
 	if (currentJoinRequest.status === 'PENDING') {
-		return 'Solicitud enviada'
+		return t('tenantGroups.status.pending')
 	}
 
 	if (currentJoinRequest.status === 'REJECTED') {
-		return 'Rechazado'
+		return t('tenantGroups.status.rejected')
 	}
 
 	if (currentJoinRequest.status === 'APPROVED') {
-		return 'Aceptado'
+		return t('tenantGroups.status.approved')
 	}
 
-	return 'Cancelado'
+	return t('tenantGroups.status.cancelled')
 }
 
 export function canCreateNewJoinRequest(currentJoinRequest: TenantGroupCurrentJoinRequest | null) {

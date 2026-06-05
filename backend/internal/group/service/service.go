@@ -9,7 +9,11 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/group"
 )
 
-const signedAvatarURLTTLSeconds = 3600
+const (
+	signedAvatarURLTTLSeconds = 3600
+	apartmentPhotosBucket     = "Apartment_photos"
+	signedImageURLTTLSeconds  = 3600
+)
 
 type imageStorage interface {
 	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
@@ -493,6 +497,13 @@ func (s *Service) signGroup(ctx context.Context, item *group.Group) error {
 		}
 		item.JoinRequests[idx].Requester.AvatarURL = signedURL
 	}
+	if item.Apartment != nil {
+		signedURL, err := s.signApartmentImageURL(ctx, item.Apartment.ImageURL)
+		if err != nil {
+			return err
+		}
+		item.Apartment.ImageURL = signedURL
+	}
 	return nil
 }
 
@@ -529,6 +540,24 @@ func (s *Service) signAvatarURL(ctx context.Context, avatarURL string) (string, 
 	signedURL, err := s.imageStorage.CreateSignedURL(ctx, "profile-avatars", avatarURL, signedAvatarURLTTLSeconds)
 	if err != nil {
 		return "", fmt.Errorf("sign group avatar: %w", err)
+	}
+	return signedURL, nil
+}
+
+func (s *Service) signApartmentImageURL(ctx context.Context, imagePath string) (string, error) {
+	imagePath = strings.TrimSpace(imagePath)
+	if imagePath == "" {
+		return "", nil
+	}
+	if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
+		return imagePath, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, apartmentPhotosBucket, imagePath, signedImageURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign group apartment image: %w", err)
 	}
 	return signedURL, nil
 }
