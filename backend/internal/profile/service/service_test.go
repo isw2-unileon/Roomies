@@ -57,6 +57,14 @@ func (f *fakeProfileRepository) UpdateTenantAvatarURL(ctx context.Context, userI
 	return nil
 }
 
+func (f *fakeProfileRepository) GetOwnerProfile(ctx context.Context, userID string) (*profile.OwnerProfile, error) {
+	return nil, nil
+}
+
+func (f *fakeProfileRepository) UpdateOwnerProfile(ctx context.Context, userID string, input profile.OwnerProfileInput) error {
+	return nil
+}
+
 func (f *fakeImageStorage) UploadObject(ctx context.Context, bucket, objectPath, contentType string, fileData []byte) error {
 	f.uploadedBucket = bucket
 	f.uploadedPath = objectPath
