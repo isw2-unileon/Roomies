@@ -114,7 +114,6 @@ export default function TenantGroupCard({
 
     const hasBudget = group.averageBudgetMax > 0
     const hasImage = Boolean(group.apartment?.imageUrl)
-    const panelId = `tenant-group-panel-${group.id}`
 
     const loadDetail = useCallback(async () => {
         setLoadingDetail(true)
@@ -362,7 +361,6 @@ export default function TenantGroupCard({
                         className={styles.viewButton}
                         onClick={toggleExpanded}
                         aria-expanded={isExpanded}
-                        aria-controls={panelId}
                     >
                         <span>
                             {isExpanded
@@ -401,41 +399,40 @@ export default function TenantGroupCard({
                 </div>
             </aside>
 
-            <div
-                id={panelId}
-                className={`${styles.detailPanelSlot} ${isExpanded ? styles.detailPanelSlotOpen : ''}`}
-                aria-hidden={!isExpanded}
-            >
-                <div className={styles.detailPanelInner}>
-                    {isExpanded ? (
-                        loadingDetail ? (
-                            <TenantGroupDetailSkeleton />
-                        ) : detailError ? (
-                            <div className={styles.errorState}>{detailError}</div>
-                        ) : detail ? (
-                            <TenantGroupDetailPanel
-                                group={detail}
-                                onAcceptGroup={handleAcceptGroup}
-                                isAcceptingGroup={acceptingGroup}
-                                onDeleteGroup={handleDeleteGroup}
-                                isDeletingGroup={deletingGroup}
-                                onCreateApartmentApplication={handleCreateApartmentApplication}
-                                isCreatingApartmentApplication={creatingApartmentApplication}
-                                onCreateJoinRequest={handleCreateJoinRequest}
-                                isCreatingJoinRequest={creatingJoinRequest}
-                                onInviteMembers={handleInviteMembers}
-                                isInvitingMembers={invitingMembers}
-                                onVoteJoinRequest={(groupID, request, decision) =>
-                                    handleVoteJoinRequest(groupID, request.id, decision)
-                                }
-                                votingJoinRequestKey={votingJoinRequestKey}
-                                onLinkApartment={handleLinkApartment}
-                                isLinkingApartment={linkingApartment}
-                            />
-                        ) : null
-                    ) : null}
+            {isExpanded ? (
+                <div className={styles.modalOverlay} onClick={toggleExpanded} role="dialog" aria-modal="true">
+                    <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.modalContent}>
+                            {loadingDetail ? (
+                                <TenantGroupDetailSkeleton />
+                            ) : detailError ? (
+                                <div className={styles.errorState}>{detailError}</div>
+                            ) : detail ? (
+                                <TenantGroupDetailPanel
+                                    group={detail}
+                                    onClose={toggleExpanded}
+                                    onAcceptGroup={handleAcceptGroup}
+                                    isAcceptingGroup={acceptingGroup}
+                                    onDeleteGroup={handleDeleteGroup}
+                                    isDeletingGroup={deletingGroup}
+                                    onCreateApartmentApplication={handleCreateApartmentApplication}
+                                    isCreatingApartmentApplication={creatingApartmentApplication}
+                                    onCreateJoinRequest={handleCreateJoinRequest}
+                                    isCreatingJoinRequest={creatingJoinRequest}
+                                    onInviteMembers={handleInviteMembers}
+                                    isInvitingMembers={invitingMembers}
+                                    onVoteJoinRequest={(groupID, request, decision) =>
+                                        handleVoteJoinRequest(groupID, request.id, decision)
+                                    }
+                                    votingJoinRequestKey={votingJoinRequestKey}
+                                    onLinkApartment={handleLinkApartment}
+                                    isLinkingApartment={linkingApartment}
+                                />
+                            ) : null}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            ) : null}
         </article>
     )
 }

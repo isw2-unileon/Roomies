@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+    ArrowRightIcon,
     BanknotesIcon,
+    CalendarDaysIcon,
     CheckCircleIcon,
     CurrencyEuroIcon,
     EnvelopeIcon,
@@ -10,7 +12,10 @@ import {
     TrashIcon,
     UserGroupIcon,
     UsersIcon,
+    XMarkIcon,
 } from '@heroicons/react/24/outline'
+import { useNavigate } from 'react-router-dom'
+import { paths } from '@/routes/paths'
 
 import TenantGroupMembers from './TenantGroupMembers'
 import TenantGroupApartmentSelector from './TenantGroupApartmentSelector'
@@ -26,6 +31,7 @@ import styles from '@/styles/TenantGroupDetail.module.css'
 
 interface TenantGroupDetailPanelProps {
   group: TenantGroupDetailItem
+  onClose?: () => void
   onAcceptGroup?: (group: TenantGroupDetailItem) => void
   isAcceptingGroup?: boolean
   onDeleteGroup?: (group: TenantGroupDetailItem) => void
@@ -64,6 +70,7 @@ function formatDate(iso: string, locale: string): string {
 
 export default function TenantGroupDetailPanel({
   group,
+  onClose,
   onAcceptGroup,
   isAcceptingGroup = false,
   onDeleteGroup,
@@ -80,6 +87,7 @@ export default function TenantGroupDetailPanel({
   isLinkingApartment = false,
 }: TenantGroupDetailPanelProps) {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const [selectedApartment, setSelectedApartment] = useState<TenantProperty | null>(null)
   const [selectedCandidates, setSelectedCandidates] = useState<TenantGroupCandidate[]>([])
 
@@ -151,18 +159,18 @@ export default function TenantGroupDetailPanel({
             <span className={group.isFullyAccepted ? styles.acceptedBadge : styles.pendingBadge}>
               {t(statusKey)}
             </span>
+            <span style={{ flex: 1 }} />
+            {onClose ? (
+              <button
+                type="button"
+                className={styles.closeButton}
+                onClick={onClose}
+                aria-label="close"
+              >
+                <XMarkIcon className={styles.closeButtonIcon} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
-          {ownerName ? (
-            <p className={styles.detailMeta}>
-              <UsersIcon className={styles.iconSmall} aria-hidden="true" />
-              {t('tenantGroups.detail.general.owner', { name: ownerName })}
-            </p>
-          ) : null}
-          {formattedDate ? (
-            <p className={styles.detailMeta}>
-              {t('tenantGroups.detail.general.createdOn', { date: formattedDate })}
-            </p>
-          ) : null}
         </div>
 
         <div className={styles.detailActions}>
@@ -243,12 +251,88 @@ export default function TenantGroupDetailPanel({
             <p>{t('tenantGroups.detail.apartment.noApartment')}</p>
           </div>
         )}
+
+        {group.apartment ? (
+          <button
+            type="button"
+            className={styles.apartmentDetailButton}
+            onClick={() => navigate(paths.tenantExploreDetail.replace(':propertyId', group.apartment!.id))}
+          >
+            <span>{t('tenantGroups.detail.actions.viewApartment')}</span>
+            <ArrowRightIcon className={styles.apartmentDetailButtonIcon} aria-hidden="true" />
+          </button>
+        ) : null}
       </section>
 
-      <section className={styles.summarySection}>
+      <section className={styles.generalCard}>
         <h3 className={styles.sectionTitle}>{t('tenantGroups.detail.sections.general')}</h3>
+
+        {group.currentApartmentRequest ? (
+          <div className={styles.generalStatusRow}>
+            <CheckCircleIcon className={styles.generalStatusIcon} aria-hidden="true" />
+            <span className={styles.generalStatusText}>
+              {t('tenantGroups.status.active')}: {t(apartmentRequestStatusKey(group.currentApartmentRequest.status))}
+            </span>
+          </div>
+        ) : null}
+
         {group.description ? (
-          <p className={styles.groupDescription}>{group.description}</p>
+          <p className={styles.generalDescription}>{group.description}</p>
+        ) : null}
+
+        <hr className={styles.generalDivider} />
+
+        <div className={styles.generalGrid}>
+          {ownerName ? (
+            <div className={styles.generalItem}>
+              <UsersIcon className={styles.generalItemIcon} aria-hidden="true" />
+              <span className={styles.generalItemValue}>
+                {t('tenantGroups.detail.general.owner', { name: ownerName })}
+              </span>
+            </div>
+          ) : null}
+
+          {formattedDate ? (
+            <div className={styles.generalItem}>
+              <CalendarDaysIcon className={styles.generalItemIcon} aria-hidden="true" />
+              <span className={styles.generalItemValue}>
+                {t('tenantGroups.detail.general.createdOn', { date: formattedDate })}
+              </span>
+            </div>
+          ) : null}
+
+          <div className={styles.generalItem}>
+            <UserGroupIcon className={styles.generalItemIcon} aria-hidden="true" />
+            <span className={styles.generalItemValue}>
+              {t('tenantGroups.detail.members.count', { count: acceptedMembers.length, total: apartmentCapacity || acceptedMembers.length })}
+            </span>
+          </div>
+        </div>
+
+        {group.apartment ? (
+          <div className={styles.apartmentMiniCard}>
+            {group.apartment.imageUrl ? (
+              <img
+                className={styles.apartmentMiniThumb}
+                src={group.apartment.imageUrl}
+                alt={group.apartment.title}
+                loading="lazy"
+              />
+            ) : (
+              <div className={styles.apartmentMiniPlaceholder}>
+                <HomeModernIcon className={styles.apartmentMiniPlaceholderIcon} aria-hidden="true" />
+              </div>
+            )}
+            <div className={styles.apartmentMiniBody}>
+              <p className={styles.apartmentMiniTitle}>{group.apartment.title}</p>
+              {group.apartment.area || group.apartment.address ? (
+                <p className={styles.apartmentMiniAddress}>
+                  <MapPinIcon className={styles.apartmentMiniAddressIcon} aria-hidden="true" />
+                  {group.apartment.area}{group.apartment.area && group.apartment.address ? ' · ' : ''}{group.apartment.address}
+                </p>
+              ) : null}
+            </div>
+          </div>
         ) : null}
       </section>
 
@@ -295,38 +379,18 @@ export default function TenantGroupDetailPanel({
         </section>
       ) : null}
 
-      {group.apartment && (group.currentApartmentRequest || canCreateApartmentApplication) ? (
+      {group.apartment && canCreateApartmentApplication ? (
         <section className={styles.apartmentRequestSection}>
-          {group.currentApartmentRequest ? (
-            <>
-              <p className={styles.pendingText}>
-                {t('tenantGroups.status.active')}: {t(apartmentRequestStatusKey(group.currentApartmentRequest.status))}
-              </p>
-              {canCreateApartmentApplication ? (
-                <button
-                  type="button"
-                  className={styles.acceptGroupButton}
-                  onClick={() => onCreateApartmentApplication?.(group)}
-                  disabled={isCreatingApartmentApplication}
-                >
-                  {isCreatingApartmentApplication
-                    ? t('tenantGroups.detail.actions.creatingApartmentApplication')
-                    : t('tenantGroups.detail.actions.createApartmentApplication')}
-                </button>
-              ) : null}
-            </>
-          ) : canCreateApartmentApplication ? (
-            <button
-              type="button"
-              className={styles.acceptGroupButton}
-              onClick={() => onCreateApartmentApplication?.(group)}
-              disabled={isCreatingApartmentApplication}
-            >
-              {isCreatingApartmentApplication
-                ? t('tenantGroups.detail.actions.creatingApartmentApplication')
-                : t('tenantGroups.detail.actions.createApartmentApplication')}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className={styles.acceptGroupButton}
+            onClick={() => onCreateApartmentApplication?.(group)}
+            disabled={isCreatingApartmentApplication}
+          >
+            {isCreatingApartmentApplication
+              ? t('tenantGroups.detail.actions.creatingApartmentApplication')
+              : t('tenantGroups.detail.actions.createApartmentApplication')}
+          </button>
         </section>
       ) : null}
 

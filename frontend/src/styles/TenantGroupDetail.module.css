@@ -26,6 +26,163 @@
   color: var(--tenant-text-soft);
 }
 
+/* ---- General Data card ---- */
+
+.generalCard {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.generalStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 1rem;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 0.75rem;
+}
+
+.generalStatusIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #067647;
+  flex-shrink: 0;
+}
+
+.generalStatusText {
+  color: #067647;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.generalDivider {
+  height: 1px;
+  margin: 0;
+  background: var(--tenant-border-light);
+  border: 0;
+}
+
+.generalGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.generalItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.generalItemIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--tenant-primary);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.generalItemBody {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.generalItemLabel {
+  color: var(--tenant-text-soft);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.generalItemValue {
+  color: var(--tenant-text);
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.generalDescription {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+/* Apartment mini card inside general data */
+
+.apartmentMiniCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.apartmentMiniThumb {
+  width: 4rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  background: #eeeae5;
+}
+
+.apartmentMiniPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 3rem;
+  color: var(--tenant-primary);
+  background: rgba(124, 82, 199, 0.1);
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+}
+
+.apartmentMiniPlaceholderIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.apartmentMiniBody {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.apartmentMiniTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.8125rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.apartmentMiniAddress {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.apartmentMiniAddressIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
 .acceptedText,
 .pendingText,
 .rejectedText {
@@ -920,6 +1077,56 @@
   height: 2rem;
   color: var(--tenant-primary);
   flex: 0 0 auto;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--tenant-text-soft);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-border-light);
+}
+
+.closeButtonIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.apartmentDetailButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  padding: 0.6rem 1rem;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  background: var(--tenant-primary);
+  border: 1px solid var(--tenant-primary);
+  border-radius: 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.apartmentDetailButton:hover {
+  background: var(--tenant-primary-strong);
+}
+
+.apartmentDetailButtonIcon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .apartmentRequestSection {

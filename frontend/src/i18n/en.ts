@@ -774,6 +774,7 @@ const en = {
         creatingApartmentApplication: 'Sending request...',
         onlyCreatorCanApply: 'Only the group creator can submit the group application to the assigned apartment.',
         groupNotFullyAccepted: 'The group must be fully accepted before applying to the assigned apartment.',
+        viewApartment: 'View apartment details',
       },
       fullGroup: 'The group has already reached the apartment capacity.',
       errors: {
@@ -819,7 +820,7 @@ const en = {
       approved: 'Approved',
       rejected: 'Rejected',
       pendingConfirmedTenants: 'Pending confirmation',
-      fullyConfirmed: 'Confirmed',
+      fullyConfirmed: 'Request accepted by the flat owner',
       rejectedByOwner: 'Rejected by the owner',
     },
   },

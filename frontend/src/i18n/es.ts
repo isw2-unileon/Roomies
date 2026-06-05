@@ -774,6 +774,7 @@ const es = {
         creatingApartmentApplication: 'Enviando solicitud...',
         onlyCreatorCanApply: 'Solo la persona creadora del grupo puede enviar la solicitud grupal al piso asignado.',
         groupNotFullyAccepted: 'El grupo debe estar completamente aceptado antes de solicitar el piso asignado.',
+        viewApartment: 'Ver detalles del piso',
       },
       fullGroup: 'El grupo ya ha alcanzado la capacidad máxima del piso.',
       errors: {
@@ -819,7 +820,7 @@ const es = {
       approved: 'Aprobada',
       rejected: 'Rechazada',
       pendingConfirmedTenants: 'Pendiente de confirmación',
-      fullyConfirmed: 'Confirmada',
+      fullyConfirmed: 'Solicitud aceptada por el propietario del piso',
       rejectedByOwner: 'Rechazada por el propietario',
     },
   },

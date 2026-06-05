@@ -774,6 +774,7 @@ const de = {
         creatingApartmentApplication: 'Anfrage wird gesendet...',
         onlyCreatorCanApply: 'Nur der Gruppenersteller kann die Gruppenanfrage für die zugewiesene Wohnung senden.',
         groupNotFullyAccepted: 'Die Gruppe muss vollständig akzeptiert sein, bevor die zugewiesene Wohnung angefragt werden kann.',
+        viewApartment: 'Wohnungsdetails anzeigen',
       },
       fullGroup: 'Die Gruppe hat die Wohnungskapazität bereits erreicht.',
       errors: {
@@ -819,7 +820,7 @@ const de = {
       approved: 'Genehmigt',
       rejected: 'Abgelehnt',
       pendingConfirmedTenants: 'Bestätigung ausstehend',
-      fullyConfirmed: 'Bestätigt',
+      fullyConfirmed: 'Vom Eigentümer akzeptiert',
       rejectedByOwner: 'Vom Eigentümer abgelehnt',
     },
   },

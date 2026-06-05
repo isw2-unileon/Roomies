@@ -760,3 +760,66 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ---- Group detail modal ---- */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  overflow-y: auto;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 48rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--tenant-bg);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modalContent {
+  padding: 1.5rem;
+}
+
+.modalCloseButton {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--tenant-text-soft);
+  font-size: 1.15rem;
+  line-height: 1;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.modalCloseButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-border-light);
+}
+
+@media (max-width: 620px) {
+  .modalCard {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modalContent {
+    padding: 1.25rem 1rem;
+  }
+}

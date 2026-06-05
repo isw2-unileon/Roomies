@@ -774,6 +774,7 @@ const fr = {
         creatingApartmentApplication: 'Envoi de la demande...',
         onlyCreatorCanApply: 'Seul le créateur du groupe peut envoyer la demande de groupe pour le logement assigné.',
         groupNotFullyAccepted: 'Le groupe doit être entièrement accepté avant de demander le logement assigné.',
+        viewApartment: 'Voir les détails du logement',
       },
       fullGroup: 'Le groupe a déjà atteint la capacité maximale du logement.',
       errors: {
@@ -819,7 +820,7 @@ const fr = {
       approved: 'Approuvée',
       rejected: 'Refusée',
       pendingConfirmedTenants: 'En attente de confirmation',
-      fullyConfirmed: 'Confirmée',
+      fullyConfirmed: 'Demande acceptée par le propriétaire',
       rejectedByOwner: 'Refusée par le propriétaire',
     },
   },
