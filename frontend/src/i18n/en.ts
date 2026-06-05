@@ -302,6 +302,11 @@ const en = {
         address: 'C/ Azabachería 4',
       },
     },
+    mapFilter: {
+      title: 'Map search',
+      radius: 'Search radius',
+      searchHere: 'Search here',
+    },
     empty: {
       title: 'No flats found',
       subtitle: 'Try changing the filters or searching another area.',

@@ -19,6 +19,8 @@ export const mockTenantProfile: TenantProfile = {
     compatibilityAverage: 78,
 }
 
+const LEON_CENTER_COORDS = { latitude: 42.598, longitude: -5.567 }
+
 export const mockTenantProperties: TenantProperty[] = [
     {
         id: 'prop1',
@@ -32,6 +34,7 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-10',
+        ...LEON_CENTER_COORDS,
     },
     {
         id: 'prop2',
@@ -45,6 +48,7 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-08',
+        ...LEON_CENTER_COORDS,
     },
     {
         id: 'prop3',
@@ -58,6 +62,7 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-12',
+        ...LEON_CENTER_COORDS,
     },
     {
         id: 'prop4',
@@ -71,6 +76,7 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-15',
+        ...LEON_CENTER_COORDS,
     },
     {
         id: 'prop5',
@@ -84,6 +90,7 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-11',
+        ...LEON_CENTER_COORDS,
     },
     {
         id: 'prop6',
@@ -97,6 +104,7 @@ export const mockTenantProperties: TenantProperty[] = [
         status: 'available',
         images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80'],
         createdAt: '2026-04-09',
+        ...LEON_CENTER_COORDS,
     },
 ]
 

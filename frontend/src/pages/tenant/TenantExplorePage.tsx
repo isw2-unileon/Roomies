@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantFilters, { DEFAULT_FILTER_VALUES, type FilterValues } from '@/components/tenant/tenants_explore/TenantFilters'
+import TenantMapFilter, { type MapFilterValues } from '@/components/tenant/tenants_explore/TenantMapFilter'
 import TenantPropertyGrid from '@/components/tenant/tenants_explore/TenantPropertyGrid'
 import TenantSearchBar from '@/components/tenant/tenants_explore/TenantSearchBar'
 //import { mockTenantProfile } from '@/mocks/tenantData'
@@ -20,6 +21,7 @@ export default function TenantExplorePage() {
     const [error, setError] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [activeFilters, setActiveFilters] = useState<FilterValues>(DEFAULT_FILTER_VALUES)
+    const [mapFilters, setMapFilters] = useState<MapFilterValues | null>(null)
 
     useEffect(() => {
         let ignoreResult = false
@@ -40,6 +42,11 @@ export default function TenantExplorePage() {
                     availableRoomsMax: activeFilters.availableRoomsMax,
                     availability: activeFilters.availability,
                     sortBy: activeFilters.sortBy,
+                    ...(mapFilters && {
+                        lat: mapFilters.lat,
+                        lng: mapFilters.lng,
+                        radius: mapFilters.radius,
+                    }),
                 })
                 if (!ignoreResult) {
                     setProperties(apartments)
@@ -60,7 +67,7 @@ export default function TenantExplorePage() {
         return () => {
             ignoreResult = true
         }
-    }, [activeFilters, searchQuery, t])
+    }, [activeFilters, searchQuery, mapFilters, t])
 
     function handlePropertyClick(property: TenantProperty) {
         navigate(paths.tenantExploreDetail.replace(':propertyId', property.id), {
@@ -68,9 +75,14 @@ export default function TenantExplorePage() {
         })
     }
 
+    function handleMapFilterChange(filters: MapFilterValues | null) {
+        setMapFilters(filters)
+    }
+
     function handleResetSearchAndFilters() {
         setSearchQuery('')
         setActiveFilters(DEFAULT_FILTER_VALUES)
+        setMapFilters(null)
     }
 
     const filteredProperties = useMemo(() => properties, [properties])
@@ -97,6 +109,10 @@ export default function TenantExplorePage() {
 
             <TenantFilters
                 onFilterChange={setActiveFilters}
+            />
+
+            <TenantMapFilter
+                onMapFilterChange={handleMapFilterChange}
             />
 
             <div className={styles.resultsRow}>

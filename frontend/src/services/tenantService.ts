@@ -40,6 +40,8 @@ interface TenantApartmentDto {
   description?: string
   owner_name?: string
   compatibility_score?: number
+  latitude: number
+  longitude: number
 }
 
 interface TenantApartmentRulesDto {
@@ -125,6 +127,9 @@ export interface TenantApartmentListFilters {
   availableRoomsMax?: number
   availability?: string
   sortBy?: string
+  lat?: number
+  lng?: number
+  radius?: number
 }
 
 function resolveTenantErrorMessage(response: Response, fallbackMessage: string, apiMessage?: string) {
@@ -187,6 +192,8 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     status: tenantApartmentStatusFromDto(dto),
     images: dto.image_url ? [dto.image_url] : [],
     createdAt: dto.created_at,
+    latitude: dto.latitude,
+    longitude: dto.longitude,
   }
 }
 
@@ -290,14 +297,21 @@ function buildApartmentsQuery(filters?: TenantApartmentListFilters) {
   if (filters.sortBy?.trim()) {
     params.set('sort_by', filters.sortBy.trim())
   }
+  if (filters.lat !== undefined && filters.lng !== undefined && filters.radius !== undefined) {
+    params.set('lat', String(filters.lat))
+    params.set('lng', String(filters.lng))
+    params.set('radius', String(filters.radius))
+  }
 
   const query = params.toString()
   return query ? `?${query}` : ''
 }
 
 export async function listTenantApartments(filters?: TenantApartmentListFilters) {
+  const hasMapParams = filters?.lat !== undefined && filters?.lng !== undefined && filters?.radius !== undefined
+  const endpoint = hasMapParams ? '/api/apartments/map' : '/api/apartments'
   const query = buildApartmentsQuery(filters)
-  const response = await apiFetch(`/api/apartments${query}`)
+  const response = await apiFetch(`${endpoint}${query}`)
   const data = (await response.json()) as TenantApartmentsResponseDto
   if (!response.ok) {
     throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los pisos disponibles.', data.error))

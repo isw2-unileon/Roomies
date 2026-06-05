@@ -181,6 +181,78 @@ func (r *Repository) ListAvailableApartments(ctx context.Context, filters apartm
 	return result, nil
 }
 
+// ListApartmentsInRadius returns apartments within a radius (km) from a point using the Haversine formula.
+func (r *Repository) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
+	const query = `SELECT
+		a.id,
+		a.title,
+		a.address,
+		COALESCE(a.area, ''),
+		a.total_spots,
+		a.occupied_spots,
+		a.base_rent,
+		a.status,
+		TO_CHAR(a.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		COALESCE((
+			SELECT ap.url
+			FROM public.apartment_photos ap
+			WHERE ap.apartment_id = a.id
+			ORDER BY ap.position ASC, ap.created_at ASC
+			LIMIT 1
+		), '') AS image_url,
+		COALESCE(a.latitude, 0),
+		COALESCE(a.longitude, 0)
+	FROM public.apartments a
+	WHERE a.latitude IS NOT NULL AND a.longitude IS NOT NULL
+	AND (
+		6371 * acos(
+			cos(radians($1)) * cos(radians(a.latitude)) *
+			cos(radians(a.longitude) - radians($2)) +
+			sin(radians($1)) * sin(radians(a.latitude))
+		)
+	) <= $3
+	ORDER BY (
+		6371 * acos(
+			cos(radians($1)) * cos(radians(a.latitude)) *
+			cos(radians(a.longitude) - radians($2)) +
+			sin(radians($1)) * sin(radians(a.latitude))
+		)
+	) ASC`
+
+	rows, err := r.db.Query(ctx, query, lat, lng, radiusKm)
+	if err != nil {
+		return nil, fmt.Errorf("list apartments in radius: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]apartment.Apartment, 0)
+	for rows.Next() {
+		var item apartment.Apartment
+		if err := rows.Scan(
+			&item.ID,
+			&item.Title,
+			&item.Address,
+			&item.Area,
+			&item.TotalSpots,
+			&item.OccupiedSpots,
+			&item.BaseRent,
+			&item.Status,
+			&item.CreatedAt,
+			&item.ImageURL,
+			&item.Latitude,
+			&item.Longitude,
+		); err != nil {
+			return nil, fmt.Errorf("scan apartments in radius: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate apartments in radius: %w", err)
+	}
+
+	return result, nil
+}
+
 type availableApartmentsQuery struct {
 	query string
 	args  []interface{}

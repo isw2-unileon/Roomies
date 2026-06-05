@@ -38,6 +38,8 @@ export interface TenantProperty {
     status: PropertyAvailability
     images: string[]
     createdAt: string
+    latitude: number
+    longitude: number
 }
 
 export type PropertyAvailability = 'available' | 'occupied' | 'full'
