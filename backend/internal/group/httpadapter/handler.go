@@ -43,7 +43,6 @@ type groupResponse struct {
 	AcceptedMembersCount    int                         `json:"accepted_members_count"`
 	PendingInvitationsCount int                         `json:"pending_invitations_count"`
 	IsFullyAccepted         bool                        `json:"is_fully_accepted"`
-	AverageBudgetMin        int                         `json:"average_budget_min"`
 	AverageBudgetMax        int                         `json:"average_budget_max"`
 	Apartment               *apartmentResponse          `json:"apartment"`
 	CurrentApartmentRequest *apartmentRequestResponse   `json:"current_apartment_request"`
@@ -104,25 +103,25 @@ type apartmentResponse struct {
 }
 
 type memberResponse struct {
-	UserID        string `json:"user_id"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	AvatarURL     string `json:"avatar_url"`
-	Role          string `json:"role"`
-	Status        string `json:"status"`
-	Age           int    `json:"age"`
-	University    string `json:"university"`
-	BudgetMin     int    `json:"budget_min"`
-	BudgetMax     int    `json:"budget_max"`
-	PreferredArea string `json:"preferred_area"`
-	MoveInDate    string `json:"move_in_date"`
-	Pets          bool   `json:"pets"`
-	Smoking       bool   `json:"smoking"`
-	NoiseLevel    string `json:"noise_level"`
-	Cleanliness   string `json:"cleanliness"`
-	WorkSchedule  string `json:"work_schedule"`
-	HasAccepted   bool   `json:"has_accepted"`
-	IsCurrentUser bool   `json:"is_current_user"`
+	UserID             string `json:"user_id"`
+	Name               string `json:"name"`
+	Email              string `json:"email"`
+	AvatarURL          string `json:"avatar_url"`
+	Role               string `json:"role"`
+	Status             string `json:"status"`
+	Age                int    `json:"age"`
+	Sex                string `json:"sex"`
+	Situation          string `json:"situation"`
+	Degree             string `json:"degree"`
+	Profession         string `json:"profession"`
+	BudgetMax          int    `json:"budget_max"`
+	PreferredArea      string `json:"preferred_area"`
+	Pets               bool   `json:"pets"`
+	Smoking            bool   `json:"smoking"`
+	SocializationLevel string `json:"socialization_level"`
+	NightlifeLevel     string `json:"nightlife_level"`
+	HasAccepted        bool   `json:"has_accepted"`
+	IsCurrentUser      bool   `json:"is_current_user"`
 }
 
 type invitationResponse struct {
@@ -137,21 +136,21 @@ type invitationResponse struct {
 }
 
 type candidateResponse struct {
-	UserID        string `json:"user_id"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	AvatarURL     string `json:"avatar_url"`
-	Age           int    `json:"age"`
-	University    string `json:"university"`
-	BudgetMin     int    `json:"budget_min"`
-	BudgetMax     int    `json:"budget_max"`
-	PreferredArea string `json:"preferred_area"`
-	MoveInDate    string `json:"move_in_date"`
-	Pets          bool   `json:"pets"`
-	Smoking       bool   `json:"smoking"`
-	NoiseLevel    string `json:"noise_level"`
-	Cleanliness   string `json:"cleanliness"`
-	WorkSchedule  string `json:"work_schedule"`
+	UserID             string `json:"user_id"`
+	Name               string `json:"name"`
+	Email              string `json:"email"`
+	AvatarURL          string `json:"avatar_url"`
+	Age                int    `json:"age"`
+	Sex                string `json:"sex"`
+	Situation          string `json:"situation"`
+	Degree             string `json:"degree"`
+	Profession         string `json:"profession"`
+	BudgetMax          int    `json:"budget_max"`
+	PreferredArea      string `json:"preferred_area"`
+	Pets               bool   `json:"pets"`
+	Smoking            bool   `json:"smoking"`
+	SocializationLevel string `json:"socialization_level"`
+	NightlifeLevel     string `json:"nightlife_level"`
 }
 
 // RegisterTenantRoutes registers tenant group HTTP routes.
@@ -258,7 +257,6 @@ func (h *handler) listGroupCandidates(c *gin.Context) {
 
 	filters := group.CandidateFilters{
 		Search:     strings.TrimSpace(c.Query("search")),
-		University: strings.TrimSpace(c.Query("university")),
 	}
 
 	candidates, err := h.groupService.ListGroupCandidates(c.Request.Context(), userID, role, filters)
@@ -513,7 +511,6 @@ func groupResponseFromDomain(item group.Group) groupResponse {
 		AcceptedMembersCount:    item.AcceptedMembersCount,
 		PendingInvitationsCount: item.PendingInvitationsCount,
 		IsFullyAccepted:         item.IsFullyAccepted,
-		AverageBudgetMin:        item.AverageBudgetMin,
 		AverageBudgetMax:        item.AverageBudgetMax,
 		Apartment:               apartmentResponseFromDomain(item.Apartment),
 		CurrentApartmentRequest: apartmentRequestResponseFromDomain(item.CurrentApartmentRequest),
@@ -614,19 +611,19 @@ func memberResponses(items []group.Member) []memberResponse {
 			AvatarURL:     item.AvatarURL,
 			Role:          item.Role,
 			Status:        item.Status,
-			Age:           item.Age,
-			University:    item.University,
-			BudgetMin:     item.BudgetMin,
-			BudgetMax:     item.BudgetMax,
-			PreferredArea: item.PreferredArea,
-			MoveInDate:    item.MoveInDate,
-			Pets:          item.Pets,
-			Smoking:       item.Smoking,
-			NoiseLevel:    item.NoiseLevel,
-			Cleanliness:   item.Cleanliness,
-			WorkSchedule:  item.WorkSchedule,
-			HasAccepted:   item.HasAccepted,
-			IsCurrentUser: item.IsCurrentUser,
+			Age:                item.Age,
+			Sex:                item.Sex,
+			Situation:          item.Situation,
+			Degree:             item.Degree,
+			Profession:         item.Profession,
+			BudgetMax:          item.BudgetMax,
+			PreferredArea:      item.PreferredArea,
+			Pets:               item.Pets,
+			Smoking:            item.Smoking,
+			SocializationLevel: item.SocializationLevel,
+			NightlifeLevel:     item.NightlifeLevel,
+			HasAccepted:        item.HasAccepted,
+			IsCurrentUser:      item.IsCurrentUser,
 		})
 	}
 	return result
@@ -663,17 +660,17 @@ func candidateResponseFromDomain(item group.Candidate) candidateResponse {
 		Name:          item.Name,
 		Email:         item.Email,
 		AvatarURL:     item.AvatarURL,
-		Age:           item.Age,
-		University:    item.University,
-		BudgetMin:     item.BudgetMin,
-		BudgetMax:     item.BudgetMax,
-		PreferredArea: item.PreferredArea,
-		MoveInDate:    item.MoveInDate,
-		Pets:          item.Pets,
-		Smoking:       item.Smoking,
-		NoiseLevel:    item.NoiseLevel,
-		Cleanliness:   item.Cleanliness,
-		WorkSchedule:  item.WorkSchedule,
+		Age:                item.Age,
+		Sex:                item.Sex,
+		Situation:          item.Situation,
+		Degree:             item.Degree,
+		Profession:         item.Profession,
+		BudgetMax:          item.BudgetMax,
+		PreferredArea:      item.PreferredArea,
+		Pets:               item.Pets,
+		Smoking:            item.Smoking,
+		SocializationLevel: item.SocializationLevel,
+		NightlifeLevel:     item.NightlifeLevel,
 	}
 }
 
