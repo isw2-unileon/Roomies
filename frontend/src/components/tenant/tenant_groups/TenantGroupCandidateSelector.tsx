@@ -7,9 +7,10 @@ interface Props {
   selected: TenantGroupCandidate[]
   onChange: (candidates: TenantGroupCandidate[]) => void
   preselectedUserIds?: string[]
+  groupId?: string
 }
 
-export default function TenantGroupCandidateSelector({ selected, onChange, preselectedUserIds }: Props) {
+export default function TenantGroupCandidateSelector({ selected, onChange, preselectedUserIds, groupId }: Props) {
   const [search, setSearch] = useState('')
   const [candidates, setCandidates] = useState<TenantGroupCandidate[]>([])
   const [loading, setLoading] = useState(false)
@@ -21,7 +22,7 @@ export default function TenantGroupCandidateSelector({ selected, onChange, prese
       setLoading(true)
       setError('')
       try {
-        const list = await listTenantGroupCandidates({ search })
+	        const list = await listTenantGroupCandidates({ search, groupId })
         setCandidates(list)
       } catch (err) {
         setCandidates([])
@@ -31,7 +32,7 @@ export default function TenantGroupCandidateSelector({ selected, onChange, prese
       }
     }
     void loadCandidates()
-  }, [search])
+  }, [groupId, search])
 
   useEffect(() => {
     if (!preselectedUserIds?.length || didAutoSelect || candidates.length === 0) return

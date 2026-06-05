@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
+	inviteUsersToTenantGroup,
 	getTenantApartmentDetail,
 	getTenantPersonalProfile,
 	deleteTenantGroup,
+	listTenantGroupCandidates,
 	listTenantGroups,
 	listTenantApplications,
 	listTenantApartments,
@@ -377,6 +379,35 @@ describe('tenantService', () => {
 	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups/group-1', {
 		credentials: 'include',
 		method: 'DELETE',
+	  })
+	})
+
+	test('sends group id when loading invitable candidates', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ candidates: [] }),
+	  } as Response)
+
+	  await listTenantGroupCandidates({ search: 'laura', groupId: 'group-1' })
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/group-candidates?search=laura&group_id=group-1', {
+		credentials: 'include',
+	  })
+	})
+
+	test('invites users to an existing group', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ message: 'group invitations created' }),
+	  } as Response)
+
+	  await expect(inviteUsersToTenantGroup('group-1', ['tenant-2', 'tenant-3'])).resolves.toBe('group invitations created')
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups/group-1/invitations', {
+		credentials: 'include',
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ invited_user_ids: ['tenant-2', 'tenant-3'] }),
 	  })
 	})
 })

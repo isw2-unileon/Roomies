@@ -17,6 +17,7 @@ import {
     createTenantGroupJoinRequest,
     deleteTenantGroup,
     getTenantGroup,
+    inviteUsersToTenantGroup,
     listTenantGroupJoinRequests,
     listTenantGroups,
     rejectTenantGroupInvitation,
@@ -24,7 +25,7 @@ import {
     updateTenantGroupApartment,
 } from '@/services/tenantService'
 import styles from '@/styles/TenantGroups.module.css'
-import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupListItem, TenantProperty } from '@/types/tenant'
+import type { TenantGroupDetailItem, TenantGroupListItem, TenantProperty } from '@/types/tenant'
 import { paths } from '@/routes/paths'
 
 function memberFilterToNumber(value: string) {
@@ -60,6 +61,7 @@ export default function TenantGroupsPage() {
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
     const [linkingApartmentGroupId, setLinkingApartmentGroupId] = useState<string | null>(null)
     const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null)
+    const [invitingGroupId, setInvitingGroupId] = useState<string | null>(null)
 
     const loadGroups = useCallback(async () => {
         setLoading(true)
@@ -124,6 +126,10 @@ export default function TenantGroupsPage() {
         try {
             await acceptTenantGroupInvitation(group.invitationId)
             setNotice('Invitación aceptada correctamente.')
+            if (selectedGroup?.id === group.id) {
+                const detail = await getTenantGroup(group.id)
+                setSelectedGroup(detail)
+            }
             await loadGroups()
         } catch (acceptError) {
             setError(acceptError instanceof Error ? acceptError.message : 'No se pudo aceptar la invitación.')
@@ -151,26 +157,6 @@ export default function TenantGroupsPage() {
         } finally {
             setRespondingInvitationId(null)
         }
-    }
-
-    function handleAcceptDetailInvitation(invitation: TenantGroupInvitation) {
-        const groupFromList = groups.find((group) => group.invitationId === invitation.id)
-        if (!groupFromList) {
-            setError('No se ha encontrado la invitación asociada a este grupo.')
-            return
-        }
-
-        void handleAcceptInvitation(groupFromList)
-    }
-
-    function handleRejectDetailInvitation(invitation: TenantGroupInvitation) {
-        const groupFromList = groups.find((group) => group.invitationId === invitation.id)
-        if (!groupFromList) {
-            setError('No se ha encontrado la invitación asociada a este grupo.')
-            return
-        }
-
-        void handleRejectInvitation(groupFromList)
     }
 
     async function handleAcceptGroup(group: TenantGroupDetailItem) {
@@ -244,6 +230,25 @@ export default function TenantGroupsPage() {
 			setLinkingApartmentGroupId(null)
 		}
 	}
+
+    async function handleInviteMembers(group: TenantGroupDetailItem, invitedUserIDs: string[]) {
+        setInvitingGroupId(group.id)
+        setError('')
+        setNotice('')
+
+        try {
+            await inviteUsersToTenantGroup(group.id, invitedUserIDs)
+            setNotice('Invitaciones enviadas correctamente.')
+            const detail = await getTenantGroup(group.id)
+            setSelectedGroup(detail)
+            await loadGroups()
+        } catch (inviteError) {
+            setError(inviteError instanceof Error ? inviteError.message : 'No se pudo invitar a los nuevos miembros.')
+            throw inviteError
+        } finally {
+            setInvitingGroupId(null)
+        }
+    }
 
     async function handleDeleteGroup(group: TenantGroupDetailItem) {
         const confirmed = window.confirm('Eliminar grupo\n\n¿Seguro que quieres eliminar este grupo? Esta accion no se puede deshacer.')
@@ -407,14 +412,13 @@ export default function TenantGroupsPage() {
                                          onDeleteGroup={handleDeleteGroup}
                                          isDeletingGroup={deletingGroupId === selectedGroup.id}
                                          onCreateApartmentApplication={handleCreateApartmentApplication}
-                                        isCreatingApartmentApplication={creatingApartmentApplicationGroupId === selectedGroup.id}
-                                        onCreateJoinRequest={handleCreateJoinRequest}
-                                        isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}
-                                        onVoteJoinRequest={(groupID, request, decision) => handleVoteJoinRequest(groupID, request.id, decision)}
-                                        votingJoinRequestKey={votingJoinRequestKey}
-                                         onAcceptInvitation={handleAcceptDetailInvitation}
-                                         onRejectInvitation={handleRejectDetailInvitation}
-                                         isRespondingInvitation={respondingInvitationId}
+                                         isCreatingApartmentApplication={creatingApartmentApplicationGroupId === selectedGroup.id}
+                                         onCreateJoinRequest={handleCreateJoinRequest}
+                                         isCreatingJoinRequest={creatingJoinRequestGroupId === selectedGroup.id}
+                                         onInviteMembers={handleInviteMembers}
+                                         isInvitingMembers={invitingGroupId === selectedGroup.id}
+                                         onVoteJoinRequest={(groupID, request, decision) => handleVoteJoinRequest(groupID, request.id, decision)}
+                                         votingJoinRequestKey={votingJoinRequestKey}
                                          onLinkApartment={handleLinkApartment}
                                          isLinkingApartment={linkingApartmentGroupId === selectedGroup.id}
                                      />

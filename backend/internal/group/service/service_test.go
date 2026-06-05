@@ -9,17 +9,35 @@ import (
 )
 
 type fakeGroupRepository struct {
-	groupDetail            *group.Group
-	hasPendingJoinRequest  bool
-	hasRejectedJoinRequest bool
-	createdJoinRequestID   string
-	createdJoinRequest     bool
-	createdGroupID         string
-	isGroupCreator         bool
-	updatedApartmentID     *string
-	ownerMemberAdded       bool
-	acceptedGroupForUserID string
-	deletedGroupID         string
+	groupDetail               *group.Group
+	invitation                *group.Invitation
+	hasPendingJoinRequest     bool
+	hasRejectedJoinRequest    bool
+	createdJoinRequestID      string
+	createdJoinRequest        bool
+	createdGroupID            string
+	isGroupCreator            bool
+	canReviewJoinRequests     bool
+	updatedApartmentID        *string
+	ownerMemberAdded          bool
+	acceptedGroupForUserID    string
+	deletedGroupID            string
+	acceptedInvitationID      string
+	acceptedInvitationUserID  string
+	addedGroupMemberUserID    string
+	invitableTenantIDs        []string
+	createdPendingGroupID     string
+	createdPendingInvitedBy   string
+	createdPendingUserIDs     []string
+	apartmentCapacity         int
+	currentPeopleCount        int
+	joinRequestDetail         *group.JoinRequest
+	resolvedJoinRequestStatus string
+	resolvedJoinRequestDone   bool
+	canVoteJoinRequest        bool
+	votedRequestID            string
+	votedUserID               string
+	votedDecision             string
 }
 
 func (f *fakeGroupRepository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
@@ -48,6 +66,9 @@ func (f *fakeGroupRepository) DeleteGroup(ctx context.Context, groupID string) e
 }
 
 func (f *fakeGroupRepository) CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error {
+	f.createdPendingGroupID = groupID
+	f.createdPendingInvitedBy = invitedBy
+	f.createdPendingUserIDs = invitedUserIDs
 	return nil
 }
 
@@ -55,19 +76,28 @@ func (f *fakeGroupRepository) ListGroupCandidates(ctx context.Context, currentUs
 	return nil, nil
 }
 
+func (f *fakeGroupRepository) FilterInvitableTenantIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error) {
+	if f.invitableTenantIDs != nil {
+		return f.invitableTenantIDs, nil
+	}
+	return userIDs, nil
+}
+
 func (f *fakeGroupRepository) GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error) {
-	return 0, nil
+	return f.apartmentCapacity, nil
 }
 
 func (f *fakeGroupRepository) CountAcceptedMembersAndPendingInvitations(ctx context.Context, groupID string) (int, error) {
-	return 0, nil
+	return f.currentPeopleCount, nil
 }
 
 func (f *fakeGroupRepository) GetInvitationForUser(ctx context.Context, invitationID, userID string) (*group.Invitation, error) {
-	return nil, nil
+	return f.invitation, nil
 }
 
 func (f *fakeGroupRepository) AcceptInvitation(ctx context.Context, invitationID, userID string) error {
+	f.acceptedInvitationID = invitationID
+	f.acceptedInvitationUserID = userID
 	return nil
 }
 
@@ -76,6 +106,7 @@ func (f *fakeGroupRepository) RejectInvitation(ctx context.Context, invitationID
 }
 
 func (f *fakeGroupRepository) AddGroupMember(ctx context.Context, groupID, userID, role string) error {
+	f.addedGroupMemberUserID = userID
 	return nil
 }
 
@@ -109,23 +140,26 @@ func (f *fakeGroupRepository) ListJoinRequests(ctx context.Context, groupID stri
 }
 
 func (f *fakeGroupRepository) CanUserReviewJoinRequests(ctx context.Context, groupID, userID string) (bool, error) {
-	return false, nil
+	return f.canReviewJoinRequests, nil
 }
 
 func (f *fakeGroupRepository) CanUserVoteJoinRequest(ctx context.Context, requestID, voterUserID string) (bool, error) {
-	return false, nil
+	return f.canVoteJoinRequest, nil
 }
 
 func (f *fakeGroupRepository) VoteJoinRequest(ctx context.Context, requestID, voterUserID, decision string) error {
+	f.votedRequestID = requestID
+	f.votedUserID = voterUserID
+	f.votedDecision = decision
 	return nil
 }
 
 func (f *fakeGroupRepository) ResolveJoinRequestStatus(ctx context.Context, requestID string) (string, bool, error) {
-	return "", false, nil
+	return f.resolvedJoinRequestStatus, f.resolvedJoinRequestDone, nil
 }
 
 func (f *fakeGroupRepository) GetJoinRequest(ctx context.Context, requestID string) (*group.JoinRequest, error) {
-	return nil, nil
+	return f.joinRequestDetail, nil
 }
 
 func (f *fakeGroupRepository) CancelJoinRequest(ctx context.Context, requestID, requesterUserID string) error {
@@ -185,6 +219,185 @@ func TestCreateGroupAutoAcceptsOwner(t *testing.T) {
 	}
 	if repo.acceptedGroupForUserID != "tenant-1" {
 		t.Fatalf("acceptedGroupForUserID = %q, want tenant-1", repo.acceptedGroupForUserID)
+	}
+}
+
+func TestAcceptInvitationRejectsMissingInvitation(t *testing.T) {
+	repo := &fakeGroupRepository{}
+	svc := NewService(repo, nil)
+
+	err := svc.AcceptInvitation(context.Background(), "inv-404", "tenant-1", "tenant")
+	if !errors.Is(err, ErrInvitationNotFound) {
+		t.Fatalf("err = %v, want %v", err, ErrInvitationNotFound)
+	}
+	if repo.acceptedInvitationID != "" {
+		t.Fatalf("AcceptInvitation should not be called when invitation does not exist")
+	}
+}
+
+func TestAcceptInvitationAddsMemberOnlyForInvitedUser(t *testing.T) {
+	repo := &fakeGroupRepository{
+		invitation: &group.Invitation{
+			ID:            "inv-1",
+			GroupID:       "group-1",
+			InvitedUserID: "tenant-2",
+			Status:        group.InvitationStatusPending,
+		},
+		groupDetail: &group.Group{ID: "group-1"},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.AcceptInvitation(context.Background(), "inv-1", "tenant-2", "tenant")
+	if err != nil {
+		t.Fatalf("AcceptInvitation returned error: %v", err)
+	}
+	if repo.acceptedInvitationID != "inv-1" || repo.acceptedInvitationUserID != "tenant-2" {
+		t.Fatalf("accept invitation called with unexpected values: %q %q", repo.acceptedInvitationID, repo.acceptedInvitationUserID)
+	}
+	if repo.addedGroupMemberUserID != "tenant-2" {
+		t.Fatalf("addedGroupMemberUserID = %q, want tenant-2", repo.addedGroupMemberUserID)
+	}
+	if repo.acceptedGroupForUserID != "tenant-2" {
+		t.Fatalf("acceptedGroupForUserID = %q, want tenant-2", repo.acceptedGroupForUserID)
+	}
+}
+
+func TestAcceptInvitationAllowsThirdMemberWhenApartmentHasThreeTotalSpots(t *testing.T) {
+	repo := &fakeGroupRepository{
+		invitation: &group.Invitation{
+			ID:            "inv-3",
+			GroupID:       "group-1",
+			InvitedUserID: "tenant-3",
+			Status:        group.InvitationStatusPending,
+		},
+		groupDetail: &group.Group{
+			ID: "group-1",
+			Apartment: &group.Apartment{
+				ID:             "apt-1",
+				TotalSpots:     3,
+				AvailableSpots: 2,
+			},
+		},
+		currentPeopleCount: 3,
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.AcceptInvitation(context.Background(), "inv-3", "tenant-3", "tenant")
+	if err != nil {
+		t.Fatalf("AcceptInvitation returned error: %v", err)
+	}
+	if repo.addedGroupMemberUserID != "tenant-3" {
+		t.Fatalf("addedGroupMemberUserID = %q, want tenant-3", repo.addedGroupMemberUserID)
+	}
+	if repo.acceptedGroupForUserID != "tenant-3" {
+		t.Fatalf("acceptedGroupForUserID = %q, want tenant-3", repo.acceptedGroupForUserID)
+	}
+}
+
+func TestInviteUsersRejectsNonMember(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail:           &group.Group{ID: "group-1"},
+		canReviewJoinRequests: false,
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.InviteUsers(context.Background(), "group-1", "tenant-2", "tenant", []string{"tenant-3"})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrForbidden)
+	}
+	if len(repo.createdPendingUserIDs) > 0 {
+		t.Fatalf("CreatePendingInvitations should not be called for non members")
+	}
+}
+
+func TestInviteUsersAllowsThirdSlotWhenApartmentHasThreeTotalSpots(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail: &group.Group{
+			ID: "group-1",
+			Apartment: &group.Apartment{
+				ID:             "apt-1",
+				TotalSpots:     3,
+				AvailableSpots: 2,
+			},
+		},
+		canReviewJoinRequests: true,
+		invitableTenantIDs:    []string{"tenant-3"},
+		apartmentCapacity:     3,
+		currentPeopleCount:    2,
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.InviteUsers(context.Background(), "group-1", "tenant-2", "tenant", []string{"tenant-3"})
+	if err != nil {
+		t.Fatalf("InviteUsers returned error: %v", err)
+	}
+	if len(repo.createdPendingUserIDs) != 1 || repo.createdPendingUserIDs[0] != "tenant-3" {
+		t.Fatalf("createdPendingUserIDs = %#v, want tenant-3", repo.createdPendingUserIDs)
+	}
+}
+
+func TestInviteUsersCreatesPendingInvitationsForValidCandidates(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail:           &group.Group{ID: "group-1"},
+		canReviewJoinRequests: true,
+		invitableTenantIDs:    []string{"tenant-3", "tenant-4"},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.InviteUsers(context.Background(), "group-1", "tenant-2", "tenant", []string{"tenant-2", "tenant-3", "tenant-4"})
+	if err != nil {
+		t.Fatalf("InviteUsers returned error: %v", err)
+	}
+	if repo.createdPendingGroupID != "group-1" || repo.createdPendingInvitedBy != "tenant-2" {
+		t.Fatalf("unexpected pending invitation metadata: %q %q", repo.createdPendingGroupID, repo.createdPendingInvitedBy)
+	}
+	if len(repo.createdPendingUserIDs) != 2 || repo.createdPendingUserIDs[0] != "tenant-3" || repo.createdPendingUserIDs[1] != "tenant-4" {
+		t.Fatalf("createdPendingUserIDs = %#v, want tenant-3 and tenant-4", repo.createdPendingUserIDs)
+	}
+}
+
+func TestInviteUsersRejectsWhenNoValidCandidatesRemain(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail:           &group.Group{ID: "group-1"},
+		canReviewJoinRequests: true,
+		invitableTenantIDs:    []string{},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.InviteUsers(context.Background(), "group-1", "tenant-2", "tenant", []string{"tenant-2"})
+	if !errors.Is(err, ErrNoValidInvitedUsers) {
+		t.Fatalf("err = %v, want %v", err, ErrNoValidInvitedUsers)
+	}
+}
+
+func TestVoteJoinRequestAllowsThirdMemberWhenApartmentHasThreeTotalSpots(t *testing.T) {
+	repo := &fakeGroupRepository{
+		canVoteJoinRequest:        true,
+		resolvedJoinRequestStatus: group.JoinRequestStatusApproved,
+		resolvedJoinRequestDone:   true,
+		joinRequestDetail: &group.JoinRequest{
+			ID:              "request-1",
+			GroupID:         "group-1",
+			RequesterUserID: "tenant-3",
+		},
+		groupDetail: &group.Group{
+			ID: "group-1",
+			Apartment: &group.Apartment{
+				ID:             "apt-1",
+				TotalSpots:     3,
+				AvailableSpots: 2,
+			},
+		},
+		currentPeopleCount: 2,
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.VoteJoinRequest(context.Background(), "request-1", "tenant-2", "tenant", group.JoinRequestVoteApprove)
+	if err != nil {
+		t.Fatalf("VoteJoinRequest returned error: %v", err)
+	}
+	if repo.addedGroupMemberUserID != "tenant-3" {
+		t.Fatalf("addedGroupMemberUserID = %q, want tenant-3", repo.addedGroupMemberUserID)
 	}
 }
 

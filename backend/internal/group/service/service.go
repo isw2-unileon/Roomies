@@ -23,6 +23,7 @@ type repository interface {
 	DeleteGroup(ctx context.Context, groupID string) error
 	CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error
 	ListGroupCandidates(ctx context.Context, currentUserID string, filters group.CandidateFilters) ([]group.Candidate, error)
+	FilterInvitableTenantIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error)
 	GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error)
 	CountAcceptedMembersAndPendingInvitations(ctx context.Context, groupID string) (int, error)
 	GetInvitationForUser(ctx context.Context, invitationID, userID string) (*group.Invitation, error)
@@ -210,6 +211,16 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 	}
 
 	filters.Search = strings.TrimSpace(filters.Search)
+	filters.GroupID = strings.TrimSpace(filters.GroupID)
+	if filters.GroupID != "" {
+		canInvite, err := s.repo.CanUserReviewJoinRequests(ctx, filters.GroupID, strings.TrimSpace(currentUserID))
+		if err != nil {
+			return nil, err
+		}
+		if !canInvite {
+			return nil, ErrForbidden
+		}
+	}
 
 	candidates, err := s.repo.ListGroupCandidates(ctx, strings.TrimSpace(currentUserID), filters)
 	if err != nil {
@@ -219,6 +230,55 @@ func (s *Service) ListGroupCandidates(ctx context.Context, currentUserID, role s
 		return nil, err
 	}
 	return candidates, nil
+}
+
+// InviteUsers invites tenant candidates to an existing group.
+func (s *Service) InviteUsers(ctx context.Context, groupID, userID, role string, invitedUserIDs []string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return errors.New("group id is required")
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+
+	canInvite, err := s.repo.CanUserReviewJoinRequests(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if !canInvite {
+		return ErrForbidden
+	}
+
+	invitedUserIDs = normalizeUserIDs(invitedUserIDs, userID)
+	validInvitedUserIDs, err := s.repo.FilterInvitableTenantIDs(ctx, groupID, invitedUserIDs)
+	if err != nil {
+		return err
+	}
+	if len(validInvitedUserIDs) == 0 {
+		return ErrNoValidInvitedUsers
+	}
+
+	if groupDetail.Apartment != nil {
+		currentPeople, err := s.repo.CountAcceptedMembersAndPendingInvitations(ctx, groupID)
+		if err != nil {
+			return err
+		}
+		if err := s.ensureApartmentHasCapacity(ctx, groupDetail.Apartment.ID, currentPeople+len(validInvitedUserIDs)); err != nil {
+			return err
+		}
+	}
+
+	return s.repo.CreatePendingInvitations(ctx, groupID, userID, validInvitedUserIDs)
 }
 
 // AcceptInvitation accepts a pending group invitation and adds the tenant as member.
@@ -254,7 +314,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, invitationID, userID, ro
 		if err != nil {
 			return err
 		}
-		if currentPeople > groupDetail.Apartment.AvailableSpots {
+		if currentPeople > groupDetail.Apartment.TotalSpots {
 			return ErrApartmentFull
 		}
 	}
@@ -263,7 +323,11 @@ func (s *Service) AcceptInvitation(ctx context.Context, invitationID, userID, ro
 		return err
 	}
 
-	return s.repo.AddGroupMember(ctx, invitation.GroupID, strings.TrimSpace(userID), group.MemberRoleMember)
+	if err := s.repo.AddGroupMember(ctx, invitation.GroupID, strings.TrimSpace(userID), group.MemberRoleMember); err != nil {
+		return err
+	}
+
+	return s.repo.AcceptGroupForUser(ctx, invitation.GroupID, strings.TrimSpace(userID))
 }
 
 // RejectInvitation rejects a pending group invitation.
@@ -549,7 +613,7 @@ func (s *Service) ensureGroupHasCapacityForNewMember(ctx context.Context, groupI
 	if err != nil {
 		return err
 	}
-	if currentPeople+1 > groupDetail.Apartment.AvailableSpots {
+	if currentPeople+1 > groupDetail.Apartment.TotalSpots {
 		return ErrApartmentFull
 	}
 	return nil
@@ -682,11 +746,11 @@ func (s *Service) GetMyGroupForApartment(ctx context.Context, userID, role, apar
 }
 
 func (s *Service) ensureApartmentHasCapacity(ctx context.Context, apartmentID string, requiredPlaces int) error {
-	availableSpots, err := s.repo.GetApartmentCapacity(ctx, strings.TrimSpace(apartmentID))
+	totalSpots, err := s.repo.GetApartmentCapacity(ctx, strings.TrimSpace(apartmentID))
 	if err != nil {
 		return err
 	}
-	if requiredPlaces > availableSpots {
+	if requiredPlaces > totalSpots {
 		return ErrApartmentFull
 	}
 	return nil

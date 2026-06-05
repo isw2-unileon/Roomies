@@ -334,6 +334,7 @@ export interface TenantGroupListFilters {
 
 export interface TenantGroupCandidateFilters {
   search?: string
+  groupId?: string
 }
 
 export interface CreateTenantGroupInput {
@@ -749,6 +750,10 @@ function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) 
     params.set('search', filters.search.trim())
   }
 
+  if (filters.groupId?.trim()) {
+    params.set('group_id', filters.groupId.trim())
+  }
+
   const query = params.toString()
   return query ? `?${query}` : ''
 }
@@ -1008,6 +1013,23 @@ export async function listTenantGroupCandidates(
   }
 
   return (data.candidates ?? []).map(tenantGroupCandidateFromDto)
+}
+
+export async function inviteUsersToTenantGroup(groupID: string, invitedUserIDs: string[]): Promise<string> {
+	const response = await apiFetch(`/api/tenant/groups/${groupID}/invitations`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			invited_user_ids: invitedUserIDs,
+		}),
+	})
+
+	const data = (await response.json()) as TenantGroupMessageResponseDto
+	if (!response.ok) {
+		throw new Error(resolveTenantErrorMessage(response, 'No se pudo invitar a los nuevos miembros.', data.error))
+	}
+
+	return data.message ?? 'group invitations created'
 }
 
 export async function acceptTenantGroupInvitation(invitationID: string): Promise<string> {

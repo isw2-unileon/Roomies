@@ -392,22 +392,70 @@ func (r *Repository) ListGroupCandidates(ctx context.Context, currentUserID stri
 	return result, nil
 }
 
-// GetApartmentCapacity returns the available spots for an apartment.
+// FilterInvitableTenantIDs keeps only tenant IDs that are not already accepted members and do not have a pending invitation.
+func (r *Repository) FilterInvitableTenantIDs(ctx context.Context, groupID string, userIDs []string) ([]string, error) {
+	if len(userIDs) == 0 {
+		return []string{}, nil
+	}
+
+	const query = `SELECT u.id::text
+	FROM public.users u
+	WHERE u.id::text = ANY($1)
+		AND u.role = 'tenant'
+		AND NOT EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = $2
+				AND gm.user_id = u.id
+				AND gm.status = 'ACCEPTED'
+		)
+		AND NOT EXISTS (
+			SELECT 1
+			FROM public.group_invitations gi
+			WHERE gi.group_id = $2
+				AND gi.invited_user_id = u.id
+				AND gi.status = 'PENDING'
+		)
+	ORDER BY u.full_name ASC`
+
+	rows, err := r.db.Query(ctx, query, userIDs, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("filter invitable tenant ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]string, 0, len(userIDs))
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("scan invitable tenant id: %w", err)
+		}
+		result = append(result, userID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate invitable tenant ids: %w", err)
+	}
+
+	return result, nil
+}
+
+// GetApartmentCapacity returns the total spots for an apartment.
 func (r *Repository) GetApartmentCapacity(ctx context.Context, apartmentID string) (int, error) {
-	const query = `SELECT available_spots
+	const query = `SELECT total_spots
 	FROM public.apartments
 	WHERE id = $1
 		AND status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED')`
 
-	var availableSpots int
-	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&availableSpots); err != nil {
+	var totalSpots int
+	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&totalSpots); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, fmt.Errorf("apartment not found or not available")
 		}
 		return 0, fmt.Errorf("get apartment capacity: %w", err)
 	}
 
-	return availableSpots, nil
+	return totalSpots, nil
 }
 
 // CountAcceptedMembersAndPendingInvitations counts accepted members and pending invitations.
@@ -1439,6 +1487,25 @@ func buildListGroupCandidatesQuery(currentUserID string, filters group.Candidate
 		args = append(args, "%"+filters.Search+"%")
 		arg := fmt.Sprintf("$%d", len(args))
 		whereClauses = append(whereClauses, "(u.full_name ILIKE "+arg+" OR u.email ILIKE "+arg+" OR COALESCE(tp.preferred_area, '') ILIKE "+arg+")")
+	}
+
+	if filters.GroupID != "" {
+		args = append(args, filters.GroupID)
+		arg := fmt.Sprintf("$%d", len(args))
+		whereClauses = append(whereClauses, `NOT EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = `+arg+`
+				AND gm.user_id = u.id
+				AND gm.status = 'ACCEPTED'
+		)`)
+		whereClauses = append(whereClauses, `NOT EXISTS (
+			SELECT 1
+			FROM public.group_invitations gi
+			WHERE gi.group_id = `+arg+`
+				AND gi.invited_user_id = u.id
+				AND gi.status = 'PENDING'
+		)`)
 	}
 
 	query := baseQuery

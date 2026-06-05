@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 
 import TenantGroupSummary from './TenantGroupSummary'
 import TenantGroupMembers from './TenantGroupMembers'
-import TenantGroupInvitationCard from './TenantGroupInvitationCard'
 import TenantGroupApartmentSelector from './TenantGroupApartmentSelector'
+import TenantGroupCandidateSelector from './TenantGroupCandidateSelector'
 import { canCreateNewJoinRequest, getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
-import type { TenantGroupDetailItem, TenantGroupInvitation, TenantGroupJoinRequest, TenantProperty } from '@/types/tenant'
+import type { TenantGroupCandidate, TenantGroupDetailItem, TenantGroupJoinRequest, TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
 
 interface TenantGroupDetailProps {
@@ -18,11 +18,10 @@ interface TenantGroupDetailProps {
   isCreatingApartmentApplication?: boolean
   onCreateJoinRequest?: (group: TenantGroupDetailItem) => void
   isCreatingJoinRequest?: boolean
+  onInviteMembers?: (group: TenantGroupDetailItem, invitedUserIDs: string[]) => Promise<void>
+  isInvitingMembers?: boolean
   onVoteJoinRequest?: (groupID: string, request: TenantGroupJoinRequest, decision: 'APPROVE' | 'REJECT') => void
   votingJoinRequestKey?: string | null
-  onAcceptInvitation?: (invitation: TenantGroupInvitation) => void
-  onRejectInvitation?: (invitation: TenantGroupInvitation) => void
-  isRespondingInvitation?: string | null
   onLinkApartment?: (group: TenantGroupDetailItem, apartment: TenantProperty) => void
   isLinkingApartment?: boolean
 }
@@ -57,18 +56,19 @@ export default function TenantGroupDetail({
   isCreatingApartmentApplication = false,
   onCreateJoinRequest,
   isCreatingJoinRequest = false,
+  onInviteMembers,
+  isInvitingMembers = false,
   onVoteJoinRequest,
   votingJoinRequestKey,
-  onAcceptInvitation,
-  onRejectInvitation,
-  isRespondingInvitation,
   onLinkApartment,
   isLinkingApartment = false,
 }: TenantGroupDetailProps) {
   const [selectedApartment, setSelectedApartment] = useState<TenantProperty | null>(null)
+  const [selectedCandidates, setSelectedCandidates] = useState<TenantGroupCandidate[]>([])
 
   useEffect(() => {
     setSelectedApartment(null)
+    setSelectedCandidates([])
   }, [group.id])
 
   const isOwner = group.userRelation === 'creator'
@@ -82,11 +82,28 @@ export default function TenantGroupDetail({
 	const currentJoinRequestLabel = getCurrentJoinRequestLabel(group.currentJoinRequest)
 	const canCreateJoinRequest = group.userRelation === 'viewer' && canCreateNewJoinRequest(group.currentJoinRequest)
 	const hasRejectedJoinRequest = isRejectedJoinRequest(group.currentJoinRequest)
+	const canInviteMembers = group.userRelation === 'creator' || group.userRelation === 'member'
 	const canLinkApartment = group.userRelation === 'creator' && !group.apartment
 	const canCreateApartmentApplication = Boolean(group.apartment)
 		&& group.isFullyAccepted
 		&& group.userRelation === 'creator'
 		&& (!group.currentApartmentRequest || canResubmitApartmentRequest(group.currentApartmentRequest.status))
+	const acceptedMembers = group.members.filter(
+		(member) => member.status === 'ACCEPTED',
+	)
+
+	async function handleInviteMembers() {
+		if (!onInviteMembers || selectedCandidates.length === 0) {
+			return
+		}
+
+		try {
+			await onInviteMembers(group, selectedCandidates.map((candidate) => candidate.userId))
+			setSelectedCandidates([])
+		} catch {
+			// The page-level handler already surfaces the error message.
+		}
+	}
 
   return (
     <div className={styles.detailContainer}>
@@ -208,25 +225,30 @@ export default function TenantGroupDetail({
 
       <section className={styles.membersSection}>
         <h3>Miembros</h3>
-        <TenantGroupMembers members={group.members} />
+        <TenantGroupMembers members={acceptedMembers} />
       </section>
 
-      {group.pendingInvitations.length > 0 && (
-        <section className={styles.invitationsSection}>
-          <h3>Invitaciones pendientes</h3>
-          <div className={styles.invitationsList}>
-            {group.pendingInvitations.map((inv) => (
-              <TenantGroupInvitationCard
-                key={inv.id}
-                invitation={inv}
-                onAccept={group.userRelation === 'pending_invitation' ? onAcceptInvitation : undefined}
-                onReject={group.userRelation === 'pending_invitation' ? onRejectInvitation : undefined}
-                isResponding={isRespondingInvitation === inv.id}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+		{canInviteMembers ? (
+		  <section className={styles.apartmentLinkSection}>
+			<h3>Invitar miembros</h3>
+			<p className={styles.sectionHint}>
+			  Invita a nuevos perfiles compatibles para que se unan a este grupo.
+			</p>
+			<TenantGroupCandidateSelector
+			  selected={selectedCandidates}
+			  onChange={setSelectedCandidates}
+			  groupId={group.id}
+			/>
+			<button
+			  type="button"
+			  className={styles.acceptGroupButton}
+			  onClick={() => void handleInviteMembers()}
+			  disabled={selectedCandidates.length === 0 || isInvitingMembers}
+			>
+			  {isInvitingMembers ? 'Enviando invitaciones...' : 'Invitar miembros'}
+			</button>
+		  </section>
+		) : null}
 
       {(group.userRelation === 'creator' || group.userRelation === 'member') && group.joinRequests.length > 0 ? (
         <section className={styles.invitationsSection}>

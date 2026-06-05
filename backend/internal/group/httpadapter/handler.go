@@ -23,6 +23,10 @@ type createGroupRequest struct {
 	InvitedUserIDs []string `json:"invited_user_ids"`
 }
 
+type inviteUsersRequest struct {
+	InvitedUserIDs []string `json:"invited_user_ids"`
+}
+
 type updateGroupApartmentRequest struct {
 	ApartmentID *string `json:"apartment_id"`
 }
@@ -161,6 +165,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Servi
 	api.GET("/tenant/groups/:id", h.getTenantGroup)
 	api.POST("/tenant/groups", h.createTenantGroup)
 	api.DELETE("/tenant/groups/:id", h.deleteTenantGroup)
+	api.POST("/tenant/groups/:id/invitations", h.inviteUsersToGroup)
 	api.POST("/tenant/groups/:id/accept", h.acceptTenantGroup)
 	api.POST("/tenant/groups/:id/join-request", h.createJoinRequest)
 	api.GET("/tenant/groups/:id/join-requests", h.listJoinRequests)
@@ -250,6 +255,32 @@ func (h *handler) createTenantGroup(c *gin.Context) {
 	})
 }
 
+func (h *handler) inviteUsersToGroup(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	var request inviteUsersRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.groupService.InviteUsers(c.Request.Context(), groupID, userID, role, request.InvitedUserIDs); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "group invitations created"})
+}
+
 func (h *handler) listGroupCandidates(c *gin.Context) {
 	userID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
@@ -257,7 +288,8 @@ func (h *handler) listGroupCandidates(c *gin.Context) {
 	}
 
 	filters := group.CandidateFilters{
-		Search: strings.TrimSpace(c.Query("search")),
+		Search:  strings.TrimSpace(c.Query("search")),
+		GroupID: strings.TrimSpace(c.Query("group_id")),
 	}
 
 	candidates, err := h.groupService.ListGroupCandidates(c.Request.Context(), userID, role, filters)

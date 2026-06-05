@@ -81,7 +81,8 @@ type ListGroupsFilters struct {
 
 // CandidateFilters contains the filters used to search tenant candidates.
 type CandidateFilters struct {
-	Search string
+	Search  string
+	GroupID string
 }
 
 // Group represents a tenant group with members, invitations and optional apartment.
@@ -131,25 +132,25 @@ type ApartmentRequest struct {
 
 // Member represents an accepted group member.
 type Member struct {
-	UserID            string
-	Name              string
-	Email             string
-	AvatarURL         string
-	Role              string
-	Status            string
-	Age               int
-	Sex               string
-	Situation         string
-	Degree            string
-	Profession        string
-	BudgetMax         int
-	PreferredArea     string
-	Pets              bool
-	Smoking           bool
+	UserID             string
+	Name               string
+	Email              string
+	AvatarURL          string
+	Role               string
+	Status             string
+	Age                int
+	Sex                string
+	Situation          string
+	Degree             string
+	Profession         string
+	BudgetMax          int
+	PreferredArea      string
+	Pets               bool
+	Smoking            bool
 	SocializationLevel string
-	NightlifeLevel    string
-	HasAccepted       bool
-	IsCurrentUser     bool
+	NightlifeLevel     string
+	HasAccepted        bool
+	IsCurrentUser      bool
 }
 
 // Invitation represents a pending or answered group invitation.
