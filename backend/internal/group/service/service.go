@@ -589,18 +589,13 @@ func (s *Service) VoteJoinRequest(ctx context.Context, requestID, userID, role, 
 		return err
 	}
 
-	return s.finalizeApprovedJoinRequestIfNeeded(ctx, requestID, userID)
+	return s.finalizeApprovedJoinRequestIfNeeded(ctx, requestID)
 }
 
 // finalizeApprovedJoinRequestIfNeeded resolves the request status and, if approved, adds the requester as member.
-func (s *Service) finalizeApprovedJoinRequestIfNeeded(ctx context.Context, requestID, voterUserID string) error {
-	status, completed, err := s.repo.FinalizeJoinRequestApproval(ctx, requestID)
-	if err != nil {
-		return err
-	}
-	_ = status
-	_ = completed
-	return nil
+func (s *Service) finalizeApprovedJoinRequestIfNeeded(ctx context.Context, requestID string) error {
+	_, _, err := s.repo.FinalizeJoinRequestApproval(ctx, requestID)
+	return err
 }
 
 // CancelJoinRequest cancels a pending join request owned by the requester.

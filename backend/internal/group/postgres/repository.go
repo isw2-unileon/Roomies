@@ -893,76 +893,28 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 	}
 	defer rollbackTx(ctx, tx)
 
-	var joinRequest group.JoinRequest
-	const loadRequestQuery = `SELECT
-		gjr.id::text,
-		gjr.group_id::text,
-		gjr.requester_user_id::text,
-		COALESCE(gjr.source, 'DIRECT_REQUEST'),
-		gjr.status,
-		TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-		TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
-	FROM public.group_join_requests gjr
-	WHERE gjr.id = $1
-	FOR UPDATE`
-	if err := tx.QueryRow(ctx, loadRequestQuery, requestID).Scan(
-		&joinRequest.ID,
-		&joinRequest.GroupID,
-		&joinRequest.RequesterUserID,
-		&joinRequest.Source,
-		&joinRequest.Status,
-		&joinRequest.CreatedAt,
-		&joinRequest.UpdatedAt,
-	); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", false, nil
-		}
-		return "", false, fmt.Errorf("load join request for finalization: %w", err)
+	joinRequest, err := loadJoinRequestForUpdate(ctx, tx, requestID)
+	if err != nil {
+		return "", false, err
+	}
+	if joinRequest == nil {
+		return "", false, nil
 	}
 	if joinRequest.Status != group.JoinRequestStatusPending {
 		return joinRequest.Status, false, tx.Commit(ctx)
 	}
 
-	const rejectExistsQuery = `SELECT EXISTS (
-		SELECT 1
-		FROM public.group_join_request_votes gjrv
-		WHERE gjrv.request_id = $1
-			AND gjrv.decision = 'REJECT'
-	)`
-
-	var hasReject bool
-	if err := tx.QueryRow(ctx, rejectExistsQuery, requestID).Scan(&hasReject); err != nil {
-		return "", false, fmt.Errorf("check reject votes: %w", err)
+	hasReject, err := hasRejectVote(ctx, tx, requestID)
+	if err != nil {
+		return "", false, err
 	}
 	if hasReject {
-		if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'REJECTED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
-			return "", false, fmt.Errorf("set join request rejected: %w", err)
-		}
-		if err := tx.Commit(ctx); err != nil {
-			return "", false, fmt.Errorf("commit rejected join request: %w", err)
-		}
-		return group.JoinRequestStatusRejected, true, nil
+		return rejectJoinRequestAs(ctx, tx, requestID, group.JoinRequestStatusRejected, "set join request rejected", "commit rejected join request")
 	}
 
-	const countsQuery = `SELECT
-		COALESCE((
-			SELECT COUNT(*)
-			FROM public.group_join_request_votes gjrv
-			WHERE gjrv.request_id = $1
-				AND gjrv.decision = 'APPROVE'
-		), 0)::int,
-		COALESCE((
-			SELECT COUNT(*)
-			FROM public.group_members gm
-			INNER JOIN public.group_join_requests gjr ON gjr.group_id = gm.group_id
-			WHERE gjr.id = $1
-				AND gm.status = 'ACCEPTED'
-		), 0)::int`
-
-	var approvals int
-	var expected int
-	if err := tx.QueryRow(ctx, countsQuery, requestID).Scan(&approvals, &expected); err != nil {
-		return "", false, fmt.Errorf("count join request approvals: %w", err)
+	approvals, expected, err := countJoinRequestApprovals(ctx, tx, requestID)
+	if err != nil {
+		return "", false, err
 	}
 	if expected == 0 || approvals < expected {
 		if err := tx.Commit(ctx); err != nil {
@@ -972,21 +924,19 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 	}
 
 	var totalSpots int
-	const lockGroupQuery = `SELECT COALESCE(a.total_spots, 0)
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(a.total_spots, 0)
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE g.id = $1
-	FOR UPDATE OF g`
-	if err := tx.QueryRow(ctx, lockGroupQuery, joinRequest.GroupID).Scan(&totalSpots); err != nil {
+	FOR UPDATE OF g`, joinRequest.GroupID).Scan(&totalSpots); err != nil {
 		return "", false, fmt.Errorf("lock group for join request finalization: %w", err)
 	}
 
 	var acceptedMembers int
-	const acceptedMembersQuery = `SELECT COUNT(*)::int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*)::int
 	FROM public.group_members
 	WHERE group_id = $1
-		AND status = 'ACCEPTED'`
-	if err := tx.QueryRow(ctx, acceptedMembersQuery, joinRequest.GroupID).Scan(&acceptedMembers); err != nil {
+		AND status = 'ACCEPTED'`, joinRequest.GroupID).Scan(&acceptedMembers); err != nil {
 		return "", false, fmt.Errorf("count accepted members for join request finalization: %w", err)
 	}
 
@@ -1006,6 +956,93 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = 'APPROVED', updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID); err != nil {
 		return "", false, fmt.Errorf("set join request approved: %w", err)
 	}
+	if err := addApprovedJoinRequestMember(ctx, tx, joinRequest.GroupID, joinRequest.RequesterUserID); err != nil {
+		return "", false, err
+	}
+	if err := closePendingGroupAdmissionsTx(ctx, tx, joinRequest.GroupID, totalSpots); err != nil {
+		return "", false, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", false, fmt.Errorf("commit approved join request: %w", err)
+	}
+	return group.JoinRequestStatusApproved, true, nil
+}
+
+func loadJoinRequestForUpdate(ctx context.Context, tx pgx.Tx, requestID string) (*group.JoinRequest, error) {
+	const query = `SELECT
+		gjr.id::text,
+		gjr.group_id::text,
+		gjr.requester_user_id::text,
+		COALESCE(gjr.source, 'DIRECT_REQUEST'),
+		gjr.status,
+		TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+		TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
+	FROM public.group_join_requests gjr
+	WHERE gjr.id = $1
+	FOR UPDATE`
+
+	var item group.JoinRequest
+	if err := tx.QueryRow(ctx, query, requestID).Scan(
+		&item.ID,
+		&item.GroupID,
+		&item.RequesterUserID,
+		&item.Source,
+		&item.Status,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("load join request for finalization: %w", err)
+	}
+	return &item, nil
+}
+
+func hasRejectVote(ctx context.Context, tx pgx.Tx, requestID string) (bool, error) {
+	var hasReject bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM public.group_join_request_votes WHERE request_id = $1 AND decision = 'REJECT')`,
+		requestID,
+	).Scan(&hasReject); err != nil {
+		return false, fmt.Errorf("check reject votes: %w", err)
+	}
+	return hasReject, nil
+}
+
+func countJoinRequestApprovals(ctx context.Context, tx pgx.Tx, requestID string) (approvals int, expected int, err error) {
+	const query = `SELECT
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = $1
+				AND gjrv.decision = 'APPROVE'
+		), 0)::int,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			INNER JOIN public.group_join_requests gjr ON gjr.group_id = gm.group_id
+			WHERE gjr.id = $1
+				AND gm.status = 'ACCEPTED'
+		), 0)::int`
+	if err := tx.QueryRow(ctx, query, requestID).Scan(&approvals, &expected); err != nil {
+		return 0, 0, fmt.Errorf("count join request approvals: %w", err)
+	}
+	return approvals, expected, nil
+}
+
+func rejectJoinRequestAs(ctx context.Context, tx pgx.Tx, requestID, status, updateWrap, commitWrap string) (string, bool, error) {
+	if _, err := tx.Exec(ctx, `UPDATE public.group_join_requests SET status = $2, updated_at = NOW() WHERE id = $1 AND status = 'PENDING'`, requestID, status); err != nil {
+		return "", false, fmt.Errorf("%s: %w", updateWrap, err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return "", false, fmt.Errorf("%s: %w", commitWrap, err)
+	}
+	return status, true, nil
+}
+
+func addApprovedJoinRequestMember(ctx context.Context, tx pgx.Tx, groupID, requesterUserID string) error {
 	if _, err := tx.Exec(ctx, `INSERT INTO public.group_members
 		(group_id, user_id, role, status, joined_at, member_accepted)
 	VALUES
@@ -1015,18 +1052,10 @@ func (r *Repository) FinalizeJoinRequestApproval(ctx context.Context, requestID 
 		role = EXCLUDED.role,
 		status = 'ACCEPTED',
 		joined_at = COALESCE(public.group_members.joined_at, NOW()),
-		member_accepted = TRUE`, joinRequest.GroupID, joinRequest.RequesterUserID, group.MemberRoleMember); err != nil {
-		return "", false, fmt.Errorf("add approved join request member: %w", err)
+		member_accepted = TRUE`, groupID, requesterUserID, group.MemberRoleMember); err != nil {
+		return fmt.Errorf("add approved join request member: %w", err)
 	}
-
-	if err := closePendingGroupAdmissionsTx(ctx, tx, joinRequest.GroupID, totalSpots); err != nil {
-		return "", false, err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return "", false, fmt.Errorf("commit approved join request: %w", err)
-	}
-	return group.JoinRequestStatusApproved, true, nil
+	return nil
 }
 
 func closePendingGroupAdmissionsTx(ctx context.Context, tx pgx.Tx, groupID string, totalSpots int) error {
