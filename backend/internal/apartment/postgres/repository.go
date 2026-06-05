@@ -129,39 +129,7 @@ func (r *Repository) ListOwnerApartments(ctx context.Context, ownerID string) ([
 	}
 	defer rows.Close()
 
-	result := make([]apartment.Apartment, 0)
-	for rows.Next() {
-		var item apartment.Apartment
-        if err := rows.Scan(
-            &item.ID,
-            &item.Title,
-            &item.Address,
-            &item.Area,
-            &item.TotalSpots,
-            &item.OccupiedSpots,
-            &item.BaseRent,
-            &item.Status,
-            &item.CreatedAt,
-            &item.ImagePaths,
-            &item.Latitude,
-            &item.Longitude,
-            &item.Bathrooms,
-            &item.SurfaceM2,
-            &item.Floor,
-            &item.SmokingAllowed,
-            &item.PetsAllowed,
-            &item.StudentsAllowed,
-            &item.Notes,
-        ); err != nil {
-            return nil, fmt.Errorf("scan owner apartments: %w", err)
-        }
-		result = append(result, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate owner apartments: %w", err)
-	}
-
-	return result, nil
+	return scanApartmentRows(rows)
 }
 
 // ListAvailableApartments returns tenant-visible apartments with free spots.
@@ -173,38 +141,41 @@ func (r *Repository) ListAvailableApartments(ctx context.Context, filters apartm
 	}
 	defer rows.Close()
 
+	return scanApartmentRows(rows)
+}
+
+func scanApartmentRows(rows pgx.Rows) ([]apartment.Apartment, error) {
 	result := make([]apartment.Apartment, 0)
 	for rows.Next() {
 		var item apartment.Apartment
-        if err := rows.Scan(
-            &item.ID,
-            &item.Title,
-            &item.Address,
-            &item.Area,
-            &item.TotalSpots,
-            &item.OccupiedSpots,
-            &item.BaseRent,
-            &item.Status,
-            &item.CreatedAt,
-            &item.ImagePaths,
-            &item.Latitude,
-            &item.Longitude,
-            &item.Bathrooms,
-            &item.SurfaceM2,
-            &item.Floor,
-            &item.SmokingAllowed,
-            &item.PetsAllowed,
-            &item.StudentsAllowed,
-            &item.Notes,
-        ); err != nil {
-            return nil, fmt.Errorf("scan available apartments: %w", err)
-        }
-        result = append(result, item)
-    }
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate available apartments: %w", err)
+		if err := rows.Scan(
+			&item.ID,
+			&item.Title,
+			&item.Address,
+			&item.Area,
+			&item.TotalSpots,
+			&item.OccupiedSpots,
+			&item.BaseRent,
+			&item.Status,
+			&item.CreatedAt,
+			&item.ImagePaths,
+			&item.Latitude,
+			&item.Longitude,
+			&item.Bathrooms,
+			&item.SurfaceM2,
+			&item.Floor,
+			&item.SmokingAllowed,
+			&item.PetsAllowed,
+			&item.StudentsAllowed,
+			&item.Notes,
+		); err != nil {
+			return nil, fmt.Errorf("scan apartments: %w", err)
+		}
+		result = append(result, item)
 	}
-
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate apartments: %w", err)
+	}
 	return result, nil
 }
 
