@@ -8,7 +8,6 @@ import { logout } from '@/services/authService'
 import styles from '@/styles/OwnerDashboard.module.css'
 
 const UNREAD_MESSAGES = 1
-const UNREAD_NOTIFICATIONS = 3
 
 interface OwnerLayoutProps {
   children: ReactNode
@@ -41,7 +40,6 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
             onToggleCollapsed={() => setIsSidebarCollapsed((value) => !value)}
             onLogout={handleLogout}
             unreadMessages={UNREAD_MESSAGES}
-            unreadNotifications={UNREAD_NOTIFICATIONS}
           />
         </div>
 
@@ -89,7 +87,6 @@ export default function OwnerLayout({ children }: OwnerLayoutProps) {
               onNavigate={() => setIsMobileSidebarOpen(false)}
               onLogout={handleLogout}
               unreadMessages={UNREAD_MESSAGES}
-              unreadNotifications={UNREAD_NOTIFICATIONS}
             />
           </div>
         </div>

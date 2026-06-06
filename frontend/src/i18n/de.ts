@@ -170,7 +170,6 @@ const de = {
       applications: 'Meine Anfragen',
       groups: 'Meine Gruppen',
       messages: 'Nachrichten',
-      notifications: 'Benachrichtigungen',
       profile: 'Profil',
       publish: 'Wohnung inserieren',
       referTitle: 'Freund einladen',
@@ -192,7 +191,6 @@ const de = {
     },
     topBar: {
       area: 'Gegend:',
-      notifications: 'Benachrichtigungen',
       messages: 'Nachrichten',
       profile: 'Mein Profil',
       role: 'Mieter',
@@ -411,7 +409,6 @@ const de = {
       properties: 'Meine Wohnungen',
       applications: 'Anfragen',
       messages: 'Nachrichten',
-      notifications: 'Benachrichtigungen',
       profile: 'Profil',
       logout: 'Abmelden',
     },

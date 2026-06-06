@@ -11,13 +11,11 @@ export const paths = {
   tenantGroups: '/tenant/groups',
   tenantCreateGroup: '/tenant/groups/new',
   tenantMessages: '/tenant/messages',
-  tenantNotifications: '/tenant/notifications',
   tenantProfile: '/tenant/profile',
   ownerProperties: '/owner/properties',
   ownerPublishProperty: '/owner/properties/new',
   ownerApplications: '/owner/applications',
   ownerMessages: '/owner/messages',
-  ownerNotifications: '/owner/notifications',
   ownerProfile: '/owner/profile',
 } as const
 

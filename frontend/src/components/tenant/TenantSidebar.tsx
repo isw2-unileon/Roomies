@@ -2,7 +2,6 @@ import { useRef, useState, type ComponentType, type SVGProps } from 'react'
 import {
     ArrowLeftOnRectangleIcon,
     Bars3Icon,
-    BellIcon,
     ChatBubbleLeftRightIcon,
     ChevronDoubleLeftIcon,
     ChevronDoubleRightIcon,
@@ -19,7 +18,7 @@ import TenantInviteDialog from '@/components/common/InviteDialog'
 import { paths } from '@/routes/paths'
 import styles from '@/styles/TenantSidebar.module.css'
 
-type SidebarTab = 'explore' | 'applications' | 'groups' | 'messages' | 'notifications' | 'profile'
+type SidebarTab = 'explore' | 'applications' | 'groups' | 'messages' | 'profile'
 
 interface TenantSidebarProps {
     isCollapsed: boolean
@@ -27,7 +26,6 @@ interface TenantSidebarProps {
     onNavigate?: () => void
     onLogout?: () => void
     unreadMessages: number
-    unreadNotifications: number
     showCollapseToggle?: boolean
 }
 
@@ -38,7 +36,6 @@ const tabs: { id: SidebarTab; labelKey: string; path: string; Icon: IconComponen
     { id: 'applications', labelKey: 'tenantDashboard.sidebar.applications', path: paths.tenantApplications, Icon: ClipboardDocumentListIcon },
     { id: 'groups', labelKey: 'tenantDashboard.sidebar.groups', path: paths.tenantGroups, Icon: UserGroupIcon },
     { id: 'messages', labelKey: 'tenantDashboard.sidebar.messages', path: paths.tenantMessages, Icon: ChatBubbleLeftRightIcon },
-    { id: 'notifications', labelKey: 'tenantDashboard.sidebar.notifications', path: paths.tenantNotifications, Icon: BellIcon },
     { id: 'profile', labelKey: 'tenantDashboard.sidebar.profile', path: paths.tenantProfile, Icon: UserIcon },
 ]
 
@@ -48,7 +45,6 @@ export default function TenantSidebar({
     onNavigate,
     onLogout,
     unreadMessages,
-    unreadNotifications,
     showCollapseToggle = true,
 }: TenantSidebarProps) {
     const { t } = useTranslation()
@@ -108,11 +104,6 @@ export default function TenantSidebar({
                         {id === 'messages' && unreadMessages > 0 && (
                             <span className={styles.badge}>
                                 {unreadMessages}
-                            </span>
-                        )}
-                        {id === 'notifications' && unreadNotifications > 0 && (
-                            <span className={styles.badge}>
-                                {unreadNotifications}
                             </span>
                         )}
                     </NavLink>
