@@ -5,7 +5,7 @@ import styles from '@/styles/TenantGroups.module.css'
 import { tenantGroupStatusFilterOptions, type TenantGroupDisplayStatus } from './groupDisplayStatus'
 
 const memberOptions: Array<{ value: string; labelKey: string }> = [
-    { value: 'all', labelKey: 'tenantGroups.filters.any' },
+    { value: 'all', labelKey: 'tenantGroups.filters.all' },
     { value: '1', labelKey: 'tenantGroups.filters.members' },
     { value: '2', labelKey: 'tenantGroups.filters.twoOrMore' },
     { value: '3', labelKey: 'tenantGroups.filters.threeOrMore' },
@@ -42,6 +42,7 @@ export default function TenantGroupFilters({
                     </button>
                 </div>
 
+                {/* Keep labels and option text in i18n so the sidebar follows the active locale. */}
                 <div className={styles.filterGroup}>
                     <label className={styles.filterLabel} htmlFor="status-filter">{t('tenantGroups.filters.status')}</label>
                     <select
@@ -71,19 +72,22 @@ export default function TenantGroupFilters({
                 </div>
 
                 <div className={styles.filterGroup}>
-                    <span className={styles.filterLabel}>{t('tenantGroups.filters.members')}</span>
-                    <div className={styles.memberSelector}>
+                    <label className={styles.filterLabel} htmlFor="members-filter">{t('tenantGroups.filters.members')}</label>
+                    <select
+                        id="members-filter"
+                        className={styles.filterSelect}
+                        value={selectedMembers}
+                        onChange={(event) => onSelectedMembersChange(event.target.value)}
+                    >
                         {memberOptions.map((option) => (
-                            <button
+                            <option
                                 key={option.value}
-                                type="button"
-                                className={`${styles.memberOption} ${selectedMembers === option.value ? styles.memberOptionActive : ''}`}
-                                onClick={() => onSelectedMembersChange(option.value)}
+                                value={option.value}
                             >
                                 {t(option.labelKey)}
-                            </button>
+                            </option>
                         ))}
-                    </div>
+                    </select>
                 </div>
             </section>
 

@@ -333,6 +333,25 @@ func (r *Repository) DeleteGroup(ctx context.Context, groupID string) error {
 	return nil
 }
 
+// LeaveGroup removes an accepted non-owner member from the group.
+func (r *Repository) LeaveGroup(ctx context.Context, groupID, userID string) error {
+	const query = `DELETE FROM public.group_members
+	WHERE group_id = $1
+		AND user_id = $2
+		AND role <> 'owner'
+		AND status = 'ACCEPTED'`
+
+	result, err := r.db.Exec(ctx, query, groupID, userID)
+	if err != nil {
+		return fmt.Errorf("leave group: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("group member not found")
+	}
+
+	return nil
+}
+
 // CreatePendingInvitations creates pending invitations for selected tenants.
 func (r *Repository) CreatePendingInvitations(ctx context.Context, groupID, invitedBy string, invitedUserIDs []string) error {
 	const query = `INSERT INTO public.group_invitations

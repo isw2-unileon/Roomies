@@ -19,6 +19,7 @@ import {
     deleteTenantGroup,
     getTenantGroup,
     inviteUsersToTenantGroup,
+    leaveTenantGroup,
     listTenantGroupJoinRequests,
     updateTenantGroupApartment,
     voteTenantGroupJoinRequest,
@@ -37,6 +38,7 @@ interface TenantGroupCardProps {
     onRejectInvitation: (group: TenantGroupListItem) => void
     isRespondingInvitation?: boolean
     onMutated?: () => void
+    onNotice?: (message: string) => void
 }
 
 const FULL_GROUP_ERROR = 'group exceeds apartment available spots'
@@ -89,6 +91,7 @@ export default function TenantGroupCard({
     onRejectInvitation,
     isRespondingInvitation = false,
     onMutated,
+    onNotice,
 }: TenantGroupCardProps) {
     const { t } = useTranslation()
     const cardRef = useRef<HTMLElement | null>(null)
@@ -99,6 +102,7 @@ export default function TenantGroupCard({
 
     const [acceptingGroup, setAcceptingGroup] = useState(false)
     const [deletingGroup, setDeletingGroup] = useState(false)
+    const [leavingGroup, setLeavingGroup] = useState(false)
     const [creatingApartmentApplication, setCreatingApartmentApplication] = useState(false)
     const [creatingJoinRequest, setCreatingJoinRequest] = useState(false)
     const [invitingMembers, setInvitingMembers] = useState(false)
@@ -185,6 +189,22 @@ export default function TenantGroupCard({
             setDetailError(err instanceof Error ? err.message : t('tenantGroups.detail.errors.generic'))
         } finally {
             setDeletingGroup(false)
+        }
+    }
+
+    async function handleLeaveGroup(target: TenantGroupDetailItem) {
+        setLeavingGroup(true)
+        setDetailError('')
+        try {
+            await leaveTenantGroup(target.id)
+            setIsExpanded(false)
+            setDetail(null)
+            onNotice?.(t('tenantGroups.detail.actions.leaveSuccess'))
+            onMutated?.()
+        } catch (err) {
+            setDetailError(err instanceof Error ? err.message : t('tenantGroups.detail.errors.generic'))
+        } finally {
+            setLeavingGroup(false)
         }
     }
 
@@ -415,6 +435,8 @@ export default function TenantGroupCard({
                                     isAcceptingGroup={acceptingGroup}
                                     onDeleteGroup={handleDeleteGroup}
                                     isDeletingGroup={deletingGroup}
+                                    onLeaveGroup={handleLeaveGroup}
+                                    isLeavingGroup={leavingGroup}
                                     onCreateApartmentApplication={handleCreateApartmentApplication}
                                     isCreatingApartmentApplication={creatingApartmentApplication}
                                     onCreateJoinRequest={handleCreateJoinRequest}

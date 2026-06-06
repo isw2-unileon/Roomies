@@ -177,11 +177,94 @@
   border-radius: 0.6rem;
 }
 
+.leaveGroupButton {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  color: #b42318;
+  font-weight: 800;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 0.6rem;
+}
+
 .acceptGroupButton:disabled {
   opacity: 0.65;
 }
 
 .deleteGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.leaveGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 0.45);
+}
+
+.confirmDialog {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 28rem);
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgb(15 23 42 / 0.22);
+}
+
+.confirmTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.confirmDescription {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.confirmCancelButton,
+.confirmDangerButton {
+  padding: 0.55rem 0.9rem;
+  font-weight: 850;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.confirmCancelButton {
+  color: var(--tenant-text);
+  background: #fff;
+  border: 1px solid var(--tenant-border);
+}
+
+.confirmDangerButton {
+  color: #fff;
+  background: #b42318;
+  border: 1px solid #b42318;
+}
+
+.confirmCancelButton:disabled,
+.confirmDangerButton:disabled {
+  cursor: not-allowed;
   opacity: 0.65;
 }
 

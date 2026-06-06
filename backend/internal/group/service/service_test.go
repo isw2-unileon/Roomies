@@ -26,6 +26,8 @@ type fakeGroupRepository struct {
 	acceptedInvitationID       string
 	acceptedInvitationUserID   string
 	addedGroupMemberUserID     string
+	leftGroupID                string
+	leftGroupUserID            string
 	invitableTenantIDs         []string
 	createdPendingGroupID      string
 	createdPendingInvitedBy    string
@@ -107,6 +109,12 @@ func (f *fakeGroupRepository) RejectInvitation(ctx context.Context, invitationID
 
 func (f *fakeGroupRepository) AddGroupMember(ctx context.Context, groupID, userID, role string) error {
 	f.addedGroupMemberUserID = userID
+	return nil
+}
+
+func (f *fakeGroupRepository) LeaveGroup(ctx context.Context, groupID, userID string) error {
+	f.leftGroupID = groupID
+	f.leftGroupUserID = userID
 	return nil
 }
 
@@ -410,6 +418,64 @@ func TestInviteUsersRejectsWhenNoValidCandidatesRemain(t *testing.T) {
 	err := svc.InviteUsers(context.Background(), "group-1", "tenant-2", "tenant", []string{"tenant-2"})
 	if !errors.Is(err, ErrNoValidInvitedUsers) {
 		t.Fatalf("err = %v, want %v", err, ErrNoValidInvitedUsers)
+	}
+}
+
+func TestLeaveGroupAllowsAcceptedMember(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail: &group.Group{ID: "group-1", UserRelation: group.UserRelationMember},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.LeaveGroup(context.Background(), "group-1", "tenant-2", "tenant")
+	if err != nil {
+		t.Fatalf("LeaveGroup returned error: %v", err)
+	}
+	if repo.leftGroupID != "group-1" || repo.leftGroupUserID != "tenant-2" {
+		t.Fatalf("LeaveGroup called with unexpected values: %q %q", repo.leftGroupID, repo.leftGroupUserID)
+	}
+}
+
+func TestLeaveGroupRejectsCreator(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail: &group.Group{ID: "group-1", UserRelation: group.UserRelationCreator},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.LeaveGroup(context.Background(), "group-1", "tenant-1", "tenant")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrForbidden)
+	}
+	if repo.leftGroupID != "" {
+		t.Fatalf("repository LeaveGroup should not be called for creators")
+	}
+}
+
+func TestLeaveGroupRejectsViewer(t *testing.T) {
+	repo := &fakeGroupRepository{
+		groupDetail: &group.Group{ID: "group-1", UserRelation: group.UserRelationViewer},
+	}
+	svc := NewService(repo, nil)
+
+	err := svc.LeaveGroup(context.Background(), "group-1", "tenant-3", "tenant")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v, want %v", err, ErrForbidden)
+	}
+	if repo.leftGroupID != "" {
+		t.Fatalf("repository LeaveGroup should not be called for viewers")
+	}
+}
+
+func TestLeaveGroupRejectsNonTenant(t *testing.T) {
+	repo := &fakeGroupRepository{}
+	svc := NewService(repo, nil)
+
+	err := svc.LeaveGroup(context.Background(), "group-1", "owner-1", "owner")
+	if !errors.Is(err, ErrTenantRequired) {
+		t.Fatalf("err = %v, want %v", err, ErrTenantRequired)
+	}
+	if repo.leftGroupID != "" {
+		t.Fatalf("repository LeaveGroup should not be called for non tenants")
 	}
 }
 

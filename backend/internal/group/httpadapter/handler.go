@@ -167,6 +167,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, groupService *groupservice.Servi
 	api.GET("/tenant/groups/:id", h.getTenantGroup)
 	api.POST("/tenant/groups", h.createTenantGroup)
 	api.DELETE("/tenant/groups/:id", h.deleteTenantGroup)
+	api.PATCH("/tenant/groups/:id/leave", h.leaveTenantGroup)
 	api.POST("/tenant/groups/:id/invitations", h.inviteUsersToGroup)
 	api.POST("/tenant/groups/:id/accept", h.acceptTenantGroup)
 	api.POST("/tenant/groups/:id/join-request", h.createJoinRequest)
@@ -412,6 +413,26 @@ func (h *handler) deleteTenantGroup(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *handler) leaveTenantGroup(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	if err := h.groupService.LeaveGroup(c.Request.Context(), groupID, userID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "You have left the group."})
 }
 
 func (h *handler) createJoinRequest(c *gin.Context) {

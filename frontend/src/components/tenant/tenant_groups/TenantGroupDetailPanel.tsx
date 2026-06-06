@@ -35,6 +35,8 @@ interface TenantGroupDetailPanelProps {
   isAcceptingGroup?: boolean
   onDeleteGroup?: (group: TenantGroupDetailItem) => void
   isDeletingGroup?: boolean
+  onLeaveGroup?: (group: TenantGroupDetailItem) => void
+  isLeavingGroup?: boolean
   onCreateApartmentApplication?: (group: TenantGroupDetailItem) => void
   isCreatingApartmentApplication?: boolean
   onCreateJoinRequest?: (group: TenantGroupDetailItem) => void
@@ -74,6 +76,8 @@ export default function TenantGroupDetailPanel({
   isAcceptingGroup = false,
   onDeleteGroup,
   isDeletingGroup = false,
+  onLeaveGroup,
+  isLeavingGroup = false,
   onCreateApartmentApplication,
   isCreatingApartmentApplication = false,
   onCreateJoinRequest,
@@ -89,6 +93,7 @@ export default function TenantGroupDetailPanel({
   const navigate = useNavigate()
   const [selectedApartment, setSelectedApartment] = useState<TenantProperty | null>(null)
   const [selectedCandidates, setSelectedCandidates] = useState<TenantGroupCandidate[]>([])
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false)
 
   useEffect(() => {
     setSelectedApartment(null)
@@ -96,6 +101,7 @@ export default function TenantGroupDetailPanel({
   }, [group.id])
 
   const isOwner = group.userRelation === 'creator'
+  const canLeaveGroup = group.userRelation === 'member'
   const isOnlyMember = group.members.length === 1
   const canAcceptGroup =
      !group.isFullyAccepted
@@ -148,6 +154,11 @@ export default function TenantGroupDetailPanel({
     onDeleteGroup(group)
   }
 
+  function handleConfirmLeaveGroup() {
+    if (!onLeaveGroup) return
+    onLeaveGroup(group)
+  }
+
   return (
     <div className={styles.detailContainer}>
       <header className={styles.detailHeader}>
@@ -198,8 +209,54 @@ export default function TenantGroupDetailPanel({
                 : t('tenantGroups.detail.actions.deleteGroup')}
             </button>
           ) : null}
+
+          {canLeaveGroup ? (
+            <button
+              type="button"
+              className={styles.leaveGroupButton}
+              onClick={() => setShowLeaveDialog(true)}
+              disabled={isLeavingGroup}
+            >
+              {isLeavingGroup
+                ? t('tenantGroups.detail.actions.leavingGroup')
+                : t('tenantGroups.detail.actions.leaveGroup')}
+            </button>
+          ) : null}
         </div>
       </header>
+
+      {showLeaveDialog ? (
+        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="leave-group-title">
+          <div className={styles.confirmDialog}>
+            <h3 id="leave-group-title" className={styles.confirmTitle}>
+              {t('tenantGroups.detail.actions.confirmLeaveTitle')}
+            </h3>
+            <p className={styles.confirmDescription}>
+              {t('tenantGroups.detail.actions.confirmLeaveDescription')}
+            </p>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmCancelButton}
+                onClick={() => setShowLeaveDialog(false)}
+                disabled={isLeavingGroup}
+              >
+                {t('tenantGroups.detail.actions.confirmLeaveCancel')}
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDangerButton}
+                onClick={handleConfirmLeaveGroup}
+                disabled={isLeavingGroup}
+              >
+                {isLeavingGroup
+                  ? t('tenantGroups.detail.actions.leavingGroup')
+                  : t('tenantGroups.detail.actions.confirmLeaveConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <section className={styles.apartmentHeroSection}>
         <h3 className={styles.sectionTitle}>{t('tenantGroups.detail.sections.apartment')}</h3>
