@@ -1,6 +1,7 @@
 package httpadapter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -291,34 +292,20 @@ func (h *handler) updateOwnerApartment(c *gin.Context) {
 }
 
 func (h *handler) closeOwnerApartment(c *gin.Context) {
-	ownerID, role, ok := h.resolveUserAndRole(c)
-	if !ok {
-		return
-	}
-	apartmentID := strings.TrimSpace(c.Param("id"))
-	if apartmentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
-		return
-	}
-
-	err := h.apartmentService.CloseOwnerApartment(c.Request.Context(), ownerID, role, apartmentID)
-	if err != nil {
-		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
-			return
-		}
-		if errors.Is(err, apartmentservice.ErrApartmentAlreadyClosed) {
-			c.JSON(http.StatusConflict, gin.H{"error": "apartment is already closed"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not close apartment"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "apartment closed successfully"})
+	h.ownerApartmentAction(c, h.apartmentService.CloseOwnerApartment, apartmentservice.ErrApartmentAlreadyClosed,
+		"apartment is already closed", "could not close apartment", "apartment closed successfully")
 }
 
 func (h *handler) reopenOwnerApartment(c *gin.Context) {
+	h.ownerApartmentAction(c, h.apartmentService.ReopenOwnerApartment, apartmentservice.ErrApartmentNotClosed,
+		"apartment is not closed", "could not reopen apartment", "apartment reopened successfully")
+}
+
+func (h *handler) ownerApartmentAction(
+	c *gin.Context,
+	action func(ctx context.Context, ownerID, role, apartmentID string) error,
+	conflictErr error, conflictMsg, internalMsg, successMsg string,
+) {
 	ownerID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
 		return
@@ -329,21 +316,21 @@ func (h *handler) reopenOwnerApartment(c *gin.Context) {
 		return
 	}
 
-	err := h.apartmentService.ReopenOwnerApartment(c.Request.Context(), ownerID, role, apartmentID)
+	err := action(c.Request.Context(), ownerID, role, apartmentID)
 	if err != nil {
 		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
 			return
 		}
-		if errors.Is(err, apartmentservice.ErrApartmentNotClosed) {
-			c.JSON(http.StatusConflict, gin.H{"error": "apartment is not closed"})
+		if errors.Is(err, conflictErr) {
+			c.JSON(http.StatusConflict, gin.H{"error": conflictMsg})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not reopen apartment"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": internalMsg})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "apartment reopened successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": successMsg})
 }
 
 type apartmentTenantResponse struct {
