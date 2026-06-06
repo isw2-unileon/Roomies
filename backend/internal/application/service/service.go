@@ -399,7 +399,7 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
 		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])
 		applications[idx].StatusMessage = buildTenantApplicationStatusMessage(applications[idx])
-		applications[idx].CanCancel = applications[idx].Status == "pending"
+		applications[idx].CanCancel = applications[idx].Status == "pending" && !strings.EqualFold(strings.TrimSpace(applications[idx].Type), "group")
 
 		signedImageURL, signErr := s.signApartmentPhotoURL(ctx, applications[idx].ImageURL)
 		if signErr == nil {
