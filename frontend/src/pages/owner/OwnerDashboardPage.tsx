@@ -5,27 +5,17 @@ import { useNavigate } from 'react-router-dom'
 import { useNotice } from '@/hooks/useNotice'
 import AuthNotice from '@/components/auth/AuthNotice'
 import OwnerLayout from '@/components/owner/OwnerLayout'
-import OwnerActivityList from '@/components/owner/owner_properties/OwnerActivityList'
-import OwnerHelpCard from '@/components/owner/owner_properties/OwnerHelpCard'
-import OwnerIssuesList from '@/components/owner/owner_properties/OwnerIssuesList'
-import OwnerPaymentsList from '@/components/owner/owner_properties/OwnerPaymentsList'
 import OwnerPropertyGrid from '@/components/owner/owner_properties/OwnerPropertyGrid'
 import OwnerSummaryCard from '@/components/owner/owner_properties/OwnerSummaryCard'
-import {
-  mockOwnerActivity,
-  mockOwnerIssues,
-  mockOwnerPayments,
-} from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
 import { getProfileStatus } from '@/services/authService'
 import { closeApartment, reopenApartment, listOwnerApartments } from '@/services/ownerService'
-import type { OwnerDashboardProperty, OwnerIssueStatus } from '@/types/owner'
+import type { OwnerDashboardProperty } from '@/types/owner'
 
 export default function OwnerDashboardPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [issues, setIssues] = useState(mockOwnerIssues)
   const [ownerProperties, setOwnerProperties] = useState<OwnerDashboardProperty[]>([])
   const [isLoadingProperties, setIsLoadingProperties] = useState(false)
   const [closingPropertyId, setClosingPropertyId] = useState<string | null>(null)
@@ -80,10 +70,6 @@ export default function OwnerDashboardPage() {
       ignoreResult = true
     }
   }, [clearNotice, showError, t])
-
-  function handleStatusChange(id: string, status: OwnerIssueStatus) {
-    setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, status } : issue)))
-  }
 
   function handleEditProperty(property: OwnerDashboardProperty) {
     navigate(paths.ownerPublishProperty, { state: { propertyId: property.id } })
@@ -155,21 +141,6 @@ export default function OwnerDashboardPage() {
               <OwnerPropertyGrid properties={ownerProperties} onEdit={handleEditProperty} onClose={handleCloseProperty} onReopen={handleReopenProperty} closingPropertyId={closingPropertyId} reopeningPropertyId={reopeningPropertyId} onTenantRemoved={handleTenantRemoved} />
             )}
           </section>
-
-
-          <section className={styles.ownerSectionCard}>
-            <header className={styles.ownerSectionHeader}>
-              <h2 className={styles.ownerSectionTitle}>{t('ownerDashboard.payments.title')}</h2>
-            </header>
-            <OwnerPaymentsList payments={mockOwnerPayments} />
-          </section>
-
-          <section className={styles.ownerSectionCard}>
-            <header className={styles.ownerSectionHeader}>
-              <h2 className={styles.ownerSectionTitle}>{t('ownerDashboard.issues.title')}</h2>
-            </header>
-            <OwnerIssuesList issues={issues} onStatusChange={handleStatusChange} />
-          </section>
         </div>
 
         <aside className={styles.ownerSideColumn}>
@@ -179,8 +150,6 @@ export default function OwnerDashboardPage() {
             free={occupancy.free}
             percent={occupancy.percent}
           />
-          <OwnerActivityList items={mockOwnerActivity} />
-          <OwnerHelpCard />
         </aside>
       </div>
     </OwnerLayout>
