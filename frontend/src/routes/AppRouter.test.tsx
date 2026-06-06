@@ -36,6 +36,13 @@ vi.mock('@/services/ownerService', () => ({
   updateOwnerApartment: vi.fn(async () => ({})),
 }))
 
+vi.mock('@/services/messageService', () => ({
+  listConversations: vi.fn(async () => []),
+  listConversationMessages: vi.fn(async () => []),
+  markConversationRead: vi.fn(async () => 0),
+  sendMessage: vi.fn(async () => ({})),
+}))
+
 vi.mock('@/components/owner/owner_publish_property/LocationPicker', () => ({
   default: () => <div data-testid="location-picker" />,
 }))
@@ -76,11 +83,11 @@ describe('AppRouter', () => {
     expect(window.location.pathname).toBe(paths.login)
   })
 
-  test('renders placeholder tenant pages inside the tenant layout', async () => {
+  test('renders tenant messages page inside the tenant layout', async () => {
     renderAppAt(paths.tenantMessages)
 
     expect(await screen.findByRole('heading', { name: /mensajes/i })).toBeInTheDocument()
-    expect(screen.getByText(/esta sección se completará más adelante/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no tienes conversaciones/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /mensajes/i })).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByRole('combobox', { name: /idioma de la interfaz/i })).not.toBeInTheDocument()
   })

@@ -523,3 +523,33 @@
 .panelButton:hover {
   opacity: 0.88;
 }
+
+.iconSmall {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.modalTextarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.85rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+  font-family: inherit;
+}
+
+.modalTextarea:focus {
+  outline: none;
+  border-color: var(--tenant-primary);
+}
+
+.modalTextarea::placeholder {
+  color: var(--tenant-text-muted);
+}

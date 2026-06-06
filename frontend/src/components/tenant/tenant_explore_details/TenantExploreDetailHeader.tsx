@@ -1,6 +1,6 @@
 import {
   ArrowLeftIcon,
-  ArrowUpTrayIcon,
+  ChatBubbleLeftIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +18,7 @@ interface TenantExploreDetailHeaderProps {
   isApplying: boolean
   onApply: () => void
   onCancel: () => void
+  onContact: () => void
 }
 
 export default function TenantExploreDetailHeader({
@@ -28,6 +29,7 @@ export default function TenantExploreDetailHeader({
   isApplying,
   onApply,
   onCancel,
+  onContact,
 }: TenantExploreDetailHeaderProps) {
   const { t } = useTranslation()
   const showCancelButton = canCancel && hasActiveApplication
@@ -65,9 +67,9 @@ export default function TenantExploreDetailHeader({
         </div>
 
         <div className={styles.actionRow}>
-          <button type="button" className={styles.shareButton}>
-            <ArrowUpTrayIcon className={styles.iconTiny} aria-hidden="true" />
-            {t('tenantDashboard.detail.share')}
+          <button type="button" className={styles.shareButton} onClick={onContact}>
+            <ChatBubbleLeftIcon className={styles.iconTiny} aria-hidden="true" />
+            {t('tenantDashboard.detail.contact')}
           </button>
 
           {showCancelButton ? (

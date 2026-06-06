@@ -29,6 +29,7 @@ export interface TenantProperty {
     id: string
     titleKey: string
     description?: string
+    ownerId?: string
     ownerName?: string
     addressKey: string
     areaKey: string

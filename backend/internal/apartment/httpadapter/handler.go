@@ -63,6 +63,7 @@ type ownerApartmentResponse struct {
 
 type tenantApartmentResponse struct {
 	ID              string   `json:"id"`
+	OwnerID         string   `json:"owner_id"`
 	Title           string   `json:"title"`
 	Description     string   `json:"description"`
 	Address         string   `json:"address"`
@@ -376,6 +377,7 @@ func (h *handler) getApartmentDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, tenantApartmentDetailResponse{
 		Apartment: tenantApartmentResponse{
 			ID:              detail.Apartment.ID,
+			OwnerID:         detail.Apartment.OwnerID,
 			Title:           detail.Apartment.Title,
 			Description:     detail.Apartment.Description,
 			Address:         detail.Apartment.Address,
@@ -547,6 +549,7 @@ func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmen
 		imageURLs := nonNilStrings(item.ImageURLs)
 		responses = append(responses, tenantApartmentResponse{
 			ID:              item.ID,
+			OwnerID:         item.OwnerID,
 			Title:           item.Title,
 			Description:     item.Description,
 			Address:         item.Address,
