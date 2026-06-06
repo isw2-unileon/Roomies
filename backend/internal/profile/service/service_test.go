@@ -51,6 +51,10 @@ func (f *fakeProfileRepository) GetTenantProfileByUserID(ctx context.Context, us
 	return nil, nil
 }
 
+func (f *fakeProfileRepository) ListTenantProfiles(ctx context.Context, currentUserID string) ([]profile.TenantProfileSummary, error) {
+	return nil, nil
+}
+
 func (f *fakeProfileRepository) UpdateTenantAvatarURL(ctx context.Context, userID, avatarURL string) error {
 	f.savedUserID = userID
 	f.savedPerson.AvatarURL = avatarURL

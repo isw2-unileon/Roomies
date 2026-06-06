@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom'
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantFilters, { DEFAULT_FILTER_VALUES, type FilterValues } from '@/components/tenant/tenants_explore/TenantFilters'
 import TenantPropertyGrid from '@/components/tenant/tenants_explore/TenantPropertyGrid'
+import TenantRoommateDiscoveryPanel from '@/components/tenant/tenants_explore/TenantRoommateDiscoveryPanel'
 import TenantSearchBar from '@/components/tenant/tenants_explore/TenantSearchBar'
 import { mockTenantProfile } from '@/mocks/tenantData'
 import { paths } from '@/routes/paths'
 import { listTenantApartments } from '@/services/tenantService'
 import type { TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantDashboard.module.css'
+
+type ExploreMenu = 'apartments' | 'roommates'
 
 export default function TenantExplorePage() {
     const { t } = useTranslation()
@@ -20,6 +23,7 @@ export default function TenantExplorePage() {
     const [error, setError] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [activeFilters, setActiveFilters] = useState<FilterValues>(DEFAULT_FILTER_VALUES)
+    const [activeMenu, setActiveMenu] = useState<ExploreMenu>('apartments')
 
     useEffect(() => {
         let ignoreResult = false
@@ -94,30 +98,57 @@ export default function TenantExplorePage() {
                 </div>
             </section>
 
-            <TenantSearchBar
-                onSearch={setSearchQuery}
-                onReset={handleResetSearchAndFilters}
-            />
-
-            <TenantFilters
-                onFilterChange={setActiveFilters}
-            />
-
-            <div className={styles.resultsRow}>
-                <p className={styles.resultsText}>
-                    {t('tenantDashboard.resultsFound', { count: filteredProperties.length })}
-                </p>
+            <div className={styles.exploreTabs} role="tablist" aria-label={t('tenantDashboard.exploreTabs.label')}>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeMenu === 'apartments'}
+                    className={`${styles.exploreTab} ${activeMenu === 'apartments' ? styles.exploreTabActive : ''}`}
+                    onClick={() => setActiveMenu('apartments')}
+                >
+                    {t('tenantDashboard.exploreTabs.apartments')}
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeMenu === 'roommates'}
+                    className={`${styles.exploreTab} ${activeMenu === 'roommates' ? styles.exploreTabActive : ''}`}
+                    onClick={() => setActiveMenu('roommates')}
+                >
+                    {t('tenantDashboard.exploreTabs.roommates')}
+                </button>
             </div>
 
-            {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
+            {activeMenu === 'apartments' ? (
+                <>
+                    <TenantSearchBar
+                        onSearch={setSearchQuery}
+                        onReset={handleResetSearchAndFilters}
+                    />
 
-            {isLoading ? (
-                <p role="status" className={styles.loadingText}>{t('tenantDashboard.loading')}</p>
+                    <TenantFilters
+                        onFilterChange={setActiveFilters}
+                    />
+
+                    <div className={styles.resultsRow}>
+                        <p className={styles.resultsText}>
+                            {t('tenantDashboard.resultsFound', { count: filteredProperties.length })}
+                        </p>
+                    </div>
+
+                    {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
+
+                    {isLoading ? (
+                        <p role="status" className={styles.loadingText}>{t('tenantDashboard.loading')}</p>
+                    ) : (
+                        <TenantPropertyGrid
+                            properties={filteredProperties}
+                            onPropertyClick={handlePropertyClick}
+                        />
+                    )}
+                </>
             ) : (
-                <TenantPropertyGrid
-                    properties={filteredProperties}
-                    onPropertyClick={handlePropertyClick}
-                />
+                <TenantRoommateDiscoveryPanel />
             )}
             </div>
         </TenantLayout>
