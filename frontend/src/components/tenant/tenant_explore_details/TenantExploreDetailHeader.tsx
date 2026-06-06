@@ -2,9 +2,13 @@ import {
   ArrowLeftIcon,
   ArrowUpTrayIcon,
   MapPinIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { Map, MapMarker, MarkerContent, MapControls } from '@/components/map/map'
+import { MapPin } from 'lucide-react'
 
 import { paths } from '@/routes/paths'
 import styles from '@/styles/TenantExploreDetail.module.css'
@@ -30,6 +34,7 @@ export default function TenantExploreDetailHeader({
   onCancel,
 }: TenantExploreDetailHeaderProps) {
   const { t } = useTranslation()
+  const [showMap, setShowMap] = useState(false)
   const showCancelButton = canCancel && hasActiveApplication
   const showApplyButton = canApply && !hasActiveApplication
 
@@ -60,7 +65,7 @@ export default function TenantExploreDetailHeader({
               <MapPinIcon className={styles.iconTiny} aria-hidden="true" />
               {t(property.addressKey)}
             </span>
-            <button type="button" className={styles.mapLink}>{t('tenantDashboard.detail.viewOnMap')}</button>
+            <button type="button" className={styles.mapLink} onClick={() => setShowMap(true)}>{t('tenantDashboard.detail.viewOnMap')}</button>
           </div>
         </div>
 
@@ -83,6 +88,33 @@ export default function TenantExploreDetailHeader({
           ) : null}
         </div>
       </section>
+
+      {showMap && (
+        <div className={styles.mapOverlay} onClick={() => setShowMap(false)}>
+          <div className={styles.mapModal} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className={styles.mapCloseButton}
+              onClick={() => setShowMap(false)}
+              aria-label="Close map"
+            >
+              <XMarkIcon className={styles.iconSmall} aria-hidden="true" />
+            </button>
+            <Map
+              className={styles.modalMap}
+              center={[property.longitude, property.latitude]}
+              zoom={15}
+            >
+              <MapControls showZoom />
+              <MapMarker longitude={property.longitude} latitude={property.latitude}>
+                <MarkerContent>
+                  <MapPin className="fill-primary stroke-white dark:fill-primary" size={28} />
+                </MarkerContent>
+              </MapMarker>
+            </Map>
+          </div>
+        </div>
+      )}
     </>
   )
 }
