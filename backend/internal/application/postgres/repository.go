@@ -652,6 +652,15 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 		return false, err
 	}
 
+	if approve {
+		if err := r.incrementApartmentOccupancyTx(ctx, tx, updateContext.apartmentID); err != nil {
+			return false, err
+		}
+		if err := r.cancelOtherTenantApplicationsTx(ctx, tx, applicationID, updateContext); err != nil {
+			return false, err
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return false, fmt.Errorf("commit update owner application: %w", err)
 	}
@@ -695,8 +704,7 @@ func (r *Repository) applyOwnerApplicationStatusTx(ctx context.Context, tx pgx.T
 	query := `UPDATE public.applications app
 	SET status = $3,
 		updated_at = NOW(),
-		owner_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.owner_confirmed_at END,
-		fully_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.fully_confirmed_at END
+		owner_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.owner_confirmed_at END
 	FROM public.apartments a
 	WHERE app.id = $1
 		AND app.apartment_id = a.id
@@ -796,6 +804,38 @@ func (r *Repository) rejectOtherPendingGroupApplicationsTx(ctx context.Context, 
 		}
 	}
 
+	return nil
+}
+
+func (r *Repository) incrementApartmentOccupancyTx(ctx context.Context, tx pgx.Tx, apartmentID string) error {
+	const query = `UPDATE public.apartments
+		SET occupied_spots = occupied_spots + 1,
+			available_spots = GREATEST(available_spots - 1, 0),
+			status = CASE
+				WHEN (available_spots - 1) <= 0 THEN 'FULL'
+				ELSE 'PARTIALLY_OCCUPIED'
+			END,
+			updated_at = NOW()
+		WHERE id = $1`
+
+	if _, err := tx.Exec(ctx, query, apartmentID); err != nil {
+		return fmt.Errorf("increment apartment occupancy: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) cancelOtherTenantApplicationsTx(ctx context.Context, tx pgx.Tx, approvedApplicationID string, updateContext *ownerApplicationUpdateContext) error {
+	if updateContext.applicationType == "individual" {
+		const query = `UPDATE public.applications
+			SET status = 'CANCELLED', updated_at = NOW()
+			WHERE tenant_id = (SELECT tenant_id FROM public.applications WHERE id = $1)
+				AND id <> $1
+				AND status = 'PENDING_OWNER'`
+
+		if _, err := tx.Exec(ctx, query, approvedApplicationID); err != nil {
+			return fmt.Errorf("cancel other tenant applications: %w", err)
+		}
+	}
 	return nil
 }
 
