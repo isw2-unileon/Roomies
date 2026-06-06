@@ -5,6 +5,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantCompatibilityCard from '@/components/tenant/tenant_explore_details/TenantCompatibilityCard'
 import TenantExploreDetailHeader from '@/components/tenant/tenant_explore_details/TenantExploreDetailHeader'
+import TenantCurrentResidentsCard from '@/components/tenant/tenant_explore_details/TenantCurrentResidentsCard'
 import TenantInterestedTenantsCard from '@/components/tenant/tenant_explore_details/TenantInterestedTenantsCard'
 import TenantPropertyDetailsCard from '@/components/tenant/tenant_explore_details/TenantPropertyDetailsCard'
 import TenantPropertyGallery from '@/components/tenant/tenant_explore_details/TenantPropertyGallery'
@@ -14,10 +15,11 @@ import {
   applyToTenantApartment,
   cancelTenantApplication,
   getTenantApartmentDetail,
+  listApartmentResidents,
   listInterestedTenants,
 } from '@/services/tenantService'
 import styles from '@/styles/TenantExploreDetail.module.css'
-import type { InterestedTenant, TenantProperty, TenantPropertyDetail } from '@/types/tenant'
+import type { ApartmentResident, InterestedTenant, TenantProperty, TenantPropertyDetail } from '@/types/tenant'
 
 interface TenantExploreDetailLocationState {
   property?: TenantProperty
@@ -32,6 +34,7 @@ export default function TenantExploreDetailPage() {
   const [property, setProperty] = useState<TenantProperty | null>(locationState?.property ?? null)
   const [detail, setDetail] = useState<TenantPropertyDetail | null>(null)
   const [interestedTenants, setInterestedTenants] = useState<InterestedTenant[]>([])
+  const [residents, setResidents] = useState<ApartmentResident[]>([])
   const [isLoading, setIsLoading] = useState(!locationState?.property)
   const [error, setError] = useState('')
   const [applyStatus, setApplyStatus] = useState('')
@@ -45,9 +48,10 @@ export default function TenantExploreDetailPage() {
       setError('')
 
       try {
-        const [apartmentDetail, tenants] = await Promise.all([
+        const [apartmentDetail, tenants, apartmentResidents] = await Promise.all([
           getTenantApartmentDetail(propertyId),
           listInterestedTenants(propertyId),
+          listApartmentResidents(propertyId),
         ])
         if (ignoreResult) {
           return
@@ -56,6 +60,7 @@ export default function TenantExploreDetailPage() {
         setDetail(apartmentDetail)
         setProperty(apartmentDetail.property)
         setInterestedTenants(tenants)
+        setResidents(apartmentResidents)
       } catch (loadError) {
         if (!ignoreResult) {
           setError(loadError instanceof Error ? loadError.message : t('tenantDashboard.detail.loadError'))
@@ -157,6 +162,7 @@ export default function TenantExploreDetailPage() {
           <TenantCompatibilityCard compatibility={compatibility} reasons={compatibilityReasons} />
           <TenantPropertyDetailsCard property={property} />
           <TenantServicesLocationCard rules={rules} />
+          <TenantCurrentResidentsCard residents={residents} />
           <TenantInterestedTenantsCard tenants={interestedTenants} propertyId={propertyId} />
         </div>
       </div>

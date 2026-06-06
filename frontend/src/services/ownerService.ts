@@ -300,6 +300,63 @@ export async function rejectOwnerApplication(applicationID: string) {
 	return data.message ?? 'application rejected'
 }
 
+export async function closeApartment(apartmentId: string): Promise<string> {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(apartmentId)}/close`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const data = (await response.json()) as { message?: string; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo cerrar el piso.')
+  }
+  return data.message ?? 'apartment closed'
+}
+
+export interface ApartmentTenant {
+  userId: string
+  name: string
+  email: string
+  avatarUrl: string
+  joinedAt: string
+}
+
+interface ApartmentTenantDto {
+  user_id: string
+  name: string
+  email: string
+  avatar_url: string
+  joined_at: string
+}
+
+export async function listApartmentTenants(apartmentId: string): Promise<ApartmentTenant[]> {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(apartmentId)}/tenants`)
+  const data = (await response.json()) as { tenants?: ApartmentTenantDto[]; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudieron cargar los integrantes.')
+  }
+  return (data.tenants ?? []).map((t) => ({
+    userId: t.user_id,
+    name: t.name,
+    email: t.email,
+    avatarUrl: t.avatar_url,
+    joinedAt: t.joined_at,
+  }))
+}
+
+export async function reopenApartment(apartmentId: string): Promise<string> {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(apartmentId)}/reopen`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const data = (await response.json()) as { message?: string; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo reabrir el piso.')
+  }
+  return data.message ?? 'apartment reopened'
+}
+
 export async function updateOwnerApartment(propertyId: string, input: CreateApartmentInput): Promise<CreateApartmentResult> {
   const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(propertyId)}`, {
     method: 'PATCH',
