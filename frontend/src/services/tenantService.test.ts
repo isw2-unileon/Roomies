@@ -38,6 +38,9 @@ describe('tenantService', () => {
             created_at: '2026-05-21T10:00:00Z',
             image_url: 'https://example.test/apt.jpg',
             image_urls: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
+            latitude: 42.6,
+            longitude: -5.57,
+            is_current_tenant_home: true,
           },
         ],
       }),
@@ -58,13 +61,16 @@ describe('tenantService', () => {
         status: 'available',
         images: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
         createdAt: '2026-05-21T10:00:00Z',
+        latitude: 42.6,
+        longitude: -5.57,
         bathrooms: 0,
         surfaceM2: 0,
         floor: 0,
+        isCurrentTenantHome: true,
       },
     ])
 
-    expect(fetch).toHaveBeenCalledWith('/api/apartments', { credentials: 'include' })
+    expect(fetch).toHaveBeenCalledWith('/api/tenant/apartments', { credentials: 'include' })
   })
 
   test('sends search and filter params to apartments endpoint', async () => {
@@ -87,7 +93,7 @@ describe('tenantService', () => {
     })
 
     expect(fetch).toHaveBeenCalledWith(
-      '/api/apartments?q=centro&area=centro&price_min=300&price_max=500&total_rooms_min=2&total_rooms_max=4&available_rooms_min=1&available_rooms_max=2&availability=soon&sort_by=price_low',
+      '/api/tenant/apartments?q=centro&area=centro&price_min=300&price_max=500&total_rooms_min=2&total_rooms_max=4&available_rooms_min=1&available_rooms_max=2&availability=soon&sort_by=price_low',
       { credentials: 'include' },
     )
   })
@@ -118,7 +124,7 @@ describe('tenantService', () => {
     const result = await listTenantApartments({ lat: 42.6, lng: -5.57, radius: 2 })
 
     expect(fetch).toHaveBeenCalledWith(
-      '/api/apartments/map?lat=42.6&lng=-5.57&radius=2',
+      '/api/tenant/apartments/map?lat=42.6&lng=-5.57&radius=2',
       { credentials: 'include' },
     )
     expect(result[0]!.latitude).toBe(42.6)

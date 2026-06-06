@@ -243,7 +243,8 @@ const fr = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-    property: {
+      property: {
+        currentHome: 'TON LOGEMENT',
       status: {
         available: 'Disponible',
         occupied: 'Occupé',
@@ -316,6 +317,7 @@ const fr = {
         studentsAllowed: 'Étudiants',
         notes: 'Notes du propriétaire',
         location: 'Emplacement : {{address}}',
+        noRules: 'Le propriétaire n\'a défini aucune règle pour ce logement.',
       },
       interested: {
         title: 'Personnes intéressées par ce logement',
@@ -366,6 +368,7 @@ const fr = {
         title: 'Résidents actuels',
         since: 'Depuis {{date}}',
         viewProfile: 'Voir le profil',
+        noResidents: 'Aucun résident pour le moment.',
       },
     },
     properties: {
@@ -461,7 +464,7 @@ const fr = {
       close: 'Fermer le logement',
       closeAria: 'Fermer {{title}}',
       closeConfirmTitle: 'Fermer le logement',
-      closeConfirmMessage: 'Êtes-vous sûr de vouloir fermer ce logement ? Les candidatures en attente seront annulées et il ne sera plus visible dans les recherches.',
+      closeConfirmMessage: 'Êtes-vous sûr de vouloir fermer ce logement ? Les candidatures en attente seront annulées, il ne sera plus visible dans les recherches et les locataires confirmés seront liés exclusivement à ce logement.',
       closeConfirmButton: 'Fermer le logement',
       closeCancelButton: 'Annuler',
       closeSuccess: 'Logement fermé avec succès.',

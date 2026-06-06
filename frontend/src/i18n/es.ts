@@ -243,7 +243,8 @@ const es = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-    property: {
+      property: {
+        currentHome: 'TU PISO',
       status: {
         available: 'Disponible',
         occupied: 'Ocupado',
@@ -316,6 +317,7 @@ const es = {
         studentsAllowed: 'Estudiantes',
         notes: 'Notas del propietario',
         location: 'Ubicación: {{address}}',
+        noRules: 'El propietario no ha establecido normas para este piso.',
       },
       interested: {
         title: 'Personas interesadas en este piso',
@@ -366,6 +368,7 @@ const es = {
         title: 'Residentes actuales',
         since: 'Desde {{date}}',
         viewProfile: 'Ver perfil',
+        noResidents: 'Aún no hay residentes.',
       },
     },
     properties: {
@@ -461,7 +464,7 @@ const es = {
       close: 'Cerrar piso',
       closeAria: 'Cerrar {{title}}',
       closeConfirmTitle: 'Cerrar piso',
-      closeConfirmMessage: '¿Estás seguro de que quieres cerrar este piso? Las solicitudes pendientes serán canceladas y dejará de aparecer en las búsquedas.',
+      closeConfirmMessage: '¿Estás seguro de que quieres cerrar este piso? Las solicitudes pendientes serán canceladas, dejará de aparecer en las búsquedas y los inquilinos confirmados quedarán vinculados exclusivamente a este piso.',
       closeConfirmButton: 'Cerrar piso',
       closeCancelButton: 'Cancelar',
       closeSuccess: 'Piso cerrado correctamente.',

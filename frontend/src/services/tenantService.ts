@@ -86,6 +86,7 @@ interface TenantApartmentDto {
   pets_allowed?: boolean | null
   students_allowed?: boolean | null
   notes?: string
+  is_current_tenant_home?: boolean | null
 }
 
 interface TenantApartmentDetailResponseDto {
@@ -426,6 +427,7 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     bathrooms: dto.bathrooms ?? 0,
     surfaceM2: dto.surface_m2 ?? 0,
     floor: dto.floor ?? 0,
+    isCurrentTenantHome: dto.is_current_tenant_home === true,
   }
 }
 
@@ -794,7 +796,7 @@ function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) 
 
 export async function listTenantApartments(filters?: TenantApartmentListFilters) {
   const hasMapParams = filters?.lat !== undefined && filters?.lng !== undefined && filters?.radius !== undefined
-  const endpoint = hasMapParams ? '/api/apartments/map' : '/api/apartments'
+  const endpoint = hasMapParams ? '/api/tenant/apartments/map' : '/api/tenant/apartments'
   const query = buildApartmentsQuery(filters)
   const response = await apiFetch(`${endpoint}${query}`)
   const data = (await response.json()) as TenantApartmentsResponseDto

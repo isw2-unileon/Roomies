@@ -526,6 +526,13 @@
   line-height: 1.45;
 }
 
+.emptyText {
+  margin: 0.75rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 .interestedList {
   display: grid;
   gap: 0.8rem;

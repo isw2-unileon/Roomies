@@ -44,6 +44,7 @@ export interface TenantProperty {
     bathrooms: number
     surfaceM2: number
     floor: number
+    isCurrentTenantHome?: boolean
 }
 
 export type PropertyAvailability = 'available' | 'occupied' | 'full'

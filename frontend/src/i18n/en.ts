@@ -243,7 +243,8 @@ const en = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-    property: {
+      property: {
+        currentHome: 'YOUR FLAT',
       status: {
         available: 'Available',
         occupied: 'Occupied',
@@ -316,6 +317,7 @@ const en = {
         studentsAllowed: 'Students',
         notes: 'Owner notes',
         location: 'Location: {{address}}',
+        noRules: 'The owner has not set any rules for this flat.',
       },
       interested: {
         title: 'People interested in this flat',
@@ -366,6 +368,7 @@ const en = {
         title: 'Current residents',
         since: 'Since {{date}}',
         viewProfile: 'View profile',
+        noResidents: 'No residents yet.',
       },
     },
     properties: {
@@ -461,7 +464,7 @@ const en = {
       close: 'Close flat',
       closeAria: 'Close {{title}}',
       closeConfirmTitle: 'Close flat',
-      closeConfirmMessage: 'Are you sure you want to close this flat? Pending applications will be cancelled and it will no longer appear in searches.',
+      closeConfirmMessage: 'Are you sure you want to close this flat? Pending applications will be cancelled, it will no longer appear in searches and confirmed tenants will be locked exclusively to this flat.',
       closeConfirmButton: 'Close flat',
       closeCancelButton: 'Cancel',
       closeSuccess: 'Flat closed successfully.',
