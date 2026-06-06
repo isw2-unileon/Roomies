@@ -57,9 +57,10 @@
 .tabs {
   display: flex;
   gap: 0.35rem;
-  overflow-x: auto;
+  overflow-x: hidden;
   padding-bottom: 0.25rem;
   border-bottom: 1px solid var(--tenant-border-light);
+  scrollbar-width: none;
 }
 
 .tab {
