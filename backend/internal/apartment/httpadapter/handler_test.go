@@ -23,6 +23,9 @@ func (f *fakeMapRepo) ListOwnerApartments(ctx context.Context, ownerID string) (
 func (f *fakeMapRepo) ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
 	return nil, nil
 }
+func (f *fakeMapRepo) GetTenantClosedApartment(ctx context.Context, tenantID string) (*apartment.Apartment, error) {
+	return nil, nil
+}
 func (f *fakeMapRepo) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
 	return []apartment.Apartment{
 		{ID: "apt-1", Title: "Piso cerca", Latitude: lat + 0.001, Longitude: lng + 0.001, TotalSpots: 3, OccupiedSpots: 1},

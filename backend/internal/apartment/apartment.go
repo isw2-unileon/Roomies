@@ -36,28 +36,29 @@ type CreateApartmentResult struct {
 
 // Apartment contains apartment data shown in listing views.
 type Apartment struct {
-	ID              string
-	Title           string
-	Description     string
-	OwnerID         string
-	Address         string
-	Area            string
-	TotalSpots      int
-	OccupiedSpots   int
-	BaseRent        int
-	Status          string
-	CreatedAt       string
-	ImagePaths      []string
-	ImageURLs       []string
-	Latitude        float64
-	Longitude       float64
-	Bathrooms       int
-	SurfaceM2       int
-	Floor           int
-	SmokingAllowed  *bool
-	PetsAllowed     *bool
-	StudentsAllowed *bool
-	Notes           string
+	ID                  string
+	Title               string
+	Description         string
+	OwnerID             string
+	Address             string
+	Area                string
+	TotalSpots          int
+	OccupiedSpots       int
+	BaseRent            int
+	Status              string
+	CreatedAt           string
+	ImagePaths          []string
+	ImageURLs           []string
+	Latitude            float64
+	Longitude           float64
+	Bathrooms           int
+	SurfaceM2           int
+	Floor               int
+	SmokingAllowed      *bool
+	PetsAllowed         *bool
+	StudentsAllowed     *bool
+	Notes               string
+	IsCurrentTenantHome bool
 }
 
 // ListApartmentsFilters defines server-side filters for tenant explore listings.

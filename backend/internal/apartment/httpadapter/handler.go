@@ -63,29 +63,30 @@ type ownerApartmentResponse struct {
 }
 
 type tenantApartmentResponse struct {
-	ID              string   `json:"id"`
-	Title           string   `json:"title"`
-	Description     string   `json:"description"`
-	Address         string   `json:"address"`
-	Area            string   `json:"area"`
-	TotalSpots      int      `json:"total_spots"`
-	AvailableSpots  int      `json:"available_spots"`
-	BaseRent        int      `json:"base_rent"`
-	Status          string   `json:"status"`
-	CreatedAt       string   `json:"created_at"`
-	ImageURL        string   `json:"image_url"`
-	ImageURLs       []string `json:"image_urls"`
-	ImagePaths      []string `json:"image_paths"`
-	Compatibility   int      `json:"compatibility_score"`
-	Latitude        float64  `json:"latitude"`
-	Longitude       float64  `json:"longitude"`
-	Bathrooms       int      `json:"bathrooms"`
-	SurfaceM2       int      `json:"surface_m2"`
-	Floor           int      `json:"floor"`
-	SmokingAllowed  *bool    `json:"smoking_allowed"`
-	PetsAllowed     *bool    `json:"pets_allowed"`
-	StudentsAllowed *bool    `json:"students_allowed"`
-	Notes           string   `json:"notes"`
+	ID                  string   `json:"id"`
+	Title               string   `json:"title"`
+	Description         string   `json:"description"`
+	Address             string   `json:"address"`
+	Area                string   `json:"area"`
+	TotalSpots          int      `json:"total_spots"`
+	AvailableSpots      int      `json:"available_spots"`
+	BaseRent            int      `json:"base_rent"`
+	Status              string   `json:"status"`
+	IsCurrentTenantHome bool     `json:"is_current_tenant_home"`
+	CreatedAt           string   `json:"created_at"`
+	ImageURL            string   `json:"image_url"`
+	ImageURLs           []string `json:"image_urls"`
+	ImagePaths          []string `json:"image_paths"`
+	Compatibility       int      `json:"compatibility_score"`
+	Latitude            float64  `json:"latitude"`
+	Longitude           float64  `json:"longitude"`
+	Bathrooms           int      `json:"bathrooms"`
+	SurfaceM2           int      `json:"surface_m2"`
+	Floor               int      `json:"floor"`
+	SmokingAllowed      *bool    `json:"smoking_allowed"`
+	PetsAllowed         *bool    `json:"pets_allowed"`
+	StudentsAllowed     *bool    `json:"students_allowed"`
+	Notes               string   `json:"notes"`
 }
 
 type tenantApartmentDetailResponse struct {
@@ -108,6 +109,8 @@ func RegisterPublicRoutes(api *gin.RouterGroup, apartmentService *apartmentservi
 // RegisterTenantRoutes wires tenant apartment endpoints into the API router.
 func RegisterTenantRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
+	api.GET("/tenant/apartments", h.listTenantExploreApartments)
+	api.GET("/tenant/apartments/map", h.listTenantExploreApartmentsByMap)
 	api.GET("/apartments/:id", h.getApartmentDetail)
 	api.GET("/apartments/:id/tenants", h.listApartmentResidents)
 }
@@ -126,7 +129,39 @@ func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservic
 }
 
 func (h *handler) listAvailableApartments(c *gin.Context) {
-	filters := apartment.ListApartmentsFilters{
+	filters := listApartmentFiltersFromQuery(c)
+
+	apartments, err := h.apartmentService.ListAvailableApartmentsFiltered(c.Request.Context(), filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
+}
+
+func (h *handler) listTenantExploreApartments(c *gin.Context) {
+	tenantID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	filters := listApartmentFiltersFromQuery(c)
+
+	apartments, err := h.apartmentService.ListTenantExploreApartments(c.Request.Context(), tenantID, role, filters)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for tenant users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
+}
+
+func listApartmentFiltersFromQuery(c *gin.Context) apartment.ListApartmentsFilters {
+	return apartment.ListApartmentsFilters{
 		Query:             strings.TrimSpace(c.Query("q")),
 		Area:              strings.TrimSpace(c.Query("area")),
 		PriceMin:          parseIntQuery(c.Query("price_min")),
@@ -138,14 +173,6 @@ func (h *handler) listAvailableApartments(c *gin.Context) {
 		Availability:      strings.TrimSpace(c.Query("availability")),
 		SortBy:            strings.TrimSpace(c.Query("sort_by")),
 	}
-
-	apartments, err := h.apartmentService.ListAvailableApartmentsFiltered(c.Request.Context(), filters)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
 }
 
 func parseIntQuery(raw string) int {
@@ -193,6 +220,44 @@ func (h *handler) listApartmentsByMap(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, apartmentservice.ErrInvalidMapParams) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments by map"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
+}
+
+func (h *handler) listTenantExploreApartmentsByMap(c *gin.Context) {
+	tenantID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	lat, err := parseFloatQuery(c.Query("lat"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "lat is required and must be a number"})
+		return
+	}
+	lng, err := parseFloatQuery(c.Query("lng"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "lng is required and must be a number"})
+		return
+	}
+	radius, err := parseFloatQuery(c.Query("radius"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "radius is required and must be a number"})
+		return
+	}
+
+	apartments, err := h.apartmentService.ListTenantExploreApartmentsInRadius(c.Request.Context(), tenantID, role, lat, lng, radius)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrInvalidMapParams) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for tenant users"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments by map"})
@@ -493,29 +558,30 @@ func (h *handler) getApartmentDetail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, tenantApartmentDetailResponse{
 		Apartment: tenantApartmentResponse{
-			ID:              detail.Apartment.ID,
-			Title:           detail.Apartment.Title,
-			Description:     detail.Apartment.Description,
-			Address:         detail.Apartment.Address,
-			Area:            detail.Apartment.Area,
-			TotalSpots:      detail.Apartment.TotalSpots,
-			AvailableSpots:  detail.Apartment.TotalSpots - detail.Apartment.OccupiedSpots,
-			BaseRent:        detail.Apartment.BaseRent,
-			Status:          detail.Apartment.Status,
-			CreatedAt:       detail.Apartment.CreatedAt,
-			ImageURL:        firstImageURL(detail.Apartment.ImageURLs),
-			ImageURLs:       nonNilStrings(detail.Apartment.ImageURLs),
-			ImagePaths:      nonNilStrings(detail.Apartment.ImagePaths),
-			Compatibility:   detail.CompatibilityScore,
-			Latitude:        detail.Apartment.Latitude,
-			Longitude:       detail.Apartment.Longitude,
-			Bathrooms:       detail.Apartment.Bathrooms,
-			SurfaceM2:       detail.Apartment.SurfaceM2,
-			Floor:           detail.Apartment.Floor,
-			SmokingAllowed:  detail.Apartment.SmokingAllowed,
-			PetsAllowed:     detail.Apartment.PetsAllowed,
-			StudentsAllowed: detail.Apartment.StudentsAllowed,
-			Notes:           detail.Apartment.Notes,
+			ID:                  detail.Apartment.ID,
+			Title:               detail.Apartment.Title,
+			Description:         detail.Apartment.Description,
+			Address:             detail.Apartment.Address,
+			Area:                detail.Apartment.Area,
+			TotalSpots:          detail.Apartment.TotalSpots,
+			AvailableSpots:      detail.Apartment.TotalSpots - detail.Apartment.OccupiedSpots,
+			BaseRent:            detail.Apartment.BaseRent,
+			Status:              detail.Apartment.Status,
+			IsCurrentTenantHome: detail.Apartment.IsCurrentTenantHome,
+			CreatedAt:           detail.Apartment.CreatedAt,
+			ImageURL:            firstImageURL(detail.Apartment.ImageURLs),
+			ImageURLs:           nonNilStrings(detail.Apartment.ImageURLs),
+			ImagePaths:          nonNilStrings(detail.Apartment.ImagePaths),
+			Compatibility:       detail.CompatibilityScore,
+			Latitude:            detail.Apartment.Latitude,
+			Longitude:           detail.Apartment.Longitude,
+			Bathrooms:           detail.Apartment.Bathrooms,
+			SurfaceM2:           detail.Apartment.SurfaceM2,
+			Floor:               detail.Apartment.Floor,
+			SmokingAllowed:      detail.Apartment.SmokingAllowed,
+			PetsAllowed:         detail.Apartment.PetsAllowed,
+			StudentsAllowed:     detail.Apartment.StudentsAllowed,
+			Notes:               detail.Apartment.Notes,
 		},
 		CompatibilityReasons:     detail.CompatibilityReason,
 		CurrentApplicationID:     detail.CurrentApplicationID,
@@ -665,29 +731,30 @@ func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmen
 	for _, item := range apartments {
 		imageURLs := nonNilStrings(item.ImageURLs)
 		responses = append(responses, tenantApartmentResponse{
-			ID:              item.ID,
-			Title:           item.Title,
-			Description:     item.Description,
-			Address:         item.Address,
-			Area:            item.Area,
-			TotalSpots:      item.TotalSpots,
-			AvailableSpots:  item.TotalSpots - item.OccupiedSpots,
-			BaseRent:        item.BaseRent,
-			Status:          item.Status,
-			CreatedAt:       item.CreatedAt,
-			ImageURL:        firstImageURL(imageURLs),
-			ImageURLs:       imageURLs,
-			ImagePaths:      nonNilStrings(item.ImagePaths),
-			Compatibility:   0,
-			Latitude:        item.Latitude,
-			Longitude:       item.Longitude,
-			Bathrooms:       item.Bathrooms,
-			SurfaceM2:       item.SurfaceM2,
-			Floor:           item.Floor,
-			SmokingAllowed:  item.SmokingAllowed,
-			PetsAllowed:     item.PetsAllowed,
-			StudentsAllowed: item.StudentsAllowed,
-			Notes:           item.Notes,
+			ID:                  item.ID,
+			Title:               item.Title,
+			Description:         item.Description,
+			Address:             item.Address,
+			Area:                item.Area,
+			TotalSpots:          item.TotalSpots,
+			AvailableSpots:      item.TotalSpots - item.OccupiedSpots,
+			BaseRent:            item.BaseRent,
+			Status:              item.Status,
+			IsCurrentTenantHome: item.IsCurrentTenantHome,
+			CreatedAt:           item.CreatedAt,
+			ImageURL:            firstImageURL(imageURLs),
+			ImageURLs:           imageURLs,
+			ImagePaths:          nonNilStrings(item.ImagePaths),
+			Compatibility:       0,
+			Latitude:            item.Latitude,
+			Longitude:           item.Longitude,
+			Bathrooms:           item.Bathrooms,
+			SurfaceM2:           item.SurfaceM2,
+			Floor:               item.Floor,
+			SmokingAllowed:      item.SmokingAllowed,
+			PetsAllowed:         item.PetsAllowed,
+			StudentsAllowed:     item.StudentsAllowed,
+			Notes:               item.Notes,
 		})
 	}
 	return responses

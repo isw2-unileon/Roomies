@@ -24,6 +24,7 @@ type fakeApartmentRepository struct {
 	mapApartments    []apartment.Apartment
 	mapError         error
 	apartmentByID    *apartment.Apartment
+	tenantHome       *apartment.Apartment
 	tenantProfile    *profile.TenantProfileInput
 }
 
@@ -57,6 +58,10 @@ func (f *fakeApartmentRepository) ListAvailableApartments(ctx context.Context, f
 	return []apartment.Apartment{{ID: "apartment-1", Title: "Flat", TotalSpots: 3, OccupiedSpots: 1}}, nil
 }
 
+func (f *fakeApartmentRepository) GetTenantClosedApartment(ctx context.Context, tenantID string) (*apartment.Apartment, error) {
+	return f.tenantHome, nil
+}
+
 func (f *fakeApartmentRepository) GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error) {
 	if f.apartmentByID != nil {
 		return f.apartmentByID, nil
@@ -86,6 +91,10 @@ func (f *fakeApartmentRepository) GetTenantProfileByUserID(ctx context.Context, 
 
 func (f *fakeApartmentRepository) GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error) {
 	return f.applicationForApartmentID, f.applicationForApartmentStatus, nil
+}
+
+func (f *fakeApartmentRepository) IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	return false, nil
 }
 
 func (f *fakeApartmentRepository) CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
@@ -183,6 +192,28 @@ func TestListAvailableApartmentsReturnsTenantVisibleListings(t *testing.T) {
 	}
 	if apartments[0].OccupiedSpots != 1 {
 		t.Fatalf("OccupiedSpots = %d, want 1", apartments[0].OccupiedSpots)
+	}
+}
+
+func TestListTenantExploreApartmentsAddsClosedTenantHome(t *testing.T) {
+	repo := &fakeApartmentRepository{
+		tenantApartments: []apartment.Apartment{{ID: "apartment-open", Title: "Open flat"}},
+		tenantHome:       &apartment.Apartment{ID: "apartment-home", Title: "My closed flat", Status: apartment.StatusClosed},
+	}
+	svc := NewService(repo, nil, repo, repo)
+
+	apartments, err := svc.ListTenantExploreApartments(context.Background(), "tenant-1", "tenant", apartment.ListApartmentsFilters{})
+	if err != nil {
+		t.Fatalf("ListTenantExploreApartments returned error: %v", err)
+	}
+	if len(apartments) != 2 {
+		t.Fatalf("len(apartments) = %d, want 2", len(apartments))
+	}
+	if apartments[0].IsCurrentTenantHome {
+		t.Fatal("open listing marked as current home")
+	}
+	if apartments[1].ID != "apartment-home" || !apartments[1].IsCurrentTenantHome {
+		t.Fatalf("home listing = %+v, want current tenant home", apartments[1])
 	}
 }
 
@@ -437,5 +468,18 @@ func TestGetApartmentDetailForTenantAllowsLeavingAcceptedApartment(t *testing.T)
 	}
 	if detail.CanCancel {
 		t.Fatalf("CanCancel = %t, want false", detail.CanCancel)
+	}
+}
+
+func TestGetApartmentDetailForTenantAllowsApplyToFullApartment(t *testing.T) {
+	repo := &fakeApartmentRepository{apartmentByID: &apartment.Apartment{ID: "apartment-1", BaseRent: 400, Area: "centro", TotalSpots: 3, OccupiedSpots: 3, Status: apartment.StatusAvailable}}
+	svc := NewService(repo, nil, repo, repo)
+
+	detail, err := svc.GetApartmentDetailForTenant(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("GetApartmentDetailForTenant returned error: %v", err)
+	}
+	if !detail.CanApply {
+		t.Fatalf("CanApply = %t, want true for full non-closed apartment", detail.CanApply)
 	}
 }

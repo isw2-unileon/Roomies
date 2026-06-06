@@ -23,6 +23,7 @@ type repository interface {
 	UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error)
+	GetTenantClosedApartment(ctx context.Context, tenantID string) (*apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
 	CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error)
 	ReopenApartment(ctx context.Context, ownerID, apartmentID string) (bool, error)
@@ -36,6 +37,7 @@ type profileReader interface {
 
 type applicationReader interface {
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
+	IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error)
 }
 
 type imageStorage interface {
@@ -352,6 +354,60 @@ func (s *Service) ListAvailableApartmentsFiltered(ctx context.Context, filters a
 	return s.signApartmentImages(ctx, apartments)
 }
 
+// ListTenantExploreApartments returns tenant-visible listings plus the tenant's closed home when applicable.
+func (s *Service) ListTenantExploreApartments(ctx context.Context, tenantID, role string, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return nil, ErrTenantRequired
+	}
+
+	apartments, err := s.ListAvailableApartmentsFiltered(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+	return s.appendTenantClosedHome(ctx, apartments, tenantID)
+}
+
+// ListTenantExploreApartmentsInRadius returns map-filtered listings plus the tenant's closed home when applicable.
+func (s *Service) ListTenantExploreApartmentsInRadius(ctx context.Context, tenantID, role string, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return nil, ErrTenantRequired
+	}
+
+	apartments, err := s.ListApartmentsInRadius(ctx, lat, lng, radiusKm)
+	if err != nil {
+		return nil, err
+	}
+	return s.appendTenantClosedHome(ctx, apartments, tenantID)
+}
+
+func (s *Service) appendTenantClosedHome(ctx context.Context, apartments []apartment.Apartment, tenantID string) ([]apartment.Apartment, error) {
+	home, err := s.repo.GetTenantClosedApartment(ctx, strings.TrimSpace(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	if home == nil {
+		return apartments, nil
+	}
+	for idx := range apartments {
+		if apartments[idx].ID == home.ID {
+			apartments[idx].IsCurrentTenantHome = true
+			return apartments, nil
+		}
+	}
+	home.IsCurrentTenantHome = true
+	signed, err := s.signApartmentImages(ctx, []apartment.Apartment{*home})
+	if err != nil {
+		return nil, err
+	}
+	return append(apartments, signed[0]), nil
+}
+
 // ListApartmentsInRadius returns apartments within a radius (km) from a point.
 func (s *Service) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
 	if lat < -90 || lat > 90 || lng < -180 || lng > 180 || radiusKm <= 0 {
@@ -448,10 +504,18 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 	if err != nil {
 		return nil, err
 	}
+	tenantInClosedApartment := false
+	if s.applicationReader != nil {
+		tenantInClosedApartment, err = s.applicationReader.IsTenantInClosedApartment(ctx, tenantID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	mappedStatus := application.MapStatus(applicationStatus)
-	canApply := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
+	isClosed := strings.ToUpper(strings.TrimSpace(apartmentRow.Status)) == "CLOSED"
+	canApply := !isClosed && !tenantInClosedApartment && (strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected")
 	canCancel := mappedStatus == "pending"
-	canLeave := mappedStatus == "approved"
+	canLeave := !isClosed && mappedStatus == "approved"
 
 	return &apartment.Detail{
 		Apartment:                apartmentsWithImage[0],
