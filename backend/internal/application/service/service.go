@@ -26,6 +26,7 @@ type repository interface {
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
 	CreateTenantApplication(ctx context.Context, apartmentID, tenantID string, compatibilityScore int) (string, error)
 	CancelTenantApplication(ctx context.Context, applicationID, tenantID string) (bool, error)
+	LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID string) (bool, error)
 	ListInterestedTenants(ctx context.Context, apartmentID string) ([]application.InterestedTenantCandidate, error)
 	ListTenantApplications(ctx context.Context, tenantID string) ([]application.TenantApplication, error)
 	GetGroupApplicationContext(ctx context.Context, groupID, userID string) (*application.GroupApplicationContext, error)
@@ -35,6 +36,9 @@ type repository interface {
 	GetOwnerApplicationByID(ctx context.Context, applicationID, ownerID string) (*application.OwnerApplication, error)
 	ApproveOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error)
 	RejectOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error)
+	RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID string) (bool, error)
+	IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error)
+	IsApartmentClosed(ctx context.Context, apartmentID string) (bool, error)
 }
 
 type apartmentReader interface {
@@ -87,6 +91,12 @@ var ErrOwnerApplicationAlreadyHandled = errors.New("owner application is not pen
 // ErrOwnerApplicationConflict is returned when approving the application would create an inconsistent state.
 var ErrOwnerApplicationConflict = errors.New("owner application conflicts with the current apartment assignment")
 
+// ErrApartmentClosed is returned when trying to apply to a closed apartment.
+var ErrApartmentClosed = errors.New("apartment is closed")
+
+// ErrTenantInClosedApartment is returned when a tenant in a closed apartment tries to apply elsewhere.
+var ErrTenantInClosedApartment = errors.New("tenant belongs to a closed apartment")
+
 const ownerApplicationConflictMessage = "owner application conflicts with the current apartment assignment"
 
 // Service contains application use cases.
@@ -105,6 +115,11 @@ func NewService(repo repository, apartmentReader apartmentReader, profileReader 
 // GetTenantApplicationForApartment returns the most recent tenant application for an apartment.
 func (s *Service) GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error) {
 	return s.repo.GetTenantApplicationForApartment(ctx, apartmentID, tenantID)
+}
+
+// IsTenantInClosedApartment reports whether a tenant is locked to a closed apartment.
+func (s *Service) IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	return s.repo.IsTenantInClosedApartment(ctx, tenantID)
 }
 
 // ApplyToApartment creates an individual application for a tenant.
@@ -126,8 +141,16 @@ func (s *Service) ApplyToApartment(ctx context.Context, apartmentID, tenantID, r
 	if apartmentRow == nil {
 		return "", ErrApartmentNotFound
 	}
-	if apartmentRow.TotalSpots-apartmentRow.OccupiedSpots <= 0 {
-		return "", ErrApartmentFull
+	if strings.ToUpper(strings.TrimSpace(apartmentRow.Status)) == "CLOSED" {
+		return "", ErrApartmentClosed
+	}
+
+	inClosed, err := s.repo.IsTenantInClosedApartment(ctx, tenantID)
+	if err != nil {
+		return "", err
+	}
+	if inClosed {
+		return "", ErrTenantInClosedApartment
 	}
 
 	hasActive, err := s.repo.HasActiveApplication(ctx, apartmentID, tenantID)
@@ -231,6 +254,9 @@ func (s *Service) validateGroupApplicationApartment(ctx context.Context, apartme
 	if apartmentRow == nil {
 		return ErrApartmentNotFound
 	}
+	if strings.ToUpper(strings.TrimSpace(apartmentRow.Status)) == "CLOSED" {
+		return ErrApartmentClosed
+	}
 	if apartmentRow.TotalSpots-apartmentRow.OccupiedSpots <= 0 {
 		return ErrApartmentFull
 	}
@@ -249,6 +275,27 @@ func (s *Service) CancelTenantApplication(ctx context.Context, applicationID, te
 		return ErrTenantRequired
 	}
 	updated, err := s.repo.CancelTenantApplication(ctx, applicationID, tenantID)
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrApplicationNotCancelable
+	}
+	return nil
+}
+
+// LeaveAcceptedApartment lets a tenant leave an already accepted apartment.
+func (s *Service) LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID, role string) error {
+	if strings.TrimSpace(applicationID) == "" {
+		return errors.New("application id is required")
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return ErrTenantRequired
+	}
+	updated, err := s.repo.LeaveAcceptedApartment(ctx, strings.TrimSpace(applicationID), strings.TrimSpace(tenantID))
 	if err != nil {
 		return err
 	}
@@ -356,7 +403,7 @@ func authorizeInterestedTenantsViewer(apartmentRow *apartment.Apartment, viewerI
 	switch strings.ToLower(strings.TrimSpace(role)) {
 	case "tenant":
 		status := strings.ToUpper(strings.TrimSpace(apartmentRow.Status))
-		if status == "CLOSED" || status == "HIDDEN" {
+		if status == "HIDDEN" {
 			return ErrApartmentNotFound
 		}
 		return nil
@@ -399,7 +446,9 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
 		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])
 		applications[idx].StatusMessage = buildTenantApplicationStatusMessage(applications[idx])
-		applications[idx].CanCancel = applications[idx].Status == "pending" && !strings.EqualFold(strings.TrimSpace(applications[idx].Type), "group")
+		isGroup := strings.EqualFold(strings.TrimSpace(applications[idx].Type), "group")
+		isGroupCreator := isGroup && applications[idx].SubmittedByUserID == tenantID
+		applications[idx].CanCancel = applications[idx].Status == "pending" && (!isGroup || isGroupCreator)
 
 		signedImageURL, signErr := s.signApartmentPhotoURL(ctx, applications[idx].ImageURL)
 		if signErr == nil {
@@ -505,6 +554,12 @@ func (s *Service) ApproveOwnerApplication(ctx context.Context, applicationID, ow
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrOwnerApplicationNotFound
 		}
+		if err.Error() == ErrApartmentClosed.Error() {
+			return ErrApartmentClosed
+		}
+		if err.Error() == ErrApartmentFull.Error() {
+			return ErrApartmentFull
+		}
 		if isOwnerApplicationConflictError(err) {
 			return ErrOwnerApplicationConflict
 		}
@@ -550,6 +605,37 @@ func (s *Service) RejectOwnerApplication(ctx context.Context, applicationID, own
 	}
 	if !updated {
 		return ErrOwnerApplicationAlreadyHandled
+	}
+	return nil
+}
+
+// RemoveAcceptedTenant lets an owner remove an accepted tenant from one owned apartment.
+func (s *Service) RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID, role string) error {
+	if strings.TrimSpace(apartmentID) == "" {
+		return errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant id is required")
+	}
+	if strings.TrimSpace(ownerID) == "" {
+		return errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+	closed, err := s.repo.IsApartmentClosed(ctx, strings.TrimSpace(apartmentID))
+	if err != nil {
+		return err
+	}
+	if closed {
+		return ErrApartmentClosed
+	}
+	updated, err := s.repo.RemoveAcceptedTenant(ctx, strings.TrimSpace(apartmentID), strings.TrimSpace(tenantID), strings.TrimSpace(ownerID))
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrOwnerApplicationNotFound
 	}
 	return nil
 }

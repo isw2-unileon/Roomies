@@ -18,20 +18,24 @@ interface TenantExploreDetailHeaderProps {
   property: TenantProperty
   canApply: boolean
   canCancel: boolean
+  canLeave: boolean
   hasActiveApplication: boolean
   isApplying: boolean
   onApply: () => void
   onCancel: () => void
+  onLeave: () => void
 }
 
 export default function TenantExploreDetailHeader({
   property,
   canApply,
   canCancel,
+  canLeave,
   hasActiveApplication,
   isApplying,
   onApply,
   onCancel,
+  onLeave,
 }: TenantExploreDetailHeaderProps) {
   const { t } = useTranslation()
   const [showMap, setShowMap] = useState(false)
@@ -74,6 +78,12 @@ export default function TenantExploreDetailHeader({
             <ArrowUpTrayIcon className={styles.iconTiny} aria-hidden="true" />
             {t('tenantDashboard.detail.share')}
           </button>
+
+          {canLeave ? (
+            <button type="button" className={styles.leaveButton} onClick={onLeave} disabled={isApplying}>
+              {isApplying ? t('tenantDashboard.detail.leaving') : t('tenantDashboard.detail.leaveApartment')}
+            </button>
+          ) : null}
 
           {showCancelButton ? (
             <button type="button" className={styles.applyButton} onClick={onCancel} disabled={isApplying}>

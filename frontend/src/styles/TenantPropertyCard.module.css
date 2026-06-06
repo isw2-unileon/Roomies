@@ -161,6 +161,7 @@
 }
 
 .statusBadge,
+.homeBadge,
 .compatibilityBadge {
   display: inline-flex;
   align-items: center;
@@ -170,6 +171,12 @@
   font-weight: 700;
   border: 1px solid transparent;
   border-radius: 999px;
+}
+
+.homeBadge {
+  color: #4b277f;
+  background: #f0eafe;
+  border-color: #d7c7ff;
 }
 
 .available {

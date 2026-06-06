@@ -115,6 +115,7 @@
 }
 
 .shareButton,
+.leaveButton,
 .applyButton {
   min-height: 3rem;
   padding: 0 1rem;
@@ -138,6 +139,23 @@
   color: #fff;
   background: var(--tenant-primary);
   border: 1px solid var(--tenant-primary);
+}
+
+.leaveButton {
+  color: #b42318;
+  background: #fff5f4;
+  border: 1px solid rgba(180, 35, 24, 0.22);
+}
+
+.leaveButton:hover {
+  color: #fff;
+  background: #b42318;
+}
+
+.leaveButton:disabled,
+.applyButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .mainGrid {
@@ -508,6 +526,13 @@
   line-height: 1.45;
 }
 
+.emptyText {
+  margin: 0.75rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 .interestedList {
   display: grid;
   gap: 0.8rem;
@@ -542,6 +567,38 @@
   color: #149f60;
   font-size: 0.85rem;
   font-weight: 800;
+}
+
+.residentRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.residentAvatar {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.residentProfileButton {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #6c63ff);
+  background: transparent;
+  border: 1.5px solid var(--tenant-primary, #6c63ff);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.residentProfileButton:hover {
+  background: var(--tenant-primary, #6c63ff);
+  color: #fff;
 }
 
 .statusText {
@@ -616,17 +673,32 @@
 @media (min-width: 980px) {
   .mainGrid {
     grid-template-columns: minmax(0, 1fr) 27rem;
+    grid-auto-flow: dense;
   }
 
-  .galleryCard,
-  .detailsCard,
+  .galleryCard {
+    grid-column: 1;
+    order: 1;
+  }
+
+  .compatibilityCard {
+    grid-column: 2;
+    order: 2;
+  }
+
+  .detailsCard {
+    grid-column: 1;
+    order: 3;
+  }
+
   .servicesCard {
     grid-column: 1;
+    order: 4;
   }
 
-  .compatibilityCard,
   .peopleCard {
     grid-column: 2;
+    order: 4;
   }
 
   .galleryCard {
@@ -649,6 +721,7 @@
   }
 
   .shareButton,
+  .leaveButton,
   .applyButton {
     flex: 1;
   }

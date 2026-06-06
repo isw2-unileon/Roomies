@@ -7,21 +7,35 @@ import (
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const ownerApplicationConflictMessage = "owner application conflicts with the current apartment assignment"
+const ownerApplicationApartmentClosedMessage = "apartment is closed"
+const ownerApplicationApartmentFullMessage = "apartment is full"
 
 // Repository stores application data in PostgreSQL.
 type Repository struct {
-	db *pgxpool.Pool
+	db database
+}
+
+type database interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Begin(ctx context.Context) (pgx.Tx, error)
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
 type ownerApplicationUpdateContext struct {
 	apartmentID     string
+	apartmentStatus string
 	groupID         string
 	applicationType string
 	currentStatus   string
+	totalSpots      int
+	occupiedSpots   int
 }
 
 // NewRepository creates a PostgreSQL application repository.
@@ -100,6 +114,38 @@ func (r *Repository) CancelTenantApplication(ctx context.Context, applicationID,
 		return false, fmt.Errorf("cancel tenant application: %w", err)
 	}
 	return result.RowsAffected() > 0, nil
+}
+
+// LeaveAcceptedApartment marks an accepted individual application as cancelled and frees one spot.
+func (r *Repository) LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID string) (bool, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin leave accepted apartment: %w", err)
+	}
+	defer rollbackTx(ctx, tx)
+
+	const query = `UPDATE public.applications
+	SET status = 'CANCELLED',
+		updated_at = NOW()
+	WHERE id = $1
+		AND tenant_id = $2
+		AND status = 'FULLY_CONFIRMED'
+	RETURNING apartment_id::text`
+
+	var apartmentID string
+	if err := tx.QueryRow(ctx, query, applicationID, tenantID).Scan(&apartmentID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("leave accepted apartment: %w", err)
+	}
+	if err := r.decrementApartmentOccupancyTx(ctx, tx, apartmentID); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit leave accepted apartment: %w", err)
+	}
+	return true, nil
 }
 
 // ListInterestedTenants returns tenants with active applications for an apartment.
@@ -626,6 +672,41 @@ func (r *Repository) RejectOwnerApplication(ctx context.Context, applicationID, 
 	return r.updateOwnerApplicationStatus(ctx, applicationID, ownerID, "REJECTED_BY_OWNER", "REJECTED", false)
 }
 
+// RemoveAcceptedTenant marks an accepted tenant application as cancelled and frees one spot.
+func (r *Repository) RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID string) (bool, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin remove accepted tenant: %w", err)
+	}
+	defer rollbackTx(ctx, tx)
+
+	const query = `UPDATE public.applications app
+	SET status = 'CANCELLED',
+		updated_at = NOW()
+	FROM public.apartments a
+	WHERE app.apartment_id = a.id
+		AND app.apartment_id = $1
+		AND app.tenant_id = $2
+		AND a.owner_id = $3
+		AND app.status = 'FULLY_CONFIRMED'
+	RETURNING app.apartment_id::text`
+
+	var updatedApartmentID string
+	if err := tx.QueryRow(ctx, query, apartmentID, tenantID, ownerID).Scan(&updatedApartmentID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("remove accepted tenant: %w", err)
+	}
+	if err := r.decrementApartmentOccupancyTx(ctx, tx, updatedApartmentID); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit remove accepted tenant: %w", err)
+	}
+	return true, nil
+}
+
 func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicationID, ownerID, nextStatus, nextGroupStatus string, approve bool) (bool, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -652,6 +733,12 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 		return false, err
 	}
 
+	if approve {
+		if err := r.incrementApartmentOccupancyTx(ctx, tx, updateContext.apartmentID); err != nil {
+			return false, err
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return false, fmt.Errorf("commit update owner application: %w", err)
 	}
@@ -660,14 +747,15 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 }
 
 func (r *Repository) loadOwnerApplicationUpdateContextTx(ctx context.Context, tx pgx.Tx, applicationID, ownerID string) (*ownerApplicationUpdateContext, error) {
-	lookupQuery := `SELECT app.apartment_id::text, COALESCE(app.group_id::text, ''), app.type, app.status
+	lookupQuery := `SELECT app.apartment_id::text, a.status, COALESCE(app.group_id::text, ''), app.type, app.status, a.total_spots, a.occupied_spots
 	FROM public.applications app
 	INNER JOIN public.apartments a ON a.id = app.apartment_id
 	WHERE app.id = $1
-		AND a.owner_id = $2`
+		AND a.owner_id = $2
+	FOR UPDATE OF app, a`
 
 	var item ownerApplicationUpdateContext
-	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&item.apartmentID, &item.groupID, &item.applicationType, &item.currentStatus); err != nil {
+	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&item.apartmentID, &item.apartmentStatus, &item.groupID, &item.applicationType, &item.currentStatus, &item.totalSpots, &item.occupiedSpots); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pgx.ErrNoRows
 		}
@@ -678,7 +766,16 @@ func (r *Repository) loadOwnerApplicationUpdateContextTx(ctx context.Context, tx
 }
 
 func (r *Repository) ensureOwnerApplicationApprovalAllowedTx(ctx context.Context, tx pgx.Tx, applicationID string, updateContext *ownerApplicationUpdateContext, approve bool) error {
-	if !approve || updateContext.applicationType != "group" {
+	if !approve {
+		return nil
+	}
+	if updateContext.apartmentStatus == "CLOSED" {
+		return errors.New(ownerApplicationApartmentClosedMessage)
+	}
+	if updateContext.occupiedSpots >= updateContext.totalSpots {
+		return errors.New(ownerApplicationApartmentFullMessage)
+	}
+	if updateContext.applicationType != "group" {
 		return nil
 	}
 	conflictExists, err := r.hasAcceptedGroupApplicationForApartmentTx(ctx, tx, updateContext.apartmentID, applicationID)
@@ -695,8 +792,7 @@ func (r *Repository) applyOwnerApplicationStatusTx(ctx context.Context, tx pgx.T
 	query := `UPDATE public.applications app
 	SET status = $3,
 		updated_at = NOW(),
-		owner_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.owner_confirmed_at END,
-		fully_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.fully_confirmed_at END
+		owner_confirmed_at = CASE WHEN $4 THEN NOW() ELSE app.owner_confirmed_at END
 	FROM public.apartments a
 	WHERE app.id = $1
 		AND app.apartment_id = a.id
@@ -797,6 +893,76 @@ func (r *Repository) rejectOtherPendingGroupApplicationsTx(ctx context.Context, 
 	}
 
 	return nil
+}
+
+func (r *Repository) incrementApartmentOccupancyTx(ctx context.Context, tx pgx.Tx, apartmentID string) error {
+	const query = `UPDATE public.apartments
+		SET occupied_spots = occupied_spots + 1,
+			available_spots = GREATEST(available_spots - 1, 0),
+			status = CASE
+				WHEN (available_spots - 1) <= 0 THEN 'FULL'
+				ELSE 'PARTIALLY_OCCUPIED'
+			END,
+			updated_at = NOW()
+		WHERE id = $1`
+
+	if _, err := tx.Exec(ctx, query, apartmentID); err != nil {
+		return fmt.Errorf("increment apartment occupancy: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) decrementApartmentOccupancyTx(ctx context.Context, tx pgx.Tx, apartmentID string) error {
+	const query = `UPDATE public.apartments
+		SET occupied_spots = GREATEST(occupied_spots - 1, 0),
+			available_spots = LEAST(available_spots + 1, total_spots),
+			status = CASE
+				WHEN status IN ('CLOSED', 'HIDDEN') THEN status
+				WHEN GREATEST(occupied_spots - 1, 0) = 0 THEN 'AVAILABLE'
+				WHEN LEAST(available_spots + 1, total_spots) > 0 THEN 'PARTIALLY_OCCUPIED'
+				ELSE 'FULL'
+			END,
+			updated_at = NOW()
+		WHERE id = $1`
+
+	if _, err := tx.Exec(ctx, query, apartmentID); err != nil {
+		return fmt.Errorf("decrement apartment occupancy: %w", err)
+	}
+	return nil
+}
+
+// IsTenantInClosedApartment checks if a tenant has a confirmed spot in a closed apartment.
+func (r *Repository) IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.applications app
+		INNER JOIN public.apartments a ON a.id = app.apartment_id
+		WHERE app.tenant_id = $1
+			AND app.status = 'FULLY_CONFIRMED'
+			AND a.status = 'CLOSED'
+	)`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, tenantID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check tenant in closed apartment: %w", err)
+	}
+	return exists, nil
+}
+
+// IsApartmentClosed checks if an apartment has CLOSED status.
+func (r *Repository) IsApartmentClosed(ctx context.Context, apartmentID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.apartments
+		WHERE id = $1
+			AND status = 'CLOSED'
+	)`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check apartment closed: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *Repository) ownerApplicationExists(ctx context.Context, applicationID, ownerID string) (bool, error) {

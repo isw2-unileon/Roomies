@@ -89,6 +89,11 @@ export default function TenantPropertyCard({ property, onDetails = () => {} }: T
 
                 <div className={styles.footer}>
                     <div className={styles.badges}>
+                        {property.isCurrentTenantHome ? (
+                            <span className={styles.homeBadge}>
+                                {t('tenantDashboard.property.currentHome')}
+                            </span>
+                        ) : null}
                         <span className={`${styles.statusBadge} ${availability.statusClass}`}>
                             {t(availability.labelKey)}
                         </span>
