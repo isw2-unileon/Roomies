@@ -566,6 +566,53 @@
   height: 1.15rem;
 }
 
+.mapOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.mapModal {
+  position: relative;
+  width: 90%;
+  max-width: 56rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.mapCloseButton {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--tenant-text-soft);
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.mapCloseButton:hover {
+  background: var(--tenant-bg, #f9f7f4);
+}
+
+.modalMap {
+  width: 100%;
+  height: 400px;
+}
+
 @media (min-width: 980px) {
   .mainGrid {
     grid-template-columns: minmax(0, 1fr) 27rem;
