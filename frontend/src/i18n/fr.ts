@@ -793,8 +793,8 @@ const fr = {
     filters: {
       title: 'Filtres',
       status: 'Statut',
-      hasApartment: 'Logement',
-      members: 'Membres',
+      hasApartment: 'Logement assigné',
+      members: 'Nombre de membres',
       sort: 'Trier',
       reset: 'Réinitialiser',
       all: 'Tous',

@@ -793,8 +793,8 @@ const de = {
     filters: {
       title: 'Filter',
       status: 'Status',
-      hasApartment: 'Wohnung',
-      members: 'Mitglieder',
+      hasApartment: 'Zugewiesene Wohnung',
+      members: 'Anzahl der Mitglieder',
       sort: 'Sortieren',
       reset: 'Zurücksetzen',
       all: 'Alle',

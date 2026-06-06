@@ -449,7 +449,9 @@
 }
 
 .sideCard {
-  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
   background: var(--tenant-surface);
   border: 1px solid var(--tenant-border);
   border-radius: 1rem;
@@ -461,7 +463,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--tenant-border-light);
 }
 
 .sideTitle {
@@ -483,32 +486,44 @@
   cursor: pointer;
 }
 
+.clearButton:hover {
+  color: var(--tenant-primary-strong);
+}
+
 .filterGroup {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
 .filterGroup + .filterGroup {
-  margin-top: 0.9rem;
+  padding-top: 0.15rem;
 }
 
 .filterLabel {
   color: var(--tenant-text);
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 900;
+  letter-spacing: 0.01em;
 }
 
 .filterSelect {
+  width: 100%;
   min-height: 2.55rem;
-  padding: 0 0.75rem;
-  color: var(--tenant-text-soft);
+  padding: 0 0.85rem;
+  color: var(--tenant-text);
   font: inherit;
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 800;
   background: #fff;
   border: 1px solid var(--tenant-border-light);
   border-radius: 0.7rem;
   outline: 0;
+  cursor: pointer;
+}
+
+.filterSelect:focus {
+  border-color: var(--tenant-primary);
+  box-shadow: 0 0 0 3px rgba(124, 82, 199, 0.14);
 }
 
 .rangeWrap {
@@ -527,33 +542,6 @@
   color: var(--tenant-text-soft);
   font-size: 0.75rem;
   font-weight: 800;
-}
-
-.memberSelector {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.memberOption {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.45rem;
-  height: 2.45rem;
-  color: var(--tenant-text-soft);
-  font-size: 0.8125rem;
-  font-weight: 900;
-  background: var(--tenant-bg-soft);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.memberOptionActive {
-  color: #fff;
-  background: var(--tenant-primary);
-  border-color: var(--tenant-primary);
 }
 
 .tipsList {

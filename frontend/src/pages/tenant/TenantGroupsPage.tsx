@@ -29,8 +29,8 @@ function memberFilterToNumber(value: string) {
     if (value === 'all') {
         return undefined
     }
-    if (value === '5+') {
-        return 5
+    if (value === '4+') {
+        return 4
     }
     const parsedValue = Number(value)
     return Number.isNaN(parsedValue) ? undefined : parsedValue
