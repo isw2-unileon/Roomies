@@ -170,7 +170,6 @@ const en = {
       applications: 'My applications',
       groups: 'My groups',
       messages: 'Messages',
-      notifications: 'Notifications',
       profile: 'Profile',
       publish: 'List a flat',
       referTitle: 'Refer a friend',
@@ -192,7 +191,6 @@ const en = {
     },
     topBar: {
       area: 'Area:',
-      notifications: 'Notifications',
       messages: 'Messages',
       profile: 'My profile',
       role: 'Tenant',
@@ -411,7 +409,6 @@ const en = {
       properties: 'My flats',
       applications: 'Applications',
       messages: 'Messages',
-      notifications: 'Notifications',
       profile: 'Profile',
       logout: 'Sign out',
     },

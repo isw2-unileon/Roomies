@@ -1,7 +1,6 @@
 import {
     CheckCircleIcon,
     ClockIcon,
-    EllipsisHorizontalIcon,
     ExclamationCircleIcon,
     HomeModernIcon,
     MapPinIcon,
@@ -9,6 +8,7 @@ import {
     UserIcon,
     XCircleIcon,
 } from '@heroicons/react/24/outline'
+import { useNavigate } from 'react-router-dom'
 
 import styles from '@/styles/TenantApplications.module.css'
 import type { TenantApplication, ApplicationStatus } from '@/types/tenant'
@@ -57,6 +57,7 @@ function getStatusIcon(status: ApplicationStatus) {
 }
 
 export default function TenantApplicationCard({ application, onCancel, isCancelling = false }: TenantApplicationCardProps) {
+	const navigate = useNavigate()
 	const groupMembersLabel = application.groupMembers.map((member) => member.name).join(', ')
 
     return (
@@ -127,11 +128,7 @@ export default function TenantApplicationCard({ application, onCancel, isCancell
                 </div>
 
                 <div className={styles.actions}>
-					{application.status === 'approved' ? (
-                        <button type="button" className={styles.confirmButton}>
-                            Confirmar plaza
-                        </button>
-					) : application.status === 'pending' && application.canCancel ? (
+					{application.status === 'pending' && application.canCancel ? (
                         <button
                             type="button"
                             className={styles.detailsButton}
@@ -140,22 +137,14 @@ export default function TenantApplicationCard({ application, onCancel, isCancell
                         >
                             {isCancelling ? 'Anulando...' : 'Anular solicitud'}
                         </button>
-					) : application.status === 'pending' ? (
-						<button type="button" className={styles.detailsButton} disabled>
-							Pendiente de revision
-						</button>
-                    ) : (
-                        <button type="button" className={styles.detailsButton}>
-                            Ver detalles
-                        </button>
-                    )}
+					) : null}
 
                     <button
                         type="button"
-                        className={styles.moreButton}
-                        aria-label={`Más opciones de ${application.propertyTitle}`}
+                        className={styles.confirmButton}
+                        onClick={() => navigate(`/tenant/explore/${application.propertyId}`)}
                     >
-                        <EllipsisHorizontalIcon className={styles.iconMedium} aria-hidden="true" />
+                        Ver piso
                     </button>
                 </div>
             </aside>

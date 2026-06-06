@@ -14,6 +14,8 @@ import (
 )
 
 const signedAvatarURLTTLSeconds = 3600
+const signedPhotoURLTTLSeconds = 3600
+const apartmentPhotosBucket = "Apartment_photos"
 
 type imageStorage interface {
 	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
@@ -335,6 +337,21 @@ func (s *Service) signAvatarURL(ctx context.Context, avatarURL string) (string, 
 	return signedURL, nil
 }
 
+func (s *Service) signApartmentPhotoURL(ctx context.Context, photoPath string) (string, error) {
+	photoPath = strings.TrimSpace(photoPath)
+	if photoPath == "" || strings.HasPrefix(photoPath, "http://") || strings.HasPrefix(photoPath, "https://") {
+		return photoPath, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, apartmentPhotosBucket, photoPath, signedPhotoURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign application apartment photo: %w", err)
+	}
+	return signedURL, nil
+}
+
 func authorizeInterestedTenantsViewer(apartmentRow *apartment.Apartment, viewerID, role string) error {
 	switch strings.ToLower(strings.TrimSpace(role)) {
 	case "tenant":
@@ -382,7 +399,12 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
 		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])
 		applications[idx].StatusMessage = buildTenantApplicationStatusMessage(applications[idx])
-		applications[idx].CanCancel = applications[idx].Type == "individual" && applications[idx].Status == "pending"
+		applications[idx].CanCancel = applications[idx].Status == "pending" && !strings.EqualFold(strings.TrimSpace(applications[idx].Type), "group")
+
+		signedImageURL, signErr := s.signApartmentPhotoURL(ctx, applications[idx].ImageURL)
+		if signErr == nil {
+			applications[idx].ImageURL = signedImageURL
+		}
 	}
 	return applications, nil
 }
@@ -432,6 +454,7 @@ func (s *Service) ListOwnerApplications(ctx context.Context, ownerID, role strin
 	if err != nil {
 		return nil, err
 	}
+	s.enrichOwnerApplicationCompatibility(ctx, applications)
 	if err := s.signOwnerApplications(ctx, applications); err != nil {
 		return nil, err
 	}
@@ -458,6 +481,7 @@ func (s *Service) GetOwnerApplicationByID(ctx context.Context, applicationID, ow
 		return nil, ErrOwnerApplicationNotFound
 	}
 	applications := []application.OwnerApplication{*item}
+	s.enrichOwnerApplicationCompatibility(ctx, applications)
 	if err := s.signOwnerApplications(ctx, applications); err != nil {
 		return nil, err
 	}
@@ -528,6 +552,51 @@ func (s *Service) RejectOwnerApplication(ctx context.Context, applicationID, own
 		return ErrOwnerApplicationAlreadyHandled
 	}
 	return nil
+}
+
+func (s *Service) enrichOwnerApplicationCompatibility(ctx context.Context, applications []application.OwnerApplication) {
+	for idx := range applications {
+		if applications[idx].Type == "individual" && applications[idx].Tenant != nil {
+			s.enrichIndividualCompatibility(ctx, &applications[idx])
+		} else if applications[idx].Type == "group" && applications[idx].Group != nil {
+			s.enrichGroupCompatibility(ctx, &applications[idx])
+		}
+	}
+}
+
+func (s *Service) enrichIndividualCompatibility(ctx context.Context, app *application.OwnerApplication) {
+	tenantProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, app.Tenant.UserID)
+	if err != nil {
+		return
+	}
+	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, app.ApartmentID)
+	if err != nil || apartmentRow == nil {
+		return
+	}
+	score, _ := matching.CalculateCompatibility(*apartmentRow, tenantProfile)
+	app.CompatibilityScore = score
+}
+
+func (s *Service) enrichGroupCompatibility(ctx context.Context, app *application.OwnerApplication) {
+	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, app.ApartmentID)
+	if err != nil || apartmentRow == nil {
+		return
+	}
+	total := 0
+	count := 0
+	for idx := range app.Group.Members {
+		memberProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, app.Group.Members[idx].UserID)
+		if err != nil {
+			continue
+		}
+		score, _ := matching.CalculateCompatibility(*apartmentRow, memberProfile)
+		app.Group.Members[idx].CompatibilityScore = score
+		total += score
+		count++
+	}
+	if count > 0 {
+		app.CompatibilityScore = total / count
+	}
 }
 
 func (s *Service) signOwnerApplications(ctx context.Context, applications []application.OwnerApplication) error {

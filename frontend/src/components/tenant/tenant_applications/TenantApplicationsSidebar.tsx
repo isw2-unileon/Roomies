@@ -1,11 +1,7 @@
 import {
     CheckCircleIcon,
     ClockIcon,
-    InformationCircleIcon,
-    LightBulbIcon,
     ListBulletIcon,
-    ShieldCheckIcon,
-    SparklesIcon,
     XCircleIcon,
 } from '@heroicons/react/24/outline'
 
@@ -81,67 +77,6 @@ export default function TenantApplicationsSidebar({ filters, getCount }: TenantA
                 </div>
             </section>
 
-            <section className={styles.sideCard}>
-                <h2 className={styles.sideTitle}>Consejos para destacar</h2>
-
-                <div className={styles.tipsList}>
-                    <div className={styles.tipItem}>
-                        <span className={`${styles.tipIcon} ${styles.purpleSoft}`}>
-                            <SparklesIcon className={styles.iconSmall} aria-hidden="true" />
-                        </span>
-
-                        <div>
-                            <p className={styles.tipTitle}>Completa tu perfil al 100%</p>
-                            <p className={styles.tipText}>
-                                Los perfiles completos reciben más respuestas.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className={styles.tipItem}>
-                        <span className={`${styles.tipIcon} ${styles.greenSoft}`}>
-                            <ShieldCheckIcon className={styles.iconSmall} aria-hidden="true" />
-                        </span>
-
-                        <div>
-                            <p className={styles.tipTitle}>Sé rápido</p>
-                            <p className={styles.tipText}>
-                                Los primeros en solicitar tienen más posibilidades.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className={styles.tipItem}>
-                        <span className={`${styles.tipIcon} ${styles.orangeSoft}`}>
-                            <LightBulbIcon className={styles.iconSmall} aria-hidden="true" />
-                        </span>
-
-                        <div>
-                            <p className={styles.tipTitle}>Escribe un buen mensaje</p>
-                            <p className={styles.tipText}>
-                                Presentarte al propietario marca la diferencia.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="button" className={styles.guideButton}>
-                    Ver guía completa
-                </button>
-            </section>
-
-            <section className={styles.sideCard}>
-                <h2 className={styles.sideTitle}>¿Necesitas ayuda?</h2>
-
-                <p className={styles.helpText}>
-                    Estamos aquí para ayudarte en cualquier momento.
-                </p>
-
-                <button type="button" className={styles.supportButton}>
-                    <InformationCircleIcon className={styles.iconSmall} aria-hidden="true" />
-                    Contactar soporte
-                </button>
-            </section>
         </aside>
     )
 }

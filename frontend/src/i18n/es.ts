@@ -170,7 +170,6 @@ const es = {
       applications: 'Mis solicitudes',
       groups: 'Mis grupos',
       messages: 'Mensajes',
-      notifications: 'Notificaciones',
       profile: 'Perfil',
       publish: 'Publicar piso',
       referTitle: 'Invita a un amigo',
@@ -192,7 +191,6 @@ const es = {
     },
     topBar: {
       area: 'Área:',
-      notifications: 'Notificaciones',
       messages: 'Mensajes',
       profile: 'Mi perfil',
       role: 'Inquilino',
@@ -411,7 +409,6 @@ const es = {
       properties: 'Mis pisos',
       applications: 'Solicitudes',
       messages: 'Mensajes',
-      notifications: 'Notificaciones',
       profile: 'Perfil',
       logout: 'Cerrar sesión',
     },

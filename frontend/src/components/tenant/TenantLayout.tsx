@@ -8,7 +8,6 @@ import { logout } from '@/services/authService'
 import styles from '@/styles/TenantLayout.module.css'
 
 const UNREAD_MESSAGES = 2
-const UNREAD_NOTIFICATIONS = 1
 
 interface TenantLayoutProps {
   children: ReactNode
@@ -40,7 +39,6 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
           onToggleCollapsed={() => setIsSidebarCollapsed((value) => !value)}
           onLogout={handleLogout}
           unreadMessages={UNREAD_MESSAGES}
-          unreadNotifications={UNREAD_NOTIFICATIONS}
         />
       </div>
 
@@ -87,7 +85,6 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
               onNavigate={() => setIsMobileSidebarOpen(false)}
               onLogout={handleLogout}
               unreadMessages={UNREAD_MESSAGES}
-              unreadNotifications={UNREAD_NOTIFICATIONS}
             />
           </div>
         </div>

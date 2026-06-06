@@ -170,7 +170,6 @@ const fr = {
       applications: 'Mes demandes',
       groups: 'Mes groupes',
       messages: 'Messages',
-      notifications: 'Notifications',
       profile: 'Profil',
       publish: 'Publier un logement',
       referTitle: 'Inviter un ami',
@@ -192,7 +191,6 @@ const fr = {
     },
     topBar: {
       area: 'Zone :',
-      notifications: 'Notifications',
       messages: 'Messages',
       profile: 'Mon profil',
       role: 'Locataire',
@@ -411,7 +409,6 @@ const fr = {
       properties: 'Mes logements',
       applications: 'Demandes',
       messages: 'Messages',
-      notifications: 'Notifications',
       profile: 'Profil',
       logout: 'Se déconnecter',
     },

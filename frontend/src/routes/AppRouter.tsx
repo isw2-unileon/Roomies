@@ -7,7 +7,6 @@ import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import OwnerApplications from '@/pages/owner/OwnerApplications'
 import OwnerDashboardPage from '@/pages/owner/OwnerDashboardPage'
 import OwnerMessages from '@/pages/owner/OwnerMessages'
-import OwnerNotifications from '@/pages/owner/OwnerNotifications'
 import OwnerProfile from '@/pages/owner/OwnerProfile'
 import OwnerPublishPropertyPage from '@/pages/owner/OwnerPublishPropertyPage'
 import TenantApplicationsPage from '@/pages/tenant/TenantApplicationsPage'
@@ -16,7 +15,6 @@ import TenantExploreDetailPage from '@/pages/tenant/TenantExploreDetailPage'
 import TenantExplorePage from '@/pages/tenant/TenantExplorePage'
 import TenantGroupsPage from '@/pages/tenant/TenantGroupsPage'
 import TenantMessagesPage from '@/pages/tenant/TenantMessagesPage'
-import TenantNotificationsPage from '@/pages/tenant/TenantNotificationsPage'
 import TenantInterestedTenantsPage from '@/pages/tenant/TenantInterestedTenantsPage'
 import TenantOnboardingPage from '@/pages/tenant/TenantOnboardingPage'
 import TenantProfilePage from '@/pages/tenant/TenantProfilePage'
@@ -149,14 +147,6 @@ function AppRoutes() {
         )}
       />
       <Route
-        path={paths.tenantNotifications}
-        element={(
-          <ProtectedRoleRoute requiredRole="tenant">
-            <TenantNotificationsPage />
-          </ProtectedRoleRoute>
-        )}
-      />
-      <Route
         path={paths.tenantProfile}
         element={(
           <ProtectedRoleRoute requiredRole="tenant">
@@ -196,14 +186,6 @@ function AppRoutes() {
         element={(
           <ProtectedRoleRoute requiredRole="owner">
             <OwnerMessages />
-          </ProtectedRoleRoute>
-        )}
-      />
-      <Route
-        path={paths.ownerNotifications}
-        element={(
-          <ProtectedRoleRoute requiredRole="owner">
-            <OwnerNotifications />
           </ProtectedRoleRoute>
         )}
       />

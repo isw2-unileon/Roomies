@@ -2,7 +2,6 @@ import type { ComponentType, SVGProps } from 'react'
 import {
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  BellIcon,
   BuildingOffice2Icon,
   ChatBubbleLeftRightIcon,
   ChevronDoubleLeftIcon,
@@ -23,7 +22,6 @@ interface OwnerSidebarProps {
   onNavigate?: () => void
   onLogout?: () => void
   unreadMessages: number
-  unreadNotifications: number
   showCollapseToggle?: boolean
 }
 
@@ -33,7 +31,6 @@ const tabs: { id: OwnerNavTab; labelKey: string; path: string; Icon: IconCompone
   { id: 'properties', labelKey: 'ownerDashboard.sidebar.properties', path: paths.ownerProperties, Icon: BuildingOffice2Icon },
   { id: 'applications', labelKey: 'ownerDashboard.sidebar.applications', path: paths.ownerApplications, Icon: ClipboardDocumentListIcon },
   { id: 'messages', labelKey: 'ownerDashboard.sidebar.messages', path: paths.ownerMessages, Icon: ChatBubbleLeftRightIcon },
-  { id: 'notifications', labelKey: 'ownerDashboard.sidebar.notifications', path: paths.ownerNotifications, Icon: BellIcon },
   { id: 'profile', labelKey: 'ownerDashboard.sidebar.profile', path: paths.ownerProfile, Icon: UserIcon },
 ]
 
@@ -43,7 +40,6 @@ export default function OwnerSidebar({
   onNavigate,
   onLogout,
   unreadMessages,
-  unreadNotifications,
   showCollapseToggle = true,
 }: OwnerSidebarProps) {
   const { t } = useTranslation()
@@ -95,9 +91,6 @@ export default function OwnerSidebar({
             <span className={styles.ownerNavLabel}>{t(labelKey)}</span>
             {id === 'messages' && unreadMessages > 0 && (
               <span className={styles.ownerNavBadge}>{unreadMessages}</span>
-            )}
-            {id === 'notifications' && unreadNotifications > 0 && (
-              <span className={styles.ownerNavBadge}>{unreadNotifications}</span>
             )}
           </NavLink>
         ))}

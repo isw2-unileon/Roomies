@@ -1,0 +1,87 @@
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.segmentedControl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.segmentOption {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 5.25rem;
+  padding: 0.9rem 0.75rem;
+  text-align: center;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  background: var(--tenant-surface, #fff);
+  color: var(--tenant-text, var(--rm-text-strong));
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.segmentOption:hover {
+  border-color: var(--tenant-primary, var(--rm-primary));
+  transform: translateY(-1px);
+}
+
+.segmentOptionActive {
+  border-color: var(--tenant-primary, var(--rm-primary));
+  background: var(--tenant-primary-subtle, rgba(100, 54, 199, 0.07));
+  box-shadow: 0 0 0 4px rgba(100, 54, 199, 0.1);
+}
+
+.segmentInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmentInput:focus-visible + .segmentLabel {
+  text-decoration: underline;
+}
+
+.segmentLabel {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.segmentNote,
+.segmentNotePlaceholder {
+  min-height: 1rem;
+  font-size: 0.75rem;
+  color: var(--tenant-text-soft, var(--rm-text-soft));
+  line-height: 1.2;
+}
+
+.segmentNotePlaceholder {
+  visibility: hidden;
+}
+
+@media (max-width: 639px) {
+  .segmentedControl {
+    grid-template-columns: 1fr;
+  }
+
+  .segmentOption {
+    min-height: 4.5rem;
+    border-radius: 1rem;
+  }
+}

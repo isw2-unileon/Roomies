@@ -51,6 +51,7 @@ interface OwnerApplicationGroupMemberDto {
 	name: string
 	email: string
 	avatar_url: string
+	compatibility_score?: number
 }
 
 interface OwnerApplicationGroupDto {
@@ -70,6 +71,7 @@ interface OwnerApplicationDto {
 	created_at: string
 	tenant?: OwnerApplicationApplicantDto
 	group?: OwnerApplicationGroupDto
+	compatibility_score?: number
 }
 
 interface OwnerApplicationsResponseDto {
@@ -180,8 +182,15 @@ function ownerApplicationFromDto(dto: OwnerApplicationDto): OwnerDashboardReques
 			groupId: dto.group.group_id,
 			name: dto.group.name,
 			creator: ownerApplicationApplicantFromDto(dto.group.creator),
-			members: (dto.group.members ?? []).map(ownerApplicationApplicantFromDto),
+			members: (dto.group.members ?? []).map((m) => ({
+				userId: m.user_id,
+				name: m.name,
+				email: m.email,
+				avatarUrl: m.avatar_url,
+				compatibilityScore: m.compatibility_score,
+			})),
 		} : undefined,
+		compatibilityScore: dto.compatibility_score,
 	}
 }
 

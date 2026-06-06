@@ -1,10 +1,10 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
-import AuthNotice from '@/components/auth/AuthNotice'
-import FormField from '@/components/auth/FormField'
-import LanguageSwitcher from '@/components/common/LanguageSwitcher'
+import OwnerProfileFormCard from '@/components/owner/owner_profile/OwnerProfileFormCard'
+import type { OwnerProfileFormData } from '@/components/owner/owner_profile/OwnerProfileFormCard'
+import OwnerProfilePreferencesCard from '@/components/owner/owner_profile/OwnerProfilePreferencesCard'
 import OwnerLayout from '@/components/owner/OwnerLayout'
 import { useNotice } from '@/hooks/useNotice'
 import { forgotPassword } from '@/services/authService'
@@ -12,6 +12,13 @@ import { getOwnerProfile, updateOwnerProfile, uploadOwnerAvatar } from '@/servic
 import styles from '@/styles/OwnerProfile.module.css'
 
 const MAX_AVATAR_SIZE_BYTES = 1_500_000
+
+const INITIAL_FORM_DATA: OwnerProfileFormData = {
+  fullName: '',
+  email: '',
+  displayName: '',
+  phone: '',
+}
 
 export default function OwnerProfile() {
   const { t } = useTranslation()
@@ -22,18 +29,19 @@ export default function OwnerProfile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [isSendingReset, setIsSendingReset] = useState(false)
 
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
-  const [displayName, setDisplayName] = useState('')
-  const [phone, setPhone] = useState('')
+  const [formData, setFormData] = useState<OwnerProfileFormData>(INITIAL_FORM_DATA)
 
   const profileNotice = useNotice()
   const passwordNotice = useNotice()
 
   const { notice: profileBanner, clearNotice: clearProfileNotice, showError: showProfileError, showSuccess: showProfileSuccess } = profileNotice
   const { notice: passwordBanner, clearNotice: clearPasswordNotice, showError: showPasswordError, showSuccess: showPasswordSuccess } = passwordNotice
+
+  const handleFieldChange = useCallback(<K extends keyof OwnerProfileFormData>(field: K, value: OwnerProfileFormData[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -44,12 +52,14 @@ export default function OwnerProfile() {
       try {
         const profile = await getOwnerProfile()
         if (!isMounted) return
-        setFullName(profile.fullName)
-        setEmail(profile.email)
         setAvatarUrl(profile.avatarUrl)
         setAvatarLoadFailed(false)
-        setDisplayName(profile.displayName)
-        setPhone(profile.phone)
+        setFormData({
+          fullName: profile.fullName,
+          email: profile.email,
+          displayName: profile.displayName,
+          phone: profile.phone,
+        })
       } catch (error) {
         if (!isMounted) return
         showProfileError(error instanceof Error ? error.message : t('ownerProfile.personal.loadError'))
@@ -97,7 +107,7 @@ export default function OwnerProfile() {
     event.preventDefault()
     clearProfileNotice()
 
-    if (fullName.trim().length < 2) {
+    if (formData.fullName.trim().length < 2) {
       showProfileError(t('ownerProfile.personal.errors.fullNameMin'))
       return
     }
@@ -105,9 +115,9 @@ export default function OwnerProfile() {
     setIsSaving(true)
     try {
       const message = await updateOwnerProfile({
-        fullName: fullName.trim(),
-        displayName: displayName.trim(),
-        phone: phone.trim(),
+        fullName: formData.fullName.trim(),
+        displayName: formData.displayName.trim(),
+        phone: formData.phone.trim(),
       })
       showProfileSuccess(message ?? t('ownerProfile.personal.saveSuccess'))
     } catch (error) {
@@ -119,14 +129,14 @@ export default function OwnerProfile() {
 
   async function handlePasswordReset() {
     clearPasswordNotice()
-    if (!email.trim()) {
+    if (!formData.email.trim()) {
       showPasswordError(t('ownerProfile.preferences.passwordMissingEmail'))
       return
     }
 
     setIsSendingReset(true)
     try {
-      const message = await forgotPassword(email)
+      const message = await forgotPassword(formData.email)
       showPasswordSuccess(message ?? t('ownerProfile.preferences.passwordSuccess'))
     } catch (error) {
       showPasswordError(error instanceof Error ? error.message : t('ownerProfile.preferences.passwordError'))
@@ -147,140 +157,27 @@ export default function OwnerProfile() {
         </section>
 
         <div className={styles.grid}>
-          <section className={styles.card} aria-labelledby="owner-profile-personal-title">
-            <button
-              type="button"
-              className={styles.cardToggle}
-              aria-expanded={isExpanded}
-              aria-controls="owner-profile-personal-panel"
-              onClick={() => setIsExpanded((current) => !current)}
-            >
-              <div>
-                <span className={styles.cardEyebrow}>{t('ownerProfile.personal.kicker')}</span>
-                <h2 id="owner-profile-personal-title" className={styles.cardTitle}>
-                  {t('ownerProfile.personal.title')}
-                </h2>
-              </div>
-              <span className={styles.toggleText}>
-                {isExpanded ? t('ownerProfile.personal.close') : t('ownerProfile.personal.edit')}
-              </span>
-            </button>
+          <OwnerProfileFormCard
+            isExpanded={isExpanded}
+            onToggle={() => setIsExpanded((c) => !c)}
+            isLoading={isLoading}
+            isSaving={isSaving}
+            isUploadingAvatar={isUploadingAvatar}
+            profileImage={profileImage}
+            onAvatarLoadFailed={() => setAvatarLoadFailed(true)}
+            onAvatarChange={handleAvatarChange}
+            data={formData}
+            onFieldChange={handleFieldChange}
+            notice={profileBanner}
+            onSubmit={handleSubmit}
+          />
 
-            <p className={styles.cardText}>{t('ownerProfile.personal.description')}</p>
-
-            <div id="owner-profile-personal-panel" className={styles.personalPanel} hidden={!isExpanded}>
-              {isLoading ? (
-                <p className={styles.cardText}>{t('ownerProfile.personal.loading')}</p>
-              ) : (
-                <form className={styles.form} noValidate onSubmit={handleSubmit}>
-                  <div className={styles.avatarSection}>
-                    <img
-                      src={profileImage}
-                      alt={t('ownerProfile.personal.avatarAlt')}
-                      className={styles.avatar}
-                      onError={() => setAvatarLoadFailed(true)}
-                    />
-                    <div className={styles.avatarCopy}>
-                      <p className={styles.avatarTitle}>{t('ownerProfile.personal.avatarTitle')}</p>
-                      <p className={styles.avatarHint}>{t('ownerProfile.personal.avatarHint')}</p>
-                      <label className={styles.avatarButton}>
-                        {isUploadingAvatar ? t('ownerProfile.personal.avatarUploading') : t('ownerProfile.personal.avatarAction')}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className={styles.fileInput}
-                          onChange={handleAvatarChange}
-                          disabled={isUploadingAvatar}
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className={styles.formGrid}>
-                    <FormField
-                      id="owner-profile-full-name"
-                      label={t('ownerProfile.personal.fullNameLabel')}
-                      type="text"
-                      value={fullName}
-                      onChange={(event) => setFullName(event.target.value)}
-                      required
-                    />
-
-                    <div>
-                      <FormField
-                        id="owner-profile-email"
-                        label={t('ownerProfile.personal.emailLabel')}
-                        type="email"
-                        value={email}
-                        readOnly
-                        disabled
-                      />
-                      <p className={styles.readOnlyHint}>{t('ownerProfile.personal.emailHint')}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.formGrid}>
-                    <FormField
-                      id="owner-profile-display-name"
-                      label={t('ownerProfile.personal.displayNameLabel')}
-                      type="text"
-                      value={displayName}
-                      onChange={(event) => setDisplayName(event.target.value)}
-                    />
-
-                    <FormField
-                      id="owner-profile-phone"
-                      label={t('ownerProfile.personal.phoneLabel')}
-                      type="tel"
-                      value={phone}
-                      onChange={(event) => setPhone(event.target.value)}
-                    />
-                  </div>
-
-                  <AuthNotice kind={profileBanner.kind} message={profileBanner.message} />
-
-                  <button type="submit" disabled={isSaving || isUploadingAvatar} className={styles.primaryButton}>
-                    {isSaving ? t('ownerProfile.personal.saving') : t('ownerProfile.personal.save')}
-                  </button>
-                </form>
-              )}
-            </div>
-          </section>
-
-          <section className={styles.card} aria-labelledby="owner-profile-preferences-title">
-            <div>
-              <span className={styles.cardEyebrow}>{t('ownerProfile.preferences.kicker')}</span>
-              <h2 id="owner-profile-preferences-title" className={styles.cardTitle}>
-                {t('ownerProfile.preferences.title')}
-              </h2>
-            </div>
-            <p className={styles.cardText}>{t('ownerProfile.preferences.description')}</p>
-
-            <div className={styles.preferenceRow}>
-              <div>
-                <h3 className={styles.preferenceTitle}>{t('ownerProfile.preferences.languageTitle')}</h3>
-                <p className={styles.preferenceText}>{t('ownerProfile.preferences.languageDescription')}</p>
-              </div>
-              <LanguageSwitcher />
-            </div>
-
-            <div className={styles.preferenceRow}>
-              <div>
-                <h3 className={styles.preferenceTitle}>{t('ownerProfile.preferences.passwordTitle')}</h3>
-                <p className={styles.preferenceText}>{t('ownerProfile.preferences.passwordDescription')}</p>
-              </div>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={handlePasswordReset}
-                disabled={isSendingReset || isLoading}
-              >
-                {isSendingReset ? t('ownerProfile.preferences.passwordSending') : t('ownerProfile.preferences.passwordAction')}
-              </button>
-            </div>
-
-            <AuthNotice kind={passwordBanner.kind} message={passwordBanner.message} />
-          </section>
+          <OwnerProfilePreferencesCard
+            onPasswordReset={handlePasswordReset}
+            isSendingReset={isSendingReset}
+            isLoading={isLoading}
+            notice={passwordBanner}
+          />
         </div>
       </div>
     </OwnerLayout>

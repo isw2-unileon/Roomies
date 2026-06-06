@@ -1,7 +1,7 @@
 export type PropertyStatus = 'open' | 'closed' | 'full'
 export type MatchStatus = 'pending' | 'approved' | 'rejected'
 export type OwnerApplicationType = 'individual' | 'group'
-export type OwnerNavTab = 'properties' | 'applications' | 'messages' | 'notifications' | 'profile'
+export type OwnerNavTab = 'properties' | 'applications' | 'messages' | 'profile'
 export type OwnerIssueStatus = 'pending' | 'in_progress' | 'resolved'
 
 export interface OwnerProperty {
@@ -73,6 +73,7 @@ export interface OwnerDashboardRequest {
     createdAt: string
     tenant?: OwnerApplicationApplicant
     group?: OwnerApplicationGroup
+    compatibilityScore?: number
 }
 
 export interface OwnerApplicationApplicant {
@@ -87,6 +88,7 @@ export interface OwnerApplicationGroupMember {
 	name: string
 	email: string
 	avatarUrl: string
+	compatibilityScore?: number
 }
 
 export interface OwnerApplicationGroup {
