@@ -22,6 +22,7 @@ type repository interface {
 	GetOwnerApartmentByID(ctx context.Context, ownerID, apartmentID string) (*apartment.Apartment, error)
 	UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
+	ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
 }
 
@@ -73,6 +74,9 @@ var ErrApplicationAlreadyExists = errors.New("active application already exists"
 
 // ErrApplicationNotCancelable is returned when application cannot be cancelled.
 var ErrApplicationNotCancelable = errors.New("application is not cancelable")
+
+// ErrInvalidMapParams is returned when map search params are out of range.
+var ErrInvalidMapParams = errors.New("invalid map search parameters: lat must be in [-90,90], lng in [-180,180], radius > 0")
 
 // Service contains apartment use cases.
 type Service struct {
@@ -235,6 +239,18 @@ func (s *Service) ListAvailableApartments(ctx context.Context) ([]apartment.Apar
 func (s *Service) ListAvailableApartmentsFiltered(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
 	normalized := normalizeListApartmentsFilters(filters)
 	apartments, err := s.repo.ListAvailableApartments(ctx, normalized)
+	if err != nil {
+		return nil, err
+	}
+	return s.signApartmentImages(ctx, apartments)
+}
+
+// ListApartmentsInRadius returns apartments within a radius (km) from a point.
+func (s *Service) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
+	if lat < -90 || lat > 90 || lng < -180 || lng > 180 || radiusKm <= 0 {
+		return nil, ErrInvalidMapParams
+	}
+	apartments, err := s.repo.ListApartmentsInRadius(ctx, lat, lng, radiusKm)
 	if err != nil {
 		return nil, err
 	}

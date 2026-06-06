@@ -15,6 +15,7 @@ import type {
   TenantGroupJoinVote,
   TenantGroupListItem,
   TenantGroupProfile,
+  TenantRoommateProfile,
   TenantProperty,
   TenantPropertyDetail,
   TenantPropertyRules,
@@ -76,6 +77,8 @@ interface TenantApartmentDto {
   description?: string
   owner_name?: string
   compatibility_score?: number
+  latitude: number
+  longitude: number
   bathrooms?: number
   surface_m2?: number
   floor?: number
@@ -256,6 +259,10 @@ interface TenantGroupProfileDto {
   nightlife_level: string
 }
 
+interface TenantRoommateProfileDto extends TenantGroupProfileDto {
+  compatibility: number
+}
+
 interface TenantGroupMemberDto extends TenantGroupProfileDto {
   role: 'owner' | 'member'
   status: 'ACCEPTED' | 'LEFT'
@@ -291,6 +298,11 @@ interface TenantGroupCandidatesResponseDto {
   error?: string
 }
 
+interface TenantRoommateProfilesResponseDto {
+  profiles?: TenantRoommateProfileDto[]
+  error?: string
+}
+
 interface CreateTenantGroupResponseDto {
   message?: string
   group_id?: string
@@ -322,6 +334,9 @@ export interface TenantApartmentListFilters {
   availableRoomsMax?: number
   availability?: string
   sortBy?: string
+  lat?: number
+  lng?: number
+  radius?: number
 }
 
 export interface TenantGroupListFilters {
@@ -405,6 +420,8 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     status: tenantApartmentStatusFromDto(dto),
     images: imageUrls,
     createdAt: dto.created_at,
+    latitude: dto.latitude,
+    longitude: dto.longitude,
     bathrooms: dto.bathrooms ?? 0,
     surfaceM2: dto.surface_m2 ?? 0,
     floor: dto.floor ?? 0,
@@ -427,6 +444,13 @@ function interestedTenantFromDto(dto: InterestedTenantDto): InterestedTenant {
     age: dto.age,
     studies: dto.studies,
     avatarUrl: dto.avatar_url,
+    compatibility: dto.compatibility,
+  }
+}
+
+function tenantRoommateProfileFromDto(dto: TenantRoommateProfileDto): TenantRoommateProfile {
+  return {
+    ...tenantGroupProfileFromDto(dto),
     compatibility: dto.compatibility,
   }
 }
@@ -713,6 +737,11 @@ function buildApartmentsQuery(filters?: TenantApartmentListFilters) {
   if (filters.sortBy?.trim()) {
     params.set('sort_by', filters.sortBy.trim())
   }
+  if (filters.lat !== undefined && filters.lng !== undefined && filters.radius !== undefined) {
+    params.set('lat', String(filters.lat))
+    params.set('lng', String(filters.lng))
+    params.set('radius', String(filters.radius))
+  }
 
   const query = params.toString()
   return query ? `?${query}` : ''
@@ -763,13 +792,24 @@ function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) 
 }
 
 export async function listTenantApartments(filters?: TenantApartmentListFilters) {
+  const hasMapParams = filters?.lat !== undefined && filters?.lng !== undefined && filters?.radius !== undefined
+  const endpoint = hasMapParams ? '/api/apartments/map' : '/api/apartments'
   const query = buildApartmentsQuery(filters)
-  const response = await apiFetch(`/api/apartments${query}`)
+  const response = await apiFetch(`${endpoint}${query}`)
   const data = (await response.json()) as TenantApartmentsResponseDto
   if (!response.ok) {
     throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los pisos disponibles.', data.error))
   }
   return (data.apartments ?? []).map(tenantApartmentFromDto)
+}
+
+export async function listTenantProfiles(): Promise<TenantRoommateProfile[]> {
+  const response = await apiFetch('/api/tenant/profiles')
+  const data = (await response.json()) as TenantRoommateProfilesResponseDto
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los perfiles de inquilinos.', data.error))
+  }
+  return (data.profiles ?? []).map(tenantRoommateProfileFromDto)
 }
 
 export async function getTenantApartmentDetail(apartmentID: string): Promise<TenantPropertyDetail> {

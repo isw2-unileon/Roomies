@@ -103,6 +103,66 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 	return &p, nil
 }
 
+// ListTenantProfiles returns registered tenant profiles except the current tenant.
+func (r *Repository) ListTenantProfiles(ctx context.Context, currentUserID string) ([]profile.TenantProfileSummary, error) {
+	const query = `SELECT
+		u.id::text,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, ''),
+		COALESCE(tp.budget_max, 0),
+		COALESCE(tp.preferred_area, ''),
+		COALESCE(tp.pets, FALSE),
+		COALESCE(tp.smoking, FALSE),
+		COALESCE(tp.age, 0),
+		COALESCE(tp.sex, ''),
+		COALESCE(tp.tenant_situation, ''),
+		COALESCE(tp.degree, ''),
+		COALESCE(tp.profession, ''),
+		COALESCE(tp.socialization_level, ''),
+		COALESCE(tp.nightlife_level, '')
+	FROM public.users u
+	INNER JOIN public.tenant_profiles tp ON tp.user_id = u.id
+	WHERE u.role = 'tenant'
+		AND u.id <> $1
+	ORDER BY u.full_name ASC, u.created_at DESC`
+
+	rows, err := r.db.Query(ctx, query, currentUserID)
+	if err != nil {
+		return nil, fmt.Errorf("list tenant profiles: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]profile.TenantProfileSummary, 0)
+	for rows.Next() {
+		var item profile.TenantProfileSummary
+		if err := rows.Scan(
+			&item.UserID,
+			&item.Name,
+			&item.Email,
+			&item.AvatarURL,
+			&item.BudgetMax,
+			&item.PreferredArea,
+			&item.Pets,
+			&item.Smoking,
+			&item.Age,
+			&item.Sex,
+			&item.Situation,
+			&item.Degree,
+			&item.Profession,
+			&item.Socialization,
+			&item.Nightlife,
+		); err != nil {
+			return nil, fmt.Errorf("scan tenant profile summary: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tenant profiles: %w", err)
+	}
+	return result, nil
+}
+
 // GetTenantPersonalProfile returns editable account data from users table.
 func (r *Repository) GetTenantPersonalProfile(ctx context.Context, userID string) (*profile.TenantPersonalProfile, error) {
 	const query = `SELECT id, COALESCE(full_name, ''), COALESCE(email, ''), COALESCE(avatar_url, '')

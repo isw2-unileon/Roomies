@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/matching"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile"
 )
 
@@ -25,6 +26,7 @@ type repository interface {
 	NeedsTenantProfile(ctx context.Context, userID, role string) (bool, error)
 	UpsertTenantProfile(ctx context.Context, userID string, input profile.TenantProfileInput) error
 	GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error)
+	ListTenantProfiles(ctx context.Context, currentUserID string) ([]profile.TenantProfileSummary, error)
 	GetTenantPersonalProfile(ctx context.Context, userID string) (*profile.TenantPersonalProfile, error)
 	UpdateTenantPersonalProfile(ctx context.Context, userID string, input profile.TenantPersonalProfileInput) error
 	UpdateTenantAvatarURL(ctx context.Context, userID, avatarURL string) error
@@ -62,6 +64,43 @@ func (s *Service) NeedsTenantProfile(ctx context.Context, userID, role string) (
 // GetTenantProfileByUserID returns the preference profile for any tenant user.
 func (s *Service) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error) {
 	return s.repo.GetTenantProfileByUserID(ctx, userID)
+}
+
+// ListTenantProfiles returns public tenant profiles with compatibility against the current tenant.
+func (s *Service) ListTenantProfiles(ctx context.Context, currentUserID, role string) ([]profile.TenantProfileSummary, error) {
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return nil, ErrTenantRequired
+	}
+	currentProfile, err := s.repo.GetTenantProfileByUserID(ctx, strings.TrimSpace(currentUserID))
+	if err != nil {
+		return nil, err
+	}
+	profiles, err := s.repo.ListTenantProfiles(ctx, strings.TrimSpace(currentUserID))
+	if err != nil {
+		return nil, err
+	}
+	for idx := range profiles {
+		candidateProfile := profile.TenantProfileInput{
+			UserID:        profiles[idx].UserID,
+			BudgetMax:     profiles[idx].BudgetMax,
+			PreferredArea: profiles[idx].PreferredArea,
+			Pets:          profiles[idx].Pets,
+			Smoking:       profiles[idx].Smoking,
+			Age:           profiles[idx].Age,
+			Sex:           profiles[idx].Sex,
+			Situation:     profiles[idx].Situation,
+			Degree:        profiles[idx].Degree,
+			Profession:    profiles[idx].Profession,
+			Socialization: profiles[idx].Socialization,
+			Nightlife:     profiles[idx].Nightlife,
+		}
+		profiles[idx].Compatibility = matching.CalculateTenantCompatibility(currentProfile, &candidateProfile)
+		profiles[idx].AvatarURL, err = s.signedAvatarURL(ctx, profiles[idx].AvatarURL)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return profiles, nil
 }
 
 // SaveTenantProfile upserts tenant onboarding/profile data.

@@ -39,6 +39,8 @@ export interface TenantProperty {
     status: PropertyAvailability
     images: string[]
     createdAt: string
+    latitude: number
+    longitude: number
     bathrooms: number
     surfaceM2: number
     floor: number
@@ -240,6 +242,10 @@ export interface TenantGroupProfile {
     smoking: boolean
     socializationLevel: string
     nightlifeLevel: string
+}
+
+export interface TenantRoommateProfile extends TenantGroupProfile {
+    compatibility: number
 }
 
 export interface TenantGroupAcceptedMember extends TenantGroupProfile {

@@ -100,6 +100,7 @@ type tenantApartmentDetailResponse struct {
 func RegisterPublicRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/apartments", h.listAvailableApartments)
+	api.GET("/apartments/map", h.listApartmentsByMap)
 }
 
 // RegisterTenantRoutes wires tenant apartment endpoints into the API router.
@@ -151,6 +152,48 @@ func parseIntQuery(raw string) int {
 		return 0
 	}
 	return parsed
+}
+
+func parseFloatQuery(raw string) (float64, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return 0, errors.New("empty value")
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid float: %w", err)
+	}
+	return parsed, nil
+}
+
+func (h *handler) listApartmentsByMap(c *gin.Context) {
+	lat, err := parseFloatQuery(c.Query("lat"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "lat is required and must be a number"})
+		return
+	}
+	lng, err := parseFloatQuery(c.Query("lng"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "lng is required and must be a number"})
+		return
+	}
+	radius, err := parseFloatQuery(c.Query("radius"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "radius is required and must be a number"})
+		return
+	}
+
+	apartments, err := h.apartmentService.ListApartmentsInRadius(c.Request.Context(), lat, lng, radius)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrInvalidMapParams) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments by map"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apartments": tenantApartmentResponses(apartments)})
 }
 
 func (h *handler) createApartment(c *gin.Context) {
@@ -269,29 +312,29 @@ func (h *handler) uploadApartmentPhotos(c *gin.Context) {
 	}
 
 	files := make([]apartmentservice.UploadFile, 0, len(formFiles))
-    for _, fh := range formFiles {
-        data, err := fh.Open()
-        if err != nil {
-            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
-            return
-        }
-        fileData, readErr := io.ReadAll(data)
-        closeErr := data.Close()
-        if readErr != nil {
-            c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
-            return
-        }
-        if closeErr != nil {
-            // Closing the uploaded file failed — treat as internal error.
-            c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fh.Filename)})
-            return
-        }
-        files = append(files, apartmentservice.UploadFile{
-            Filename:    fh.Filename,
-            ContentType: fh.Header.Get("Content-Type"),
-            Data:        fileData,
-        })
-    }
+	for _, fh := range formFiles {
+		data, err := fh.Open()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+			return
+		}
+		fileData, readErr := io.ReadAll(data)
+		closeErr := data.Close()
+		if readErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("could not read file %q", fh.Filename)})
+			return
+		}
+		if closeErr != nil {
+			// Closing the uploaded file failed — treat as internal error.
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("could not close file %q", fh.Filename)})
+			return
+		}
+		files = append(files, apartmentservice.UploadFile{
+			Filename:    fh.Filename,
+			ContentType: fh.Header.Get("Content-Type"),
+			Data:        fileData,
+		})
+	}
 
 	results, err := h.apartmentService.UploadApartmentPhotos(c.Request.Context(), ownerID, role, apartmentID, apartmentName, files)
 	if err != nil {
