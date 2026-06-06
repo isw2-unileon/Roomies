@@ -154,6 +154,11 @@ const de = {
       noProfiles: 'Es sind keine weiteren Mieterprofile verfügbar.',
       noGroups: 'Es sind keine Gruppen verfügbar, denen du beitreten kannst.',
       compatibility: '{{count}}% kompatibel',
+      filterLabel: 'Anzeigen',
+      filterAll: 'Alle',
+      filterTenants: 'Mieter',
+      filterGroups: 'Gruppen',
+      viewProfile: 'Profil von {{name}} anzeigen',
     },
     sidebar: {
       panel: 'Mieterbereich',

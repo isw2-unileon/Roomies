@@ -154,6 +154,11 @@ const en = {
       noProfiles: 'No other tenant profiles are available.',
       noGroups: 'No groups are available to request joining.',
       compatibility: '{{count}}% compatible',
+      filterLabel: 'Show',
+      filterAll: 'All',
+      filterTenants: 'Tenants',
+      filterGroups: 'Groups',
+      viewProfile: 'View {{name}} profile',
     },
     sidebar: {
       panel: 'Tenant panel',

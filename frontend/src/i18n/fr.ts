@@ -154,6 +154,11 @@ const fr = {
       noProfiles: 'Aucun autre profil de locataire disponible.',
       noGroups: 'Aucun groupe disponible à rejoindre.',
       compatibility: '{{count}}% compatible',
+      filterLabel: 'Afficher',
+      filterAll: 'Tous',
+      filterTenants: 'Locataires',
+      filterGroups: 'Groupes',
+      viewProfile: 'Voir le profil de {{name}}',
     },
     sidebar: {
       panel: 'Panneau locataire',

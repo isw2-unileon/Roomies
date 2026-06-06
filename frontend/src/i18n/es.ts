@@ -154,6 +154,11 @@ const es = {
       noProfiles: 'No hay otros perfiles de inquilinos disponibles.',
       noGroups: 'No hay grupos disponibles para solicitar unirte.',
       compatibility: '{{count}}% compatible',
+      filterLabel: 'Mostrar',
+      filterAll: 'Todos',
+      filterTenants: 'Inquilinos',
+      filterGroups: 'Grupos',
+      viewProfile: 'Ver perfil de {{name}}',
     },
     sidebar: {
       panel: 'Panel de inquilino',

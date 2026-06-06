@@ -10,12 +10,12 @@ import type { InterestedTenant, TenantGroupDetailItem } from '@/types/tenant'
 
 interface TenantDetailModalProps {
   tenant: InterestedTenant
-  propertyId: string
-  myGroup: TenantGroupDetailItem | null
+  propertyId?: string
+  myGroup?: TenantGroupDetailItem | null
   onClose: () => void
 }
 
-export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose }: TenantDetailModalProps) {
+export default function TenantDetailModal({ tenant, propertyId = '', myGroup = null, onClose }: TenantDetailModalProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<TenantPublicProfile | null>(null)
@@ -38,7 +38,7 @@ export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose
   function handleInviteToGroup() {
     if (myGroup) {
       navigate(paths.tenantGroups)
-    } else {
+    } else if (propertyId) {
       navigate(paths.tenantCreateGroup, {
         state: { preselectedUserId: tenant.userId, preselectedApartmentId: propertyId },
       })
@@ -82,17 +82,19 @@ export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose
           </div>
         </div>
 
-        {myGroup && (
+        {myGroup && propertyId ? (
           <p className={styles.modalGroupHint}>
             {t('tenantDashboard.detail.interested.myGroup.alreadyHasGroup')}
           </p>
-        )}
+        ) : null}
 
-        <button className={styles.inviteButton} onClick={handleInviteToGroup}>
-          {myGroup
-            ? t('tenantDashboard.detail.interested.myGroup.inviteFromModal')
-            : t('tenantDashboard.detail.interested.inviteToGroup')}
-        </button>
+        {propertyId ? (
+          <button className={styles.inviteButton} onClick={handleInviteToGroup}>
+            {myGroup
+              ? t('tenantDashboard.detail.interested.myGroup.inviteFromModal')
+              : t('tenantDashboard.detail.interested.inviteToGroup')}
+          </button>
+        ) : null}
 
         {loading && <p className={styles.modalStatus}>{t('tenantDashboard.detail.interested.modal.loading')}</p>}
         {error && <p className={styles.modalStatus}>{t('tenantDashboard.detail.interested.modal.error')}</p>}

@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { UserCircleIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { UserGroupIcon } from '@heroicons/react/24/outline'
 
+import placeholderAvatar from '@/assets/placeholder-avatar.png'
+import TenantDetailModal from '@/components/tenant/tenant_interested/TenantDetailModal'
 import TenantGroupCard from '@/components/tenant/tenant_groups/TenantGroupCard'
 import { canCreateNewJoinRequest } from '@/components/tenant/tenant_groups/joinRequestStatus'
 import { listTenantGroups, listTenantProfiles } from '@/services/tenantService'
-import type { TenantGroupListItem, TenantRoommateProfile } from '@/types/tenant'
+import type { InterestedTenant, TenantGroupListItem, TenantRoommateProfile } from '@/types/tenant'
 import styles from '@/styles/TenantDashboard.module.css'
+
+type RoommateFilter = 'all' | 'tenants' | 'groups'
 
 function canRequestToJoinGroup(group: TenantGroupListItem) {
   const totalSpots = group.apartment?.totalSpots ?? 0
@@ -18,6 +22,8 @@ export default function TenantRoommateDiscoveryPanel() {
   const { t } = useTranslation()
   const [profiles, setProfiles] = useState<TenantRoommateProfile[]>([])
   const [groups, setGroups] = useState<TenantGroupListItem[]>([])
+  const [filter, setFilter] = useState<RoommateFilter>('all')
+  const [selectedTenant, setSelectedTenant] = useState<InterestedTenant | null>(null)
   const [loadingProfiles, setLoadingProfiles] = useState(true)
   const [loadingGroups, setLoadingGroups] = useState(true)
   const [profilesError, setProfilesError] = useState('')
@@ -73,12 +79,34 @@ export default function TenantRoommateDiscoveryPanel() {
   }, [loadGroups])
 
   const requestableGroups = useMemo(() => groups.filter(canRequestToJoinGroup), [groups])
+  const showProfiles = filter === 'all' || filter === 'tenants'
+  const showGroups = filter === 'all' || filter === 'groups'
+
+  function roommateProfileToInterestedTenant(profile: TenantRoommateProfile): InterestedTenant {
+    return {
+      userId: profile.userId,
+      name: profile.name,
+      age: profile.age,
+      studies: profile.degree || profile.profession || profile.situation,
+      avatarUrl: profile.avatarUrl,
+      compatibility: profile.compatibility,
+    }
+  }
 
   return (
     <div className={styles.roommatePanel}>
       {notice ? <p className={styles.successText}>{notice}</p> : null}
 
-      <section className={styles.discoverySection}>
+      <label className={styles.roommateFilter}>
+        <span>{t('tenantDashboard.roommates.filterLabel')}</span>
+        <select value={filter} onChange={(event) => setFilter(event.target.value as RoommateFilter)}>
+          <option value="all">{t('tenantDashboard.roommates.filterAll')}</option>
+          <option value="tenants">{t('tenantDashboard.roommates.filterTenants')}</option>
+          <option value="groups">{t('tenantDashboard.roommates.filterGroups')}</option>
+        </select>
+      </label>
+
+      {showProfiles ? <section className={styles.discoverySection}>
         <div className={styles.discoveryHeader}>
           <div>
             <h2 className={styles.discoveryTitle}>{t('tenantDashboard.roommates.profilesTitle')}</h2>
@@ -92,14 +120,22 @@ export default function TenantRoommateDiscoveryPanel() {
         ) : profiles.length > 0 ? (
           <div className={styles.profileGrid}>
             {profiles.map((profile) => (
-              <article key={profile.userId} className={styles.profileCard}>
-                {profile.avatarUrl ? (
-                  <img className={styles.profileAvatar} src={profile.avatarUrl} alt={profile.name} loading="lazy" />
-                ) : (
-                  <div className={styles.profileAvatarFallback}>
-                    <UserCircleIcon className={styles.profileAvatarIcon} aria-hidden="true" />
-                  </div>
-                )}
+              <button
+                key={profile.userId}
+                type="button"
+                className={styles.profileCard}
+                onClick={() => setSelectedTenant(roommateProfileToInterestedTenant(profile))}
+                aria-label={t('tenantDashboard.roommates.viewProfile', { name: profile.name })}
+              >
+                <img
+                  className={styles.profileAvatar}
+                  src={profile.avatarUrl || placeholderAvatar}
+                  alt={profile.name}
+                  loading="lazy"
+                  onError={(event) => {
+                    event.currentTarget.src = placeholderAvatar
+                  }}
+                />
                 <div className={styles.profileCardBody}>
                   <div className={styles.profileCardHeader}>
                     <h3 className={styles.profileName}>{profile.name}</h3>
@@ -112,15 +148,15 @@ export default function TenantRoommateDiscoveryPanel() {
                   </p>
                   <p className={styles.profileMeta}>{profile.preferredArea}</p>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         ) : (
           <p className={styles.emptyDiscoveryText}>{t('tenantDashboard.roommates.noProfiles')}</p>
         )}
-      </section>
+      </section> : null}
 
-      <section className={styles.discoverySection}>
+      {showGroups ? <section className={styles.discoverySection}>
         <div className={styles.discoveryHeader}>
           <div>
             <h2 className={styles.discoveryTitle}>{t('tenantDashboard.roommates.groupsTitle')}</h2>
@@ -148,7 +184,11 @@ export default function TenantRoommateDiscoveryPanel() {
         ) : (
           <p className={styles.emptyDiscoveryText}>{t('tenantDashboard.roommates.noGroups')}</p>
         )}
-      </section>
+      </section> : null}
+
+      {selectedTenant ? (
+        <TenantDetailModal tenant={selectedTenant} onClose={() => setSelectedTenant(null)} />
+      ) : null}
     </div>
   )
 }

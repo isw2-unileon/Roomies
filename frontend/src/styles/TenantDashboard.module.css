@@ -135,6 +135,39 @@
   gap: 1.25rem;
 }
 
+.roommateFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  justify-self: start;
+  padding: 0.35rem 0.45rem 0.35rem 0.85rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 900;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.roommateFilter select {
+  min-height: 2.2rem;
+  padding: 0 0.8rem;
+  color: var(--tenant-text);
+  font: inherit;
+  font-weight: 900;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  outline: 0;
+  cursor: pointer;
+}
+
+.roommateFilter select:focus {
+  border-color: var(--tenant-primary);
+  box-shadow: 0 0 0 3px rgba(124, 82, 199, 0.14);
+}
+
 .discoverySection {
   display: grid;
   gap: 1rem;
@@ -181,34 +214,32 @@
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  width: 100%;
   padding: 0.85rem;
+  font: inherit;
+  text-align: left;
   background: var(--tenant-bg-soft);
   border: 1px solid var(--tenant-border-light);
   border-radius: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-.profileAvatar,
-.profileAvatarFallback {
+.profileCard:hover,
+.profileCard:focus-visible {
+  border-color: var(--tenant-primary);
+  box-shadow: 0 8px 24px rgba(100, 54, 199, 0.12);
+  transform: translateY(-1px);
+  outline: 0;
+}
+
+.profileAvatar {
   flex: 0 0 auto;
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 999px;
-}
-
-.profileAvatar {
   object-fit: cover;
-}
-
-.profileAvatarFallback {
-  display: grid;
-  place-items: center;
-  color: var(--tenant-primary);
-  background: var(--tenant-primary-soft);
-}
-
-.profileAvatarIcon {
-  width: 2rem;
-  height: 2rem;
+  background: #eeeae5;
 }
 
 .profileCardBody {
@@ -277,6 +308,12 @@
   }
 
   .exploreTabs {
+    display: grid;
+    width: 100%;
+    border-radius: 1rem;
+  }
+
+  .roommateFilter {
     display: grid;
     width: 100%;
     border-radius: 1rem;
