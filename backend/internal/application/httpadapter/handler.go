@@ -416,43 +416,39 @@ func (h *handler) respondOwnerApplicationDecision(
 	c.JSON(http.StatusOK, gin.H{"message": successMessage})
 }
 
+type serviceErrorMapping struct {
+	target  error
+	status  int
+	message string
+}
+
+var serviceErrorMappings = []serviceErrorMapping{
+	{applicationservice.ErrTenantRequired, http.StatusForbidden, "applications are only available for tenant users"},
+	{applicationservice.ErrOwnerRequired, http.StatusForbidden, "applications are only available for owner users"},
+	{applicationservice.ErrApartmentNotFound, http.StatusNotFound, "apartment not found"},
+	{applicationservice.ErrApartmentFull, http.StatusConflict, "apartment is full"},
+	{applicationservice.ErrApplicationAlreadyExists, http.StatusConflict, "application already exists"},
+	{applicationservice.ErrApartmentClosed, http.StatusConflict, "apartment is closed"},
+	{applicationservice.ErrTenantInClosedApartment, http.StatusConflict, "tenant belongs to a closed apartment"},
+	{applicationservice.ErrApplicationNotCancelable, http.StatusConflict, "application is not cancelable"},
+	{applicationservice.ErrInterestedTenantsForbidden, http.StatusForbidden, "interested tenants are not available for this user"},
+	{applicationservice.ErrGroupNotFound, http.StatusNotFound, "group not found"},
+	{applicationservice.ErrGroupApplicationForbidden, http.StatusForbidden, "only the group creator can submit this request"},
+	{applicationservice.ErrGroupNotReady, http.StatusConflict, "group is not fully accepted"},
+	{applicationservice.ErrGroupApartmentRequired, http.StatusConflict, "group has no assigned apartment"},
+	{applicationservice.ErrOwnerApplicationNotFound, http.StatusNotFound, "application not found"},
+	{applicationservice.ErrOwnerApplicationAlreadyHandled, http.StatusConflict, "application is not pending owner review"},
+	{applicationservice.ErrOwnerApplicationConflict, http.StatusConflict, "another group has already been accepted for this apartment"},
+}
+
 func (h *handler) handleServiceError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, applicationservice.ErrTenantRequired):
-		c.JSON(http.StatusForbidden, gin.H{"error": "applications are only available for tenant users"})
-	case errors.Is(err, applicationservice.ErrOwnerRequired):
-		c.JSON(http.StatusForbidden, gin.H{"error": "applications are only available for owner users"})
-	case errors.Is(err, applicationservice.ErrApartmentNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
-	case errors.Is(err, applicationservice.ErrApartmentFull):
-		c.JSON(http.StatusConflict, gin.H{"error": "apartment is full"})
-	case errors.Is(err, applicationservice.ErrApplicationAlreadyExists):
-		c.JSON(http.StatusConflict, gin.H{"error": "application already exists"})
-	case errors.Is(err, applicationservice.ErrApartmentClosed):
-		c.JSON(http.StatusConflict, gin.H{"error": "apartment is closed"})
-	case errors.Is(err, applicationservice.ErrTenantInClosedApartment):
-		c.JSON(http.StatusConflict, gin.H{"error": "tenant belongs to a closed apartment"})
-	case errors.Is(err, applicationservice.ErrApplicationNotCancelable):
-		c.JSON(http.StatusConflict, gin.H{"error": "application is not cancelable"})
-	case errors.Is(err, applicationservice.ErrInterestedTenantsForbidden):
-		c.JSON(http.StatusForbidden, gin.H{"error": "interested tenants are not available for this user"})
-	case errors.Is(err, applicationservice.ErrGroupNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
-	case errors.Is(err, applicationservice.ErrGroupApplicationForbidden):
-		c.JSON(http.StatusForbidden, gin.H{"error": "only the group creator can submit this request"})
-	case errors.Is(err, applicationservice.ErrGroupNotReady):
-		c.JSON(http.StatusConflict, gin.H{"error": "group is not fully accepted"})
-	case errors.Is(err, applicationservice.ErrGroupApartmentRequired):
-		c.JSON(http.StatusConflict, gin.H{"error": "group has no assigned apartment"})
-	case errors.Is(err, applicationservice.ErrOwnerApplicationNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
-	case errors.Is(err, applicationservice.ErrOwnerApplicationAlreadyHandled):
-		c.JSON(http.StatusConflict, gin.H{"error": "application is not pending owner review"})
-	case errors.Is(err, applicationservice.ErrOwnerApplicationConflict):
-		c.JSON(http.StatusConflict, gin.H{"error": "another group has already been accepted for this apartment"})
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	for _, mapping := range serviceErrorMappings {
+		if errors.Is(err, mapping.target) {
+			c.JSON(mapping.status, gin.H{"error": mapping.message})
+			return
+		}
 	}
+	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 }
 
 func ownerApplicationResponseFromDomain(item application.OwnerApplication) ownerApplicationResponse {

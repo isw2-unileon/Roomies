@@ -471,14 +471,8 @@ func normalizeListApartmentsFilters(filters apartment.ListApartmentsFilters) apa
 
 // GetApartmentDetailForTenant returns apartment detail and compatibility data for a tenant.
 func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, tenantID, role string) (*apartment.Detail, error) {
-	if strings.TrimSpace(apartmentID) == "" {
-		return nil, errors.New("apartment id is required")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, errors.New("tenant id is required")
-	}
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return nil, ErrTenantRequired
+	if err := validateGetApartmentDetailInputs(apartmentID, tenantID, role); err != nil {
+		return nil, err
 	}
 
 	apartmentRow, err := s.repo.GetApartmentByID(ctx, apartmentID)
@@ -504,18 +498,13 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 	if err != nil {
 		return nil, err
 	}
-	tenantInClosedApartment := false
-	if s.applicationReader != nil {
-		tenantInClosedApartment, err = s.applicationReader.IsTenantInClosedApartment(ctx, tenantID)
-		if err != nil {
-			return nil, err
-		}
+	tenantInClosedApartment, err := s.checkTenantInClosedApartment(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
+
+	canApply, canCancel, canLeave := computeApplicationPermissions(apartmentRow.Status, applicationID, applicationStatus, tenantInClosedApartment)
 	mappedStatus := application.MapStatus(applicationStatus)
-	isClosed := strings.ToUpper(strings.TrimSpace(apartmentRow.Status)) == "CLOSED"
-	canApply := !isClosed && !tenantInClosedApartment && (strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected")
-	canCancel := mappedStatus == "pending"
-	canLeave := !isClosed && mappedStatus == "approved"
 
 	return &apartment.Detail{
 		Apartment:                apartmentsWithImage[0],
@@ -527,6 +516,36 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 		CanCancel:                canCancel,
 		CanLeave:                 canLeave,
 	}, nil
+}
+
+func validateGetApartmentDetailInputs(apartmentID, tenantID, role string) error {
+	if strings.TrimSpace(apartmentID) == "" {
+		return errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return ErrTenantRequired
+	}
+	return nil
+}
+
+func (s *Service) checkTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	if s.applicationReader == nil {
+		return false, nil
+	}
+	return s.applicationReader.IsTenantInClosedApartment(ctx, tenantID)
+}
+
+func computeApplicationPermissions(status, applicationID, applicationStatus string, tenantInClosedApartment bool) (canApply, canCancel, canLeave bool) {
+	mappedStatus := application.MapStatus(applicationStatus)
+	isClosed := strings.ToUpper(strings.TrimSpace(status)) == "CLOSED"
+	noActiveApplication := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
+	canApply = !isClosed && !tenantInClosedApartment && noActiveApplication
+	canCancel = mappedStatus == "pending"
+	canLeave = !isClosed && mappedStatus == "approved"
+	return canApply, canCancel, canLeave
 }
 
 func (s *Service) signApartmentImages(ctx context.Context, apartments []apartment.Apartment) ([]apartment.Apartment, error) {
