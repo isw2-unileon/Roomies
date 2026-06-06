@@ -64,10 +64,11 @@ type applicantResponse struct {
 }
 
 type groupMemberResponse struct {
-	UserID    string `json:"user_id"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatar_url"`
+	UserID             string `json:"user_id"`
+	Name               string `json:"name"`
+	Email              string `json:"email"`
+	AvatarURL          string `json:"avatar_url"`
+	CompatibilityScore int    `json:"compatibility_score"`
 }
 
 type groupDetailsResponse struct {
@@ -78,15 +79,16 @@ type groupDetailsResponse struct {
 }
 
 type ownerApplicationResponse struct {
-	ID            string                `json:"id"`
-	ApartmentID   string                `json:"apartment_id"`
-	PropertyTitle string                `json:"property_title"`
-	Address       string                `json:"address"`
-	Type          string                `json:"type"`
-	Status        string                `json:"status"`
-	CreatedAt     string                `json:"created_at"`
-	Tenant        *applicantResponse    `json:"tenant,omitempty"`
-	Group         *groupDetailsResponse `json:"group,omitempty"`
+	ID                 string                `json:"id"`
+	ApartmentID        string                `json:"apartment_id"`
+	PropertyTitle      string                `json:"property_title"`
+	Address            string                `json:"address"`
+	Type               string                `json:"type"`
+	Status             string                `json:"status"`
+	CreatedAt          string                `json:"created_at"`
+	Tenant             *applicantResponse    `json:"tenant,omitempty"`
+	Group              *groupDetailsResponse `json:"group,omitempty"`
+	CompatibilityScore int                   `json:"compatibility_score"`
 }
 
 // RegisterTenantRoutes wires tenant application endpoints into the API router.
@@ -402,13 +404,14 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 
 func ownerApplicationResponseFromDomain(item application.OwnerApplication) ownerApplicationResponse {
 	response := ownerApplicationResponse{
-		ID:            item.ID,
-		ApartmentID:   item.ApartmentID,
-		PropertyTitle: item.PropertyTitle,
-		Address:       item.Address,
-		Type:          item.Type,
-		Status:        item.Status,
-		CreatedAt:     item.CreatedAt,
+		ID:                 item.ID,
+		ApartmentID:        item.ApartmentID,
+		PropertyTitle:      item.PropertyTitle,
+		Address:            item.Address,
+		Type:               item.Type,
+		Status:             item.Status,
+		CreatedAt:          item.CreatedAt,
+		CompatibilityScore: item.CompatibilityScore,
 	}
 	if item.Tenant != nil {
 		response.Tenant = &applicantResponse{
@@ -422,10 +425,11 @@ func ownerApplicationResponseFromDomain(item application.OwnerApplication) owner
 		members := make([]groupMemberResponse, 0, len(item.Group.Members))
 		for _, member := range item.Group.Members {
 			members = append(members, groupMemberResponse{
-				UserID:    member.UserID,
-				Name:      member.Name,
-				Email:     member.Email,
-				AvatarURL: member.AvatarURL,
+				UserID:             member.UserID,
+				Name:               member.Name,
+				Email:              member.Email,
+				AvatarURL:          member.AvatarURL,
+				CompatibilityScore: member.CompatibilityScore,
 			})
 		}
 		response.Group = &groupDetailsResponse{

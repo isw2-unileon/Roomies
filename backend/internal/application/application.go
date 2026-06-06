@@ -86,10 +86,11 @@ type Applicant struct {
 
 // GroupMember contains the public group member data shown to owners.
 type GroupMember struct {
-	UserID    string
-	Name      string
-	Email     string
-	AvatarURL string
+	UserID             string
+	Name               string
+	Email              string
+	AvatarURL          string
+	CompatibilityScore int
 }
 
 // GroupDetails contains owner-facing data for a group application.
@@ -102,15 +103,16 @@ type GroupDetails struct {
 
 // OwnerApplication contains application data shown in the owner requests panel.
 type OwnerApplication struct {
-	ID            string
-	ApartmentID   string
-	PropertyTitle string
-	Address       string
-	Type          string
-	Status        string
-	CreatedAt     string
-	Tenant        *Applicant
-	Group         *GroupDetails
+	ID                 string
+	ApartmentID        string
+	PropertyTitle      string
+	Address            string
+	Type               string
+	Status             string
+	CreatedAt          string
+	Tenant             *Applicant
+	Group              *GroupDetails
+	CompatibilityScore int
 }
 
 // MapStatus converts database application statuses into tenant-facing statuses.
