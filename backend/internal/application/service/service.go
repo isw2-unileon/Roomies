@@ -454,6 +454,7 @@ func (s *Service) ListOwnerApplications(ctx context.Context, ownerID, role strin
 	if err != nil {
 		return nil, err
 	}
+	s.enrichOwnerApplicationCompatibility(ctx, applications)
 	if err := s.signOwnerApplications(ctx, applications); err != nil {
 		return nil, err
 	}
@@ -480,6 +481,7 @@ func (s *Service) GetOwnerApplicationByID(ctx context.Context, applicationID, ow
 		return nil, ErrOwnerApplicationNotFound
 	}
 	applications := []application.OwnerApplication{*item}
+	s.enrichOwnerApplicationCompatibility(ctx, applications)
 	if err := s.signOwnerApplications(ctx, applications); err != nil {
 		return nil, err
 	}
@@ -550,6 +552,51 @@ func (s *Service) RejectOwnerApplication(ctx context.Context, applicationID, own
 		return ErrOwnerApplicationAlreadyHandled
 	}
 	return nil
+}
+
+func (s *Service) enrichOwnerApplicationCompatibility(ctx context.Context, applications []application.OwnerApplication) {
+	for idx := range applications {
+		if applications[idx].Type == "individual" && applications[idx].Tenant != nil {
+			s.enrichIndividualCompatibility(ctx, &applications[idx])
+		} else if applications[idx].Type == "group" && applications[idx].Group != nil {
+			s.enrichGroupCompatibility(ctx, &applications[idx])
+		}
+	}
+}
+
+func (s *Service) enrichIndividualCompatibility(ctx context.Context, app *application.OwnerApplication) {
+	tenantProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, app.Tenant.UserID)
+	if err != nil {
+		return
+	}
+	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, app.ApartmentID)
+	if err != nil || apartmentRow == nil {
+		return
+	}
+	score, _ := matching.CalculateCompatibility(*apartmentRow, tenantProfile)
+	app.CompatibilityScore = score
+}
+
+func (s *Service) enrichGroupCompatibility(ctx context.Context, app *application.OwnerApplication) {
+	apartmentRow, err := s.apartmentReader.GetApartmentByID(ctx, app.ApartmentID)
+	if err != nil || apartmentRow == nil {
+		return
+	}
+	total := 0
+	count := 0
+	for idx := range app.Group.Members {
+		memberProfile, err := s.profileReader.GetTenantProfileByUserID(ctx, app.Group.Members[idx].UserID)
+		if err != nil {
+			continue
+		}
+		score, _ := matching.CalculateCompatibility(*apartmentRow, memberProfile)
+		app.Group.Members[idx].CompatibilityScore = score
+		total += score
+		count++
+	}
+	if count > 0 {
+		app.CompatibilityScore = total / count
+	}
 }
 
 func (s *Service) signOwnerApplications(ctx context.Context, applications []application.OwnerApplication) error {
