@@ -296,8 +296,8 @@ func TestListTenantApplicationsMapsGroupMetadata(t *testing.T) {
 	if result[0].RequestType != "Solicitud de grupo · Centro Leon" {
 		t.Fatalf("RequestType = %q, want group label", result[0].RequestType)
 	}
-	if result[0].CanCancel {
-		t.Fatal("CanCancel = true, want false")
+	if !result[0].CanCancel {
+		t.Fatal("CanCancel = false, want true (group creator can cancel)")
 	}
 	if result[0].StatusMessage == "" {
 		t.Fatal("StatusMessage is empty")
