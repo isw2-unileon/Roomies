@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
+import TenantContactModal from '@/components/tenant/tenant_explore_details/TenantContactOwnerModal'
 import styles from '@/styles/TenantInterestedTenants.module.css'
 import type { InterestedTenant, TenantGroupDetailItem } from '@/types/tenant'
 import TenantDetailModal from './TenantDetailModal'
@@ -16,6 +17,7 @@ export default function InterestedTenantCard({ tenant, propertyId, myGroup }: In
   const { t } = useTranslation()
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
 
   const avatarSrc = !avatarFailed && tenant.avatarUrl ? tenant.avatarUrl : placeholderAvatar
 
@@ -46,12 +48,26 @@ export default function InterestedTenantCard({ tenant, propertyId, myGroup }: In
           </span>
         </div>
 
-        <button className={styles.detailsButton} onClick={() => setShowModal(true)}>
-          {t('tenantDashboard.detail.interested.viewDetails')}
-        </button>
+        <div className={styles.buttonRow}>
+          <button className={styles.detailsButton} onClick={() => setShowModal(true)}>
+            {t('tenantDashboard.detail.interested.viewDetails')}
+          </button>
+          <button className={styles.contactButton} onClick={() => setShowContactModal(true)}>
+            {t('tenantDashboard.detail.contact')}
+          </button>
+        </div>
       </article>
 
       {showModal && <TenantDetailModal tenant={tenant} propertyId={propertyId} myGroup={myGroup} onClose={() => setShowModal(false)} />}
+      {showContactModal && (
+        <TenantContactModal
+          apartmentId={propertyId}
+          recipientId={tenant.userId}
+          recipientName={tenant.name}
+          titleKey="tenantDashboard.detail.contact"
+          onClose={() => setShowContactModal(false)}
+        />
+      )}
     </>
   )
 }

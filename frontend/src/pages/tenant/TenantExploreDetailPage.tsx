@@ -4,7 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantCompatibilityCard from '@/components/tenant/tenant_explore_details/TenantCompatibilityCard'
-import TenantContactOwnerModal from '@/components/tenant/tenant_explore_details/TenantContactOwnerModal'
+import TenantContactModal from '@/components/tenant/tenant_explore_details/TenantContactOwnerModal'
 import TenantExploreDetailHeader from '@/components/tenant/tenant_explore_details/TenantExploreDetailHeader'
 import TenantInterestedTenantsCard from '@/components/tenant/tenant_explore_details/TenantInterestedTenantsCard'
 import TenantPropertyDetailsCard from '@/components/tenant/tenant_explore_details/TenantPropertyDetailsCard'
@@ -165,10 +165,11 @@ export default function TenantExploreDetailPage() {
       </div>
 
       {isContactModalOpen && property.ownerId ? (
-        <TenantContactOwnerModal
+        <TenantContactModal
           apartmentId={property.id}
-          ownerId={property.ownerId}
-          ownerName={property.ownerName}
+          recipientId={property.ownerId}
+          recipientName={property.ownerName}
+          titleKey="tenantDashboard.detail.contactOwner"
           onClose={() => setIsContactModalOpen(false)}
         />
       ) : null}

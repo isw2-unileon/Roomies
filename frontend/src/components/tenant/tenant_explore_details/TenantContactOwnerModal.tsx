@@ -5,14 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { sendMessage } from '@/services/messageService'
 import styles from '@/styles/TenantInterestedTenants.module.css'
 
-interface TenantContactOwnerModalProps {
+interface TenantContactModalProps {
   apartmentId: string
-  ownerId: string
-  ownerName?: string
+  recipientId: string
+  recipientName?: string
+  titleKey?: string
   onClose: () => void
 }
 
-export default function TenantContactOwnerModal({ apartmentId, ownerId, ownerName, onClose }: TenantContactOwnerModalProps) {
+export default function TenantContactModal({ apartmentId, recipientId, recipientName, titleKey, onClose }: TenantContactModalProps) {
   const { t } = useTranslation()
   const [content, setContent] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -62,7 +63,7 @@ export default function TenantContactOwnerModal({ apartmentId, ownerId, ownerNam
 
   async function handleSend() {
     const trimmed = content.trim()
-    if (!trimmed || !ownerId || !apartmentId) {
+    if (!trimmed || !recipientId || !apartmentId) {
       setError(t('tenantDashboard.detail.messageSendError'))
       return
     }
@@ -70,7 +71,7 @@ export default function TenantContactOwnerModal({ apartmentId, ownerId, ownerNam
     setError('')
     setNotice('')
     try {
-      await sendMessage(ownerId, apartmentId, trimmed)
+      await sendMessage(recipientId, apartmentId, trimmed)
       setNotice(t('tenantDashboard.detail.messageSent'))
       setContent('')
     } catch (sendError) {
@@ -79,6 +80,8 @@ export default function TenantContactOwnerModal({ apartmentId, ownerId, ownerNam
       setIsSending(false)
     }
   }
+
+  const title = titleKey ? t(titleKey) : t('tenantDashboard.detail.contact')
 
   return (
     <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}>
@@ -91,8 +94,8 @@ export default function TenantContactOwnerModal({ apartmentId, ownerId, ownerNam
           <div className={styles.modalHeaderBody}>
             <div className={styles.modalTitleRow}>
               <div>
-                <p className={styles.modalName}>{t('tenantDashboard.detail.contactOwner')}</p>
-                <p className={styles.modalMeta}>{ownerName || ''}</p>
+                <p className={styles.modalName}>{title}</p>
+                <p className={styles.modalMeta}>{recipientName || ''}</p>
               </div>
             </div>
           </div>

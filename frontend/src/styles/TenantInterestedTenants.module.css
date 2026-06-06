@@ -195,6 +195,33 @@
   color: #fff;
 }
 
+.buttonRow {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.buttonRow > * {
+  flex: 1;
+}
+
+.contactButton {
+  width: 100%;
+  padding: 0.45rem 0;
+  background: var(--tenant-primary, #149f60);
+  border: 1.5px solid var(--tenant-primary, #149f60);
+  border-radius: 0.6rem;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.contactButton:hover {
+  opacity: 0.88;
+}
+
 /* Modal */
 
 .modalOverlay {
@@ -314,6 +341,16 @@
   line-height: 1;
 }
 
+.modalButtonRow {
+  display: flex;
+  gap: 0.65rem;
+  margin-bottom: 1.15rem;
+}
+
+.modalButtonRow > * {
+  flex: 1;
+}
+
 .inviteButton {
   width: 100%;
   margin-bottom: 1.15rem;
@@ -330,6 +367,10 @@
 
 .inviteButton:hover {
   opacity: 0.88;
+}
+
+.modalButtonRow .inviteButton {
+  margin-bottom: 0;
 }
 
 .modalStatus {
