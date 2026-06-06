@@ -1036,6 +1036,21 @@ export async function inviteUsersToTenantGroup(groupID: string, invitedUserIDs: 
 	return data.message ?? 'group invitations created'
 }
 
+export async function leaveTenantGroup(groupID: string): Promise<string> {
+  const response = await apiFetch(`/api/tenant/groups/${groupID}/leave`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+
+  const data = (await response.json()) as TenantGroupMessageResponseDto
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudo abandonar el grupo.', data.error))
+  }
+
+  return data.message ?? 'You have left the group.'
+}
+
 export async function acceptTenantGroupInvitation(invitationID: string): Promise<string> {
   const response = await apiFetch(`/api/tenant/group-invitations/${invitationID}/accept`, {
     method: 'POST',

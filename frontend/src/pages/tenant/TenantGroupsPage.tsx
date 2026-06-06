@@ -221,6 +221,7 @@ export default function TenantGroupsPage() {
                                             onRejectInvitation={handleRejectInvitation}
                                             isRespondingInvitation={respondingInvitationId === group.invitationId}
                                             onMutated={loadGroups}
+                                            onNotice={setNotice}
                                         />
                                     ))
                                 ) : (
