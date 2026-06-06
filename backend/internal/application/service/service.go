@@ -14,6 +14,8 @@ import (
 )
 
 const signedAvatarURLTTLSeconds = 3600
+const signedPhotoURLTTLSeconds = 3600
+const apartmentPhotosBucket = "Apartment_photos"
 
 type imageStorage interface {
 	CreateSignedURL(ctx context.Context, bucket string, path string, expiresIn int) (string, error)
@@ -335,6 +337,21 @@ func (s *Service) signAvatarURL(ctx context.Context, avatarURL string) (string, 
 	return signedURL, nil
 }
 
+func (s *Service) signApartmentPhotoURL(ctx context.Context, photoPath string) (string, error) {
+	photoPath = strings.TrimSpace(photoPath)
+	if photoPath == "" || strings.HasPrefix(photoPath, "http://") || strings.HasPrefix(photoPath, "https://") {
+		return photoPath, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, apartmentPhotosBucket, photoPath, signedPhotoURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign application apartment photo: %w", err)
+	}
+	return signedURL, nil
+}
+
 func authorizeInterestedTenantsViewer(apartmentRow *apartment.Apartment, viewerID, role string) error {
 	switch strings.ToLower(strings.TrimSpace(role)) {
 	case "tenant":
@@ -382,7 +399,12 @@ func (s *Service) ListTenantApplications(ctx context.Context, tenantID, role str
 		applications[idx].DateLabel = application.BuildDateLabel(applications[idx].Status, applications[idx].CreatedAt)
 		applications[idx].RequestType = buildTenantRequestTypeLabel(applications[idx])
 		applications[idx].StatusMessage = buildTenantApplicationStatusMessage(applications[idx])
-		applications[idx].CanCancel = applications[idx].Type == "individual" && applications[idx].Status == "pending"
+		applications[idx].CanCancel = applications[idx].Status == "pending"
+
+		signedImageURL, signErr := s.signApartmentPhotoURL(ctx, applications[idx].ImageURL)
+		if signErr == nil {
+			applications[idx].ImageURL = signedImageURL
+		}
 	}
 	return applications, nil
 }

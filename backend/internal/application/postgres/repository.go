@@ -86,8 +86,14 @@ func (r *Repository) CancelTenantApplication(ctx context.Context, applicationID,
 	SET status = 'CANCELLED',
 		updated_at = NOW()
 	WHERE id = $1
-		AND tenant_id = $2
-		AND status IN ('PENDING_OWNER', 'PENDING_CONFIRMED_TENANTS')`
+		AND status IN ('PENDING_OWNER', 'PENDING_CONFIRMED_TENANTS')
+		AND (
+			tenant_id = $2
+			OR group_id IN (
+				SELECT g.id FROM public.groups g
+				WHERE g.created_by = $2
+			)
+		)`
 
 	result, err := r.db.Exec(ctx, query, applicationID, tenantID)
 	if err != nil {
@@ -192,8 +198,8 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 				LIMIT 1
 			), '') AS image_url,
 			COALESCE(a.total_spots, 0) AS places,
-			0 AS size,
-			0 AS bathrooms,
+			COALESCE(a.surface_m2, 0) AS size,
+			COALESCE(a.bathrooms, 0) AS bathrooms,
 			app.type,
 			app.status,
 			TO_CHAR(app.created_at, 'YYYY-MM-DD') AS created_at,
@@ -225,8 +231,8 @@ func (r *Repository) ListTenantApplications(ctx context.Context, tenantID string
 				LIMIT 1
 			), '') AS image_url,
 			COALESCE(a.total_spots, 0) AS places,
-			0 AS size,
-			0 AS bathrooms,
+			COALESCE(a.surface_m2, 0) AS size,
+			COALESCE(a.bathrooms, 0) AS bathrooms,
 			app.type,
 			app.status,
 			TO_CHAR(app.created_at, 'YYYY-MM-DD') AS created_at,
