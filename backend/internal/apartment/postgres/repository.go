@@ -229,39 +229,7 @@ func (r *Repository) ListApartmentsInRadius(ctx context.Context, lat, lng, radiu
 	}
 	defer rows.Close()
 
-	result := make([]apartment.Apartment, 0)
-	for rows.Next() {
-		var item apartment.Apartment
-		if err := rows.Scan(
-			&item.ID,
-			&item.Title,
-			&item.Address,
-			&item.Area,
-			&item.TotalSpots,
-			&item.OccupiedSpots,
-			&item.BaseRent,
-			&item.Status,
-			&item.CreatedAt,
-			&item.ImagePaths,
-			&item.Latitude,
-			&item.Longitude,
-			&item.Bathrooms,
-			&item.SurfaceM2,
-			&item.Floor,
-			&item.SmokingAllowed,
-			&item.PetsAllowed,
-			&item.StudentsAllowed,
-			&item.Notes,
-		); err != nil {
-			return nil, fmt.Errorf("scan apartments in radius: %w", err)
-		}
-		result = append(result, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate apartments in radius: %w", err)
-	}
-
-	return result, nil
+	return scanApartmentRows(rows)
 }
 
 type availableApartmentsQuery struct {
