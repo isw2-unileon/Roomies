@@ -864,6 +864,30 @@
   font-weight: 600;
 }
 
+.ownerPropertyTenantRemoveButton {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-left: 0.25rem;
+  font-size: 1rem;
+  background: #fdecea;
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.ownerPropertyTenantRemoveButton:hover {
+  background: #f8d7da;
+}
+
+.ownerPropertyTenantRemoveButton:disabled,
+.ownerPropertyCloseModalCancel:disabled,
+.ownerPropertyCloseModalConfirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .ownerPropertyEmpty {
   margin: 0;
   padding: 1rem;

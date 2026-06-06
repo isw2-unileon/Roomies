@@ -423,3 +423,19 @@ func TestGetApartmentDetailForTenantReturnsCompatibility(t *testing.T) {
 		t.Fatalf("CanApply = %t, want false", detail.CanApply)
 	}
 }
+
+func TestGetApartmentDetailForTenantAllowsLeavingAcceptedApartment(t *testing.T) {
+	repo := &fakeApartmentRepository{applicationForApartmentID: "application-1", applicationForApartmentStatus: "FULLY_CONFIRMED"}
+	svc := NewService(repo, nil, repo, repo)
+
+	detail, err := svc.GetApartmentDetailForTenant(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("GetApartmentDetailForTenant returned error: %v", err)
+	}
+	if !detail.CanLeave {
+		t.Fatalf("CanLeave = %t, want true", detail.CanLeave)
+	}
+	if detail.CanCancel {
+		t.Fatalf("CanCancel = %t, want false", detail.CanCancel)
+	}
+}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import TenantProfileView from '@/components/owner/TenantProfileView'
-import { listApartmentTenants } from '@/services/ownerService'
+import { listApartmentTenants, removeApartmentTenant } from '@/services/ownerService'
 import type { ApartmentTenant } from '@/services/ownerService'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardProperty } from '@/types/owner'
@@ -14,9 +14,10 @@ interface OwnerPropertyGridProps {
   onReopen?: (property: OwnerDashboardProperty) => void
   closingPropertyId?: string | null
   reopeningPropertyId?: string | null
+  onTenantRemoved?: (propertyId: string) => void
 }
 
-export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReopen, closingPropertyId, reopeningPropertyId }: OwnerPropertyGridProps) {
+export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReopen, closingPropertyId, reopeningPropertyId, onTenantRemoved }: OwnerPropertyGridProps) {
   const { t } = useTranslation()
   const [confirmCloseId, setConfirmCloseId] = useState<string | null>(null)
   const [tenantsModalProperty, setTenantsModalProperty] = useState<OwnerDashboardProperty | null>(null)
@@ -24,6 +25,8 @@ export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReope
   const [loadingTenants, setLoadingTenants] = useState(false)
   const [tenantsError, setTenantsError] = useState('')
   const [viewingTenantProfile, setViewingTenantProfile] = useState<ApartmentTenant | null>(null)
+  const [confirmRemoveTenant, setConfirmRemoveTenant] = useState<ApartmentTenant | null>(null)
+  const [removingTenantId, setRemovingTenantId] = useState<string | null>(null)
 
   async function handleViewTenants(property: OwnerDashboardProperty) {
     setTenantsModalProperty(property)
@@ -45,6 +48,27 @@ export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReope
     setTenants([])
     setTenantsError('')
     setViewingTenantProfile(null)
+    setConfirmRemoveTenant(null)
+    setRemovingTenantId(null)
+  }
+
+  async function handleRemoveTenant() {
+    if (!tenantsModalProperty || !confirmRemoveTenant) {
+      return
+    }
+    setRemovingTenantId(confirmRemoveTenant.userId)
+    setTenantsError('')
+    try {
+      await removeApartmentTenant(tenantsModalProperty.id, confirmRemoveTenant.userId)
+      setTenants((prev) => prev.filter((tenant) => tenant.userId !== confirmRemoveTenant.userId))
+      setTenantsModalProperty((prev) => prev ? { ...prev, occupiedSpots: Math.max(prev.occupiedSpots - 1, 0) } : prev)
+      onTenantRemoved?.(tenantsModalProperty.id)
+      setConfirmRemoveTenant(null)
+    } catch (error) {
+      setTenantsError(error instanceof Error ? error.message : t('ownerDashboard.propertyCard.tenantsRemoveError'))
+    } finally {
+      setRemovingTenantId(null)
+    }
   }
 
   if (properties.length === 0) {
@@ -221,10 +245,50 @@ export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReope
                         >
                           {t('ownerDashboard.propertyCard.tenantsViewProfile')}
                         </button>
+                        <button
+                          type="button"
+                          className={styles.ownerPropertyTenantRemoveButton}
+                          onClick={() => setConfirmRemoveTenant(tenant)}
+                          disabled={removingTenantId === tenant.userId}
+                          aria-label={t('ownerDashboard.propertyCard.tenantsRemoveAria', { name: tenant.name })}
+                        >
+                          {removingTenantId === tenant.userId ? '...' : '🗑️'}
+                        </button>
                       </li>
                     ))}
                   </ul>
                 )}
+
+                {confirmRemoveTenant ? (
+                  <div className={styles.ownerPropertyCloseOverlay}>
+                    <div className={styles.ownerPropertyCloseModal} role="alertdialog" aria-modal="true">
+                      <h4 className={styles.ownerPropertyCloseModalTitle}>
+                        {t('ownerDashboard.propertyCard.tenantsRemoveConfirmTitle')}
+                      </h4>
+                      <p className={styles.ownerPropertyCloseModalText}>
+                        {t('ownerDashboard.propertyCard.tenantsRemoveConfirmMessage', { name: confirmRemoveTenant.name })}
+                      </p>
+                      <div className={styles.ownerPropertyCloseModalActions}>
+                        <button
+                          type="button"
+                          className={styles.ownerPropertyCloseModalCancel}
+                          onClick={() => setConfirmRemoveTenant(null)}
+                          disabled={removingTenantId === confirmRemoveTenant.userId}
+                        >
+                          {t('ownerDashboard.propertyCard.tenantsRemoveCancel')}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.ownerPropertyCloseModalConfirm}
+                          onClick={handleRemoveTenant}
+                          disabled={removingTenantId === confirmRemoveTenant.userId}
+                        >
+                          {removingTenantId === confirmRemoveTenant.userId ? t('ownerDashboard.propertyCard.tenantsRemoving') : t('ownerDashboard.propertyCard.tenantsRemoveConfirm')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </>
             )}
           </div>

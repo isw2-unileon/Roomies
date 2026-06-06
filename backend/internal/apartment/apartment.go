@@ -8,13 +8,13 @@ const StatusClosed = "CLOSED"
 
 // CreateApartmentInput contains data needed to publish an apartment.
 type CreateApartmentInput struct {
-	Title           string
-	Description     string
-	Address         string
-	Area            string
-	TotalSpots      int
-	Bathrooms       int
-	BaseRent        int
+	Title       string
+	Description string
+	Address     string
+	Area        string
+	TotalSpots  int
+	Bathrooms   int
+	BaseRent    int
 
 	ImagePaths      []string
 	Status          string
@@ -92,4 +92,5 @@ type Detail struct {
 	CurrentApplicationStatus string
 	CanApply                 bool
 	CanCancel                bool
+	CanLeave                 bool
 }

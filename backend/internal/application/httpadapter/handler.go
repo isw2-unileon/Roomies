@@ -97,6 +97,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, applicationService *applications
 	api.POST("/apartments/:id/applications", h.applyToApartment)
 	api.POST("/tenant/groups/:id/applications", h.applyGroupToAssignedApartment)
 	api.POST("/applications/:id/cancel", h.cancelTenantApplication)
+	api.POST("/applications/:id/leave", h.leaveAcceptedApartment)
 	api.GET("/tenant/applications", h.listTenantApplications)
 }
 
@@ -107,6 +108,7 @@ func RegisterOwnerRoutes(api *gin.RouterGroup, applicationService *applicationse
 	api.GET("/owner/applications/:id", h.getOwnerApplication)
 	api.POST("/owner/applications/:id/approve", h.approveOwnerApplication)
 	api.POST("/owner/applications/:id/reject", h.rejectOwnerApplication)
+	api.POST("/owner/apartments/:id/tenants/:tenantID/remove", h.removeAcceptedTenant)
 }
 
 // RegisterSharedRoutes wires authenticated application endpoints available to multiple roles.
@@ -241,6 +243,23 @@ func (h *handler) cancelTenantApplication(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "application cancelled"})
 }
 
+func (h *handler) leaveAcceptedApartment(c *gin.Context) {
+	tenantID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	applicationID := strings.TrimSpace(c.Param("id"))
+	if applicationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "application id is required"})
+		return
+	}
+	if err := h.applicationService.LeaveAcceptedApartment(c.Request.Context(), applicationID, tenantID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "apartment left"})
+}
+
 func (h *handler) listTenantApplications(c *gin.Context) {
 	tenantID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
@@ -341,6 +360,28 @@ func (h *handler) approveOwnerApplication(c *gin.Context) {
 
 func (h *handler) rejectOwnerApplication(c *gin.Context) {
 	h.respondOwnerApplicationDecision(c, h.applicationService.RejectOwnerApplication, "application rejected")
+}
+
+func (h *handler) removeAcceptedTenant(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	tenantID := strings.TrimSpace(c.Param("tenantID"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+	if tenantID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tenant id is required"})
+		return
+	}
+	if err := h.applicationService.RemoveAcceptedTenant(c.Request.Context(), apartmentID, tenantID, ownerID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "tenant removed"})
 }
 
 func (h *handler) respondOwnerApplicationDecision(

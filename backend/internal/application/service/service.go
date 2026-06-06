@@ -26,6 +26,7 @@ type repository interface {
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
 	CreateTenantApplication(ctx context.Context, apartmentID, tenantID string, compatibilityScore int) (string, error)
 	CancelTenantApplication(ctx context.Context, applicationID, tenantID string) (bool, error)
+	LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID string) (bool, error)
 	ListInterestedTenants(ctx context.Context, apartmentID string) ([]application.InterestedTenantCandidate, error)
 	ListTenantApplications(ctx context.Context, tenantID string) ([]application.TenantApplication, error)
 	GetGroupApplicationContext(ctx context.Context, groupID, userID string) (*application.GroupApplicationContext, error)
@@ -35,6 +36,7 @@ type repository interface {
 	GetOwnerApplicationByID(ctx context.Context, applicationID, ownerID string) (*application.OwnerApplication, error)
 	ApproveOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error)
 	RejectOwnerApplication(ctx context.Context, applicationID, ownerID string) (bool, error)
+	RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID string) (bool, error)
 }
 
 type apartmentReader interface {
@@ -249,6 +251,27 @@ func (s *Service) CancelTenantApplication(ctx context.Context, applicationID, te
 		return ErrTenantRequired
 	}
 	updated, err := s.repo.CancelTenantApplication(ctx, applicationID, tenantID)
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrApplicationNotCancelable
+	}
+	return nil
+}
+
+// LeaveAcceptedApartment lets a tenant leave an already accepted apartment.
+func (s *Service) LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID, role string) error {
+	if strings.TrimSpace(applicationID) == "" {
+		return errors.New("application id is required")
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return ErrTenantRequired
+	}
+	updated, err := s.repo.LeaveAcceptedApartment(ctx, strings.TrimSpace(applicationID), strings.TrimSpace(tenantID))
 	if err != nil {
 		return err
 	}
@@ -552,6 +575,30 @@ func (s *Service) RejectOwnerApplication(ctx context.Context, applicationID, own
 	}
 	if !updated {
 		return ErrOwnerApplicationAlreadyHandled
+	}
+	return nil
+}
+
+// RemoveAcceptedTenant lets an owner remove an accepted tenant from one owned apartment.
+func (s *Service) RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID, role string) error {
+	if strings.TrimSpace(apartmentID) == "" {
+		return errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant id is required")
+	}
+	if strings.TrimSpace(ownerID) == "" {
+		return errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+	updated, err := s.repo.RemoveAcceptedTenant(ctx, strings.TrimSpace(apartmentID), strings.TrimSpace(tenantID), strings.TrimSpace(ownerID))
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrOwnerApplicationNotFound
 	}
 	return nil
 }

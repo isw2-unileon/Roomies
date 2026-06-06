@@ -29,6 +29,13 @@ type fakeApplicationRepository struct {
 	rejectOwnerApplicationOK      bool
 	approveOwnerApplicationErr    error
 	rejectOwnerApplicationErr     error
+	leaveAcceptedApartmentOK      bool
+	removeAcceptedTenantOK        bool
+	leftApplicationID             string
+	leftTenantID                  string
+	removedApartmentID            string
+	removedTenantID               string
+	removedOwnerID                string
 }
 
 func (f *fakeApplicationRepository) HasActiveApplication(ctx context.Context, apartmentID, tenantID string) (bool, error) {
@@ -128,6 +135,19 @@ func (f *fakeApplicationRepository) RejectOwnerApplication(ctx context.Context, 
 		return false, f.rejectOwnerApplicationErr
 	}
 	return f.rejectOwnerApplicationOK, nil
+}
+
+func (f *fakeApplicationRepository) LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID string) (bool, error) {
+	f.leftApplicationID = applicationID
+	f.leftTenantID = tenantID
+	return f.leaveAcceptedApartmentOK, nil
+}
+
+func (f *fakeApplicationRepository) RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID string) (bool, error) {
+	f.removedApartmentID = apartmentID
+	f.removedTenantID = tenantID
+	f.removedOwnerID = ownerID
+	return f.removeAcceptedTenantOK, nil
 }
 
 type fakeApartmentReader struct {
@@ -467,5 +487,71 @@ func TestCancelTenantApplicationUpdatesPendingApplication(t *testing.T) {
 	err := svc.CancelTenantApplication(context.Background(), "application-1", "tenant-1", "tenant")
 	if err != nil {
 		t.Fatalf("CancelTenantApplication returned error: %v", err)
+	}
+}
+
+func TestLeaveAcceptedApartmentUpdatesAcceptedApplication(t *testing.T) {
+	repo := &fakeApplicationRepository{leaveAcceptedApartmentOK: true}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.LeaveAcceptedApartment(context.Background(), "application-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("LeaveAcceptedApartment returned error: %v", err)
+	}
+	if repo.leftApplicationID != "application-1" || repo.leftTenantID != "tenant-1" {
+		t.Fatalf("left application = (%q,%q), want (application-1,tenant-1)", repo.leftApplicationID, repo.leftTenantID)
+	}
+}
+
+func TestLeaveAcceptedApartmentRejectsNonTenant(t *testing.T) {
+	repo := &fakeApplicationRepository{leaveAcceptedApartmentOK: true}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.LeaveAcceptedApartment(context.Background(), "application-1", "owner-1", "owner")
+	if !errors.Is(err, ErrTenantRequired) {
+		t.Fatalf("err = %v, want %v", err, ErrTenantRequired)
+	}
+}
+
+func TestLeaveAcceptedApartmentRejectsNotAccepted(t *testing.T) {
+	repo := &fakeApplicationRepository{leaveAcceptedApartmentOK: false}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.LeaveAcceptedApartment(context.Background(), "application-1", "tenant-1", "tenant")
+	if !errors.Is(err, ErrApplicationNotCancelable) {
+		t.Fatalf("err = %v, want %v", err, ErrApplicationNotCancelable)
+	}
+}
+
+func TestRemoveAcceptedTenantUpdatesOwnerApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{removeAcceptedTenantOK: true}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.RemoveAcceptedTenant(context.Background(), "apartment-1", "tenant-1", "owner-1", "owner")
+	if err != nil {
+		t.Fatalf("RemoveAcceptedTenant returned error: %v", err)
+	}
+	if repo.removedApartmentID != "apartment-1" || repo.removedTenantID != "tenant-1" || repo.removedOwnerID != "owner-1" {
+		t.Fatalf("removed tenant = (%q,%q,%q), want (apartment-1,tenant-1,owner-1)", repo.removedApartmentID, repo.removedTenantID, repo.removedOwnerID)
+	}
+}
+
+func TestRemoveAcceptedTenantRejectsNonOwner(t *testing.T) {
+	repo := &fakeApplicationRepository{removeAcceptedTenantOK: true}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.RemoveAcceptedTenant(context.Background(), "apartment-1", "tenant-1", "tenant-2", "tenant")
+	if !errors.Is(err, ErrOwnerRequired) {
+		t.Fatalf("err = %v, want %v", err, ErrOwnerRequired)
+	}
+}
+
+func TestRemoveAcceptedTenantRejectsMissingAcceptedTenant(t *testing.T) {
+	repo := &fakeApplicationRepository{removeAcceptedTenantOK: false}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.RemoveAcceptedTenant(context.Background(), "apartment-1", "tenant-1", "owner-1", "owner")
+	if !errors.Is(err, ErrOwnerApplicationNotFound) {
+		t.Fatalf("err = %v, want %v", err, ErrOwnerApplicationNotFound)
 	}
 }

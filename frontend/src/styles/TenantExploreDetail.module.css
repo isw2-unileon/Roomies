@@ -115,6 +115,7 @@
 }
 
 .shareButton,
+.leaveButton,
 .applyButton {
   min-height: 3rem;
   padding: 0 1rem;
@@ -138,6 +139,23 @@
   color: #fff;
   background: var(--tenant-primary);
   border: 1px solid var(--tenant-primary);
+}
+
+.leaveButton {
+  color: #b42318;
+  background: #fff5f4;
+  border: 1px solid rgba(180, 35, 24, 0.22);
+}
+
+.leaveButton:hover {
+  color: #fff;
+  background: #b42318;
+}
+
+.leaveButton:disabled,
+.applyButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .mainGrid {
@@ -649,6 +667,7 @@
   }
 
   .shareButton,
+  .leaveButton,
   .applyButton {
     flex: 1;
   }

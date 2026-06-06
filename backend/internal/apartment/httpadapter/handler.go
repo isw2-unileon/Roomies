@@ -95,6 +95,7 @@ type tenantApartmentDetailResponse struct {
 	CurrentApplicationStatus string                  `json:"current_application_status"`
 	CanApply                 bool                    `json:"can_apply"`
 	CanCancel                bool                    `json:"can_cancel"`
+	CanLeave                 bool                    `json:"can_leave"`
 }
 
 // RegisterPublicRoutes wires public apartment endpoints into the API router.
@@ -521,6 +522,7 @@ func (h *handler) getApartmentDetail(c *gin.Context) {
 		CurrentApplicationStatus: detail.CurrentApplicationStatus,
 		CanApply:                 detail.CanApply,
 		CanCancel:                detail.CanCancel,
+		CanLeave:                 detail.CanLeave,
 	})
 }
 

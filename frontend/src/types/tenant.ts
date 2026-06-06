@@ -145,6 +145,7 @@ export interface TenantPropertyDetail {
     currentApplicationStatus: string
     canApply: boolean
     canCancel: boolean
+    canLeave: boolean
 }
 
 export interface InterestedTenant {

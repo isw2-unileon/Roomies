@@ -451,6 +451,7 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 	mappedStatus := application.MapStatus(applicationStatus)
 	canApply := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
 	canCancel := mappedStatus == "pending"
+	canLeave := mappedStatus == "approved"
 
 	return &apartment.Detail{
 		Apartment:                apartmentsWithImage[0],
@@ -460,6 +461,7 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 		CurrentApplicationStatus: mappedStatus,
 		CanApply:                 canApply,
 		CanCancel:                canCancel,
+		CanLeave:                 canLeave,
 	}, nil
 }
 

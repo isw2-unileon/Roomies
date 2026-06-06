@@ -15,6 +15,7 @@ import {
   applyToTenantApartment,
   cancelTenantApplication,
   getTenantApartmentDetail,
+  leaveAcceptedApartment,
   listApartmentResidents,
   listInterestedTenants,
 } from '@/services/tenantService'
@@ -117,6 +118,29 @@ export default function TenantExploreDetailPage() {
     }
   }
 
+  async function handleLeaveApartment() {
+    if (!propertyId || !detail?.currentApplicationId) {
+      return
+    }
+    setApplyStatus('')
+    setIsApplying(true)
+    try {
+      await leaveAcceptedApartment(detail.currentApplicationId)
+      const [apartmentDetail, apartmentResidents] = await Promise.all([
+        getTenantApartmentDetail(propertyId),
+        listApartmentResidents(propertyId),
+      ])
+      setDetail(apartmentDetail)
+      setProperty(apartmentDetail.property)
+      setResidents(apartmentResidents)
+      setApplyStatus(t('tenantDashboard.detail.leaveSuccess'))
+    } catch (leaveError) {
+      setApplyStatus(leaveError instanceof Error ? leaveError.message : t('tenantDashboard.detail.leaveError'))
+    } finally {
+      setIsApplying(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <TenantLayout>
@@ -150,10 +174,12 @@ export default function TenantExploreDetailPage() {
           property={property}
           canApply={detail?.canApply ?? false}
           canCancel={detail?.canCancel ?? false}
+          canLeave={detail?.canLeave ?? false}
           hasActiveApplication={hasActiveApplication}
           isApplying={isApplying}
           onApply={handleApplyToApartment}
           onCancel={handleCancelApplication}
+          onLeave={handleLeaveApartment}
         />
         {applyStatus ? <p className={styles.statusText}>{applyStatus}</p> : null}
 

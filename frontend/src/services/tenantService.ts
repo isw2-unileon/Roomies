@@ -95,6 +95,7 @@ interface TenantApartmentDetailResponseDto {
   current_application_status?: string
   can_apply?: boolean | string | number | null
   can_cancel?: boolean | string | number | null
+  can_leave?: boolean | string | number | null
   error?: string
 }
 
@@ -831,6 +832,7 @@ export async function getTenantApartmentDetail(apartmentID: string): Promise<Ten
     currentApplicationStatus: data.current_application_status ?? '',
     canApply: toBoolean(data.can_apply, true),
     canCancel: toBoolean(data.can_cancel, false),
+    canLeave: toBoolean(data.can_leave, false),
   }
 }
 
@@ -992,6 +994,19 @@ export async function cancelTenantApplication(applicationID: string) {
     throw new Error(data.error ?? 'No se pudo cancelar la solicitud.')
   }
   return data.message ?? 'application cancelled'
+}
+
+export async function leaveAcceptedApartment(applicationID: string) {
+  const response = await apiFetch(`/api/applications/${encodeURIComponent(applicationID)}/leave`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const data = (await response.json()) as CancelApplicationResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo salir del piso.')
+  }
+  return data.message ?? 'apartment left'
 }
 
 export async function listTenantApplications() {

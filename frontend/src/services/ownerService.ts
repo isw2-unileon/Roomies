@@ -344,6 +344,19 @@ export async function listApartmentTenants(apartmentId: string): Promise<Apartme
   }))
 }
 
+export async function removeApartmentTenant(apartmentId: string, tenantId: string): Promise<string> {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(apartmentId)}/tenants/${encodeURIComponent(tenantId)}/remove`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const data = (await response.json()) as { message?: string; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo expulsar al integrante.')
+  }
+  return data.message ?? 'tenant removed'
+}
+
 export async function reopenApartment(apartmentId: string): Promise<string> {
   const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(apartmentId)}/reopen`, {
     method: 'POST',

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
 	inviteUsersToTenantGroup,
+	leaveAcceptedApartment,
 	getTenantApartmentDetail,
 	getTenantPersonalProfile,
 	deleteTenantGroup,
@@ -124,7 +125,7 @@ describe('tenantService', () => {
     expect(result[0]!.longitude).toBe(-5.57)
   })
 
-  test('parses string permission flags from apartment detail safely', async () => {
+		test('parses string permission flags from apartment detail safely', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -140,17 +141,35 @@ describe('tenantService', () => {
           created_at: '2026-05-21T10:00:00Z',
           image_url: 'https://example.test/apt-22.jpg',
         },
-        can_apply: 'false',
-        can_cancel: 'false',
-      }),
-    } as Response)
+		can_apply: 'false',
+		can_cancel: 'false',
+		can_leave: 'true',
+	  }),
+	} as Response)
 
-    await expect(getTenantApartmentDetail('apt-22')).resolves.toMatchObject({
-      canApply: false,
-      canCancel: false,
-    })
+	await expect(getTenantApartmentDetail('apt-22')).resolves.toMatchObject({
+	  canApply: false,
+	  canCancel: false,
+	  canLeave: true,
+	})
 
-    expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', { credentials: 'include' })
+	expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', { credentials: 'include' })
+  })
+
+  test('posts accepted apartment leave request', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({ message: 'apartment left' }),
+	} as Response)
+
+	await expect(leaveAcceptedApartment('application-1')).resolves.toBe('apartment left')
+
+	expect(fetch).toHaveBeenCalledWith('/api/applications/application-1/leave', {
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({}),
+	  credentials: 'include',
+	})
   })
 
   test('loads tenant personal profile data', async () => {

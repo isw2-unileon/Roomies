@@ -119,6 +119,19 @@ export default function OwnerDashboardPage() {
     }
   }, [showSuccess, showError, t])
 
+  const handleTenantRemoved = useCallback((propertyId: string) => {
+    setOwnerProperties((prev) => prev.map((property) => {
+      if (property.id !== propertyId) {
+        return property
+      }
+      const occupiedSpots = Math.max(property.occupiedSpots - 1, 0)
+      const status = property.status === 'FULL'
+        ? occupiedSpots === 0 ? 'AVAILABLE' : 'PARTIALLY_OCCUPIED'
+        : property.status
+      return { ...property, occupiedSpots, status }
+    }))
+  }, [])
+
   return (
     <OwnerLayout>
       <div className={styles.ownerMainGrid}>
@@ -139,7 +152,7 @@ export default function OwnerDashboardPage() {
             {isLoadingProperties ? (
               <p className={styles.ownerPropertyEmpty}>{t('ownerDashboard.properties.loading')}</p>
             ) : (
-              <OwnerPropertyGrid properties={ownerProperties} onEdit={handleEditProperty} onClose={handleCloseProperty} onReopen={handleReopenProperty} closingPropertyId={closingPropertyId} reopeningPropertyId={reopeningPropertyId} />
+              <OwnerPropertyGrid properties={ownerProperties} onEdit={handleEditProperty} onClose={handleCloseProperty} onReopen={handleReopenProperty} closingPropertyId={closingPropertyId} reopeningPropertyId={reopeningPropertyId} onTenantRemoved={handleTenantRemoved} />
             )}
           </section>
 

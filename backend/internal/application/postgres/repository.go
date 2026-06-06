@@ -102,6 +102,38 @@ func (r *Repository) CancelTenantApplication(ctx context.Context, applicationID,
 	return result.RowsAffected() > 0, nil
 }
 
+// LeaveAcceptedApartment marks an accepted individual application as cancelled and frees one spot.
+func (r *Repository) LeaveAcceptedApartment(ctx context.Context, applicationID, tenantID string) (bool, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin leave accepted apartment: %w", err)
+	}
+	defer rollbackTx(ctx, tx)
+
+	const query = `UPDATE public.applications
+	SET status = 'CANCELLED',
+		updated_at = NOW()
+	WHERE id = $1
+		AND tenant_id = $2
+		AND status = 'FULLY_CONFIRMED'
+	RETURNING apartment_id::text`
+
+	var apartmentID string
+	if err := tx.QueryRow(ctx, query, applicationID, tenantID).Scan(&apartmentID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("leave accepted apartment: %w", err)
+	}
+	if err := r.decrementApartmentOccupancyTx(ctx, tx, apartmentID); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit leave accepted apartment: %w", err)
+	}
+	return true, nil
+}
+
 // ListInterestedTenants returns tenants with active applications for an apartment.
 func (r *Repository) ListInterestedTenants(ctx context.Context, apartmentID string) ([]application.InterestedTenantCandidate, error) {
 	const query = `SELECT
@@ -626,6 +658,41 @@ func (r *Repository) RejectOwnerApplication(ctx context.Context, applicationID, 
 	return r.updateOwnerApplicationStatus(ctx, applicationID, ownerID, "REJECTED_BY_OWNER", "REJECTED", false)
 }
 
+// RemoveAcceptedTenant marks an accepted tenant application as cancelled and frees one spot.
+func (r *Repository) RemoveAcceptedTenant(ctx context.Context, apartmentID, tenantID, ownerID string) (bool, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin remove accepted tenant: %w", err)
+	}
+	defer rollbackTx(ctx, tx)
+
+	const query = `UPDATE public.applications app
+	SET status = 'CANCELLED',
+		updated_at = NOW()
+	FROM public.apartments a
+	WHERE app.apartment_id = a.id
+		AND app.apartment_id = $1
+		AND app.tenant_id = $2
+		AND a.owner_id = $3
+		AND app.status = 'FULLY_CONFIRMED'
+	RETURNING app.apartment_id::text`
+
+	var updatedApartmentID string
+	if err := tx.QueryRow(ctx, query, apartmentID, tenantID, ownerID).Scan(&updatedApartmentID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("remove accepted tenant: %w", err)
+	}
+	if err := r.decrementApartmentOccupancyTx(ctx, tx, updatedApartmentID); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit remove accepted tenant: %w", err)
+	}
+	return true, nil
+}
+
 func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicationID, ownerID, nextStatus, nextGroupStatus string, approve bool) (bool, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -820,6 +887,25 @@ func (r *Repository) incrementApartmentOccupancyTx(ctx context.Context, tx pgx.T
 
 	if _, err := tx.Exec(ctx, query, apartmentID); err != nil {
 		return fmt.Errorf("increment apartment occupancy: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) decrementApartmentOccupancyTx(ctx context.Context, tx pgx.Tx, apartmentID string) error {
+	const query = `UPDATE public.apartments
+		SET occupied_spots = GREATEST(occupied_spots - 1, 0),
+			available_spots = LEAST(available_spots + 1, total_spots),
+			status = CASE
+				WHEN status IN ('CLOSED', 'HIDDEN') THEN status
+				WHEN GREATEST(occupied_spots - 1, 0) = 0 THEN 'AVAILABLE'
+				WHEN LEAST(available_spots + 1, total_spots) > 0 THEN 'PARTIALLY_OCCUPIED'
+				ELSE 'FULL'
+			END,
+			updated_at = NOW()
+		WHERE id = $1`
+
+	if _, err := tx.Exec(ctx, query, apartmentID); err != nil {
+		return fmt.Errorf("decrement apartment occupancy: %w", err)
 	}
 	return nil
 }
