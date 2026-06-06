@@ -107,6 +107,7 @@ func RegisterPublicRoutes(api *gin.RouterGroup, apartmentService *apartmentservi
 func RegisterTenantRoutes(api *gin.RouterGroup, apartmentService *apartmentservice.Service) {
 	h := &handler{apartmentService: apartmentService}
 	api.GET("/apartments/:id", h.getApartmentDetail)
+	api.GET("/apartments/:id/tenants", h.listApartmentResidents)
 }
 
 // RegisterOwnerRoutes wires owner apartment endpoints into the API router.
@@ -117,6 +118,9 @@ func RegisterOwnerRoutes(api *gin.RouterGroup, apartmentService *apartmentservic
 	api.PATCH("/owner/apartments/:id", h.updateOwnerApartment)
 	api.POST("/owner/apartment-photos", h.uploadApartmentPhotos)
 	api.POST("/apartments", h.createApartment)
+	api.POST("/owner/apartments/:id/close", h.closeOwnerApartment)
+	api.POST("/owner/apartments/:id/reopen", h.reopenOwnerApartment)
+	api.GET("/owner/apartments/:id/tenants", h.listApartmentTenants)
 }
 
 func (h *handler) listAvailableApartments(c *gin.Context) {
@@ -284,6 +288,132 @@ func (h *handler) updateOwnerApartment(c *gin.Context) {
 		"message":   "apartment updated successfully",
 		"apartment": ownerApartmentResponseFrom(*item),
 	})
+}
+
+func (h *handler) closeOwnerApartment(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+
+	err := h.apartmentService.CloseOwnerApartment(c.Request.Context(), ownerID, role, apartmentID)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrApartmentAlreadyClosed) {
+			c.JSON(http.StatusConflict, gin.H{"error": "apartment is already closed"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not close apartment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "apartment closed successfully"})
+}
+
+func (h *handler) reopenOwnerApartment(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+
+	err := h.apartmentService.ReopenOwnerApartment(c.Request.Context(), ownerID, role, apartmentID)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		if errors.Is(err, apartmentservice.ErrApartmentNotClosed) {
+			c.JSON(http.StatusConflict, gin.H{"error": "apartment is not closed"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not reopen apartment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "apartment reopened successfully"})
+}
+
+type apartmentTenantResponse struct {
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+	JoinedAt  string `json:"joined_at"`
+}
+
+func (h *handler) listApartmentTenants(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+
+	tenants, err := h.apartmentService.ListApartmentTenants(c.Request.Context(), ownerID, role, apartmentID)
+	if err != nil {
+		if errors.Is(err, apartmentservice.ErrOwnerRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for owner users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartment tenants"})
+		return
+	}
+
+	responses := make([]apartmentTenantResponse, 0, len(tenants))
+	for _, t := range tenants {
+		responses = append(responses, apartmentTenantResponse{
+			UserID:    t.UserID,
+			Name:      t.Name,
+			Email:     t.Email,
+			AvatarURL: t.AvatarURL,
+			JoinedAt:  t.JoinedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tenants": responses})
+}
+
+func (h *handler) listApartmentResidents(c *gin.Context) {
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+
+	tenants, err := h.apartmentService.ListApartmentResidents(c.Request.Context(), apartmentID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartment residents"})
+		return
+	}
+
+	responses := make([]apartmentTenantResponse, 0, len(tenants))
+	for _, t := range tenants {
+		responses = append(responses, apartmentTenantResponse{
+			UserID:    t.UserID,
+			Name:      t.Name,
+			Email:     t.Email,
+			AvatarURL: t.AvatarURL,
+			JoinedAt:  t.JoinedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tenants": responses})
 }
 
 func (h *handler) uploadApartmentPhotos(c *gin.Context) {

@@ -3,6 +3,9 @@ package apartment
 // StatusAvailable marks an apartment as open for tenant applications.
 const StatusAvailable = "AVAILABLE"
 
+// StatusClosed marks an apartment as closed by the owner.
+const StatusClosed = "CLOSED"
+
 // CreateApartmentInput contains data needed to publish an apartment.
 type CreateApartmentInput struct {
 	Title           string
@@ -69,6 +72,15 @@ type ListApartmentsFilters struct {
 	AvailableRoomsMax int
 	Availability      string
 	SortBy            string
+}
+
+// Tenant represents a confirmed tenant living in an apartment.
+type Tenant struct {
+	UserID    string
+	Name      string
+	Email     string
+	AvatarURL string
+	JoinedAt  string
 }
 
 // Detail contains tenant-facing apartment detail information.

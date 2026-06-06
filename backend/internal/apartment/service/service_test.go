@@ -88,6 +88,22 @@ func (f *fakeApartmentRepository) GetTenantApplicationForApartment(ctx context.C
 	return f.applicationForApartmentID, f.applicationForApartmentStatus, nil
 }
 
+func (f *fakeApartmentRepository) CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	return true, nil
+}
+
+func (f *fakeApartmentRepository) ReopenApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	return true, nil
+}
+
+func (f *fakeApartmentRepository) ListApartmentTenants(ctx context.Context, ownerID, apartmentID string) ([]apartment.Tenant, error) {
+	return nil, nil
+}
+
+func (f *fakeApartmentRepository) ListApartmentResidents(ctx context.Context, apartmentID string) ([]apartment.Tenant, error) {
+	return nil, nil
+}
+
 func (f *fakeApartmentRepository) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
 	if f.mapError != nil {
 		return nil, f.mapError

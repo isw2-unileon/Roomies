@@ -552,3 +552,131 @@ func (r *Repository) GetApartmentByID(ctx context.Context, apartmentID string) (
 	}
 	return &item, nil
 }
+
+// CloseApartment sets the apartment status to CLOSED and cancels all pending applications.
+func (r *Repository) CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return false, fmt.Errorf("begin close apartment tx: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	const updateApartmentSQL = `UPDATE public.apartments
+		SET status = 'CLOSED', updated_at = NOW()
+		WHERE id = $1 AND owner_id = $2 AND status <> 'CLOSED'
+		RETURNING id`
+
+	var updatedID string
+	if err := tx.QueryRow(ctx, updateApartmentSQL, apartmentID, ownerID).Scan(&updatedID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("close apartment: %w", err)
+	}
+
+	const cancelApplicationsSQL = `UPDATE public.applications
+		SET status = 'CANCELLED', updated_at = NOW()
+		WHERE apartment_id = $1 AND status = 'PENDING_OWNER'`
+
+	if _, err := tx.Exec(ctx, cancelApplicationsSQL, apartmentID); err != nil {
+		return false, fmt.Errorf("cancel pending applications on close: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit close apartment tx: %w", err)
+	}
+
+	return true, nil
+}
+
+// ListApartmentTenants returns confirmed tenants living in an apartment.
+func (r *Repository) ListApartmentTenants(ctx context.Context, ownerID, apartmentID string) ([]apartment.Tenant, error) {
+	const query = `SELECT
+		u.id::text,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, ''),
+		COALESCE(TO_CHAR(app.owner_confirmed_at, 'YYYY-MM-DD'), TO_CHAR(app.updated_at, 'YYYY-MM-DD'))
+	FROM public.applications app
+	INNER JOIN public.apartments a ON a.id = app.apartment_id
+	INNER JOIN public.users u ON u.id = app.tenant_id
+	WHERE app.apartment_id = $1
+		AND a.owner_id = $2
+		AND app.status = 'FULLY_CONFIRMED'
+		AND app.tenant_id IS NOT NULL
+	ORDER BY app.owner_confirmed_at ASC`
+
+	rows, err := r.db.Query(ctx, query, apartmentID, ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("list apartment tenants: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]apartment.Tenant, 0)
+	for rows.Next() {
+		var item apartment.Tenant
+		if err := rows.Scan(&item.UserID, &item.Name, &item.Email, &item.AvatarURL, &item.JoinedAt); err != nil {
+			return nil, fmt.Errorf("scan apartment tenant: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate apartment tenants: %w", err)
+	}
+	return result, nil
+}
+
+// ListApartmentResidents returns confirmed tenants living in an apartment (public view, no owner filter).
+func (r *Repository) ListApartmentResidents(ctx context.Context, apartmentID string) ([]apartment.Tenant, error) {
+	const query = `SELECT
+		u.id::text,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, ''),
+		COALESCE(TO_CHAR(app.owner_confirmed_at, 'YYYY-MM-DD'), TO_CHAR(app.updated_at, 'YYYY-MM-DD'))
+	FROM public.applications app
+	INNER JOIN public.apartments a ON a.id = app.apartment_id
+	INNER JOIN public.users u ON u.id = app.tenant_id
+	WHERE app.apartment_id = $1
+		AND app.status = 'FULLY_CONFIRMED'
+		AND app.tenant_id IS NOT NULL
+	ORDER BY app.owner_confirmed_at ASC`
+
+	rows, err := r.db.Query(ctx, query, apartmentID)
+	if err != nil {
+		return nil, fmt.Errorf("list apartment residents: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]apartment.Tenant, 0)
+	for rows.Next() {
+		var item apartment.Tenant
+		if err := rows.Scan(&item.UserID, &item.Name, &item.Email, &item.AvatarURL, &item.JoinedAt); err != nil {
+			return nil, fmt.Errorf("scan apartment resident: %w", err)
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate apartment residents: %w", err)
+	}
+	return result, nil
+}
+
+// ReopenApartment sets a closed apartment status back to AVAILABLE.
+func (r *Repository) ReopenApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	const query = `UPDATE public.apartments
+		SET status = 'AVAILABLE', updated_at = NOW()
+		WHERE id = $1 AND owner_id = $2 AND status = 'CLOSED'
+		RETURNING id`
+
+	var updatedID string
+	if err := r.db.QueryRow(ctx, query, apartmentID, ownerID).Scan(&updatedID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("reopen apartment: %w", err)
+	}
+	return true, nil
+}

@@ -38,6 +38,19 @@ func (f *fakeMapRepo) GetOwnerApartmentByID(ctx context.Context, ownerID, apartm
 func (f *fakeMapRepo) UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error) {
 	return nil, nil
 }
+func (f *fakeMapRepo) CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	return true, nil
+}
+func (f *fakeMapRepo) ReopenApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	return true, nil
+}
+func (f *fakeMapRepo) ListApartmentTenants(ctx context.Context, ownerID, apartmentID string) ([]apartment.Tenant, error) {
+	return nil, nil
+}
+
+func (f *fakeMapRepo) ListApartmentResidents(ctx context.Context, apartmentID string) ([]apartment.Tenant, error) {
+	return nil, nil
+}
 
 func TestListApartmentsByMapReturnsApartments(t *testing.T) {
 	gin.SetMode(gin.TestMode)
