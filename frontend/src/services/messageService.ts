@@ -43,7 +43,7 @@ interface CreateMessageResponseDto {
 }
 
 interface ConversationsResponseDto {
-  conversations?: Conversation[]
+  conversations?: ConversationResponseDto[]
   error?: string
 }
 
@@ -55,6 +55,30 @@ interface MessagesResponseDto {
 interface MarkReadResponseDto {
   updated?: number
   error?: string
+}
+
+interface ConversationResponseDto {
+  apartment_id: string
+  apartment_title: string
+  other_user_id: string
+  other_user_name: string
+  last_message: string
+  last_message_at: string
+  last_sender_id: string
+  unread_count: number
+}
+
+function conversationFromDto(dto: ConversationResponseDto): Conversation {
+  return {
+    apartmentId: dto.apartment_id,
+    apartmentTitle: dto.apartment_title,
+    otherUserId: dto.other_user_id,
+    otherUserName: dto.other_user_name,
+    lastMessage: dto.last_message,
+    lastMessageAt: dto.last_message_at,
+    lastSenderId: dto.last_sender_id,
+    unreadCount: dto.unread_count,
+  }
 }
 
 function messageFromDto(dto: MessageResponseDto): MessageRecord {
@@ -92,7 +116,7 @@ export async function listConversations(): Promise<Conversation[]> {
   if (!response.ok) {
     throw new Error(data.error ?? 'No se pudieron cargar las conversaciones.')
   }
-  return data.conversations ?? []
+  return (data.conversations ?? []).map(conversationFromDto)
 }
 
 export async function listConversationMessages(apartmentId: string, otherUserId: string): Promise<MessageRecord[]> {

@@ -25,7 +25,6 @@ interface TenantSidebarProps {
     onToggleCollapsed?: () => void
     onNavigate?: () => void
     onLogout?: () => void
-    unreadMessages: number
     showCollapseToggle?: boolean
 }
 
@@ -44,7 +43,6 @@ export default function TenantSidebar({
     onToggleCollapsed,
     onNavigate,
     onLogout,
-    unreadMessages,
     showCollapseToggle = true,
 }: TenantSidebarProps) {
     const { t } = useTranslation()
@@ -101,11 +99,6 @@ export default function TenantSidebar({
                     >
                         <Icon className={styles.iconSmall} aria-hidden="true" />
                         <span className={styles.navLabel}>{t(labelKey)}</span>
-                        {id === 'messages' && unreadMessages > 0 && (
-                            <span className={styles.badge}>
-                                {unreadMessages}
-                            </span>
-                        )}
                     </NavLink>
                 ))}
             </nav>
