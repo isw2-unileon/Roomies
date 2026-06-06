@@ -35,6 +35,25 @@ type tenantPersonalProfileRequest struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+type tenantProfileSummaryResponse struct {
+	UserID             string `json:"user_id"`
+	Name               string `json:"name"`
+	Email              string `json:"email"`
+	AvatarURL          string `json:"avatar_url"`
+	BudgetMax          int    `json:"budget_max"`
+	PreferredArea      string `json:"preferred_area"`
+	Pets               bool   `json:"pets"`
+	Smoking            bool   `json:"smoking"`
+	Age                int    `json:"age"`
+	Sex                string `json:"sex"`
+	Situation          string `json:"situation"`
+	Degree             string `json:"degree"`
+	Profession         string `json:"profession"`
+	SocializationLevel string `json:"socialization_level"`
+	NightlifeLevel     string `json:"nightlife_level"`
+	Compatibility      int    `json:"compatibility"`
+}
+
 // RegisterRoutes wires profile endpoints into the API router.
 func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service) {
 	h := &handler{profileService: profileService}
@@ -45,6 +64,7 @@ func RegisterRoutes(api *gin.RouterGroup, profileService *profileservice.Service
 	api.PUT("/tenant-profile/personal", h.saveTenantPersonalProfile)
 	api.POST("/tenant-profile/avatar", h.uploadTenantAvatar)
 	api.GET("/tenant-profile/me", h.getMyTenantProfile)
+	api.GET("/tenant/profiles", h.listTenantProfiles)
 	api.GET("/tenant-profile/:userId", h.getTenantProfileByUserID)
 	api.GET("/owner-profile/me", h.getOwnerProfile)
 	api.PUT("/owner-profile", h.updateOwnerProfile)
@@ -168,6 +188,23 @@ func (h *handler) getTenantPersonalProfile(c *gin.Context) {
 	})
 }
 
+func (h *handler) listTenantProfiles(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	profiles, err := h.profileService.ListTenantProfiles(c.Request.Context(), userID, role)
+	if err != nil {
+		if errors.Is(err, profileservice.ErrTenantRequired) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "tenant profile is only available for tenant users"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load tenant profiles"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"profiles": tenantProfileSummaryResponses(profiles)})
+}
+
 func (h *handler) saveTenantPersonalProfile(c *gin.Context) {
 	userID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
@@ -197,6 +234,31 @@ func (h *handler) saveTenantPersonalProfile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "tenant personal profile saved"})
+}
+
+func tenantProfileSummaryResponses(items []profile.TenantProfileSummary) []tenantProfileSummaryResponse {
+	result := make([]tenantProfileSummaryResponse, 0, len(items))
+	for _, item := range items {
+		result = append(result, tenantProfileSummaryResponse{
+			UserID:             item.UserID,
+			Name:               item.Name,
+			Email:              item.Email,
+			AvatarURL:          item.AvatarURL,
+			BudgetMax:          item.BudgetMax,
+			PreferredArea:      item.PreferredArea,
+			Pets:               item.Pets,
+			Smoking:            item.Smoking,
+			Age:                item.Age,
+			Sex:                item.Sex,
+			Situation:          item.Situation,
+			Degree:             item.Degree,
+			Profession:         item.Profession,
+			SocializationLevel: item.Socialization,
+			NightlifeLevel:     item.Nightlife,
+			Compatibility:      item.Compatibility,
+		})
+	}
+	return result
 }
 
 func (h *handler) uploadTenantAvatar(c *gin.Context) {

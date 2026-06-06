@@ -90,9 +90,195 @@
   border: 1px solid #e2b9ad;
 }
 
+.successText {
+  margin: 0;
+  padding: 1rem;
+  color: var(--tenant-primary);
+  font-size: 0.875rem;
+  font-weight: 800;
+  background: var(--tenant-primary-soft);
+  border: 1px solid #d9c9fb;
+  border-radius: 1rem;
+}
+
+.exploreTabs {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.exploreTab {
+  min-height: 2.45rem;
+  padding: 0 1rem;
+  color: var(--tenant-text-soft);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.exploreTabActive {
+  color: #fff;
+  background: var(--tenant-primary);
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.roommatePanel {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.discoverySection {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.discoveryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.discoveryTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.discoverySubtitle {
+  margin: 0.3rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.discoveryHeaderIcon {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--tenant-primary);
+}
+
+.profileGrid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.9rem;
+}
+
+.profileAvatar,
+.profileAvatarFallback {
+  flex: 0 0 auto;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+}
+
+.profileAvatar {
+  object-fit: cover;
+}
+
+.profileAvatarFallback {
+  display: grid;
+  place-items: center;
+  color: var(--tenant-primary);
+  background: var(--tenant-primary-soft);
+}
+
+.profileAvatarIcon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.profileCardBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.profileCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.profileName {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.profileMeta {
+  margin: 0.2rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.compatibilityPill {
+  padding: 0.3rem 0.55rem;
+  color: #067647;
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: #ecfdf3;
+  border-radius: 999px;
+}
+
+.requestableGroupList {
+  display: grid;
+  gap: 1rem;
+}
+
+.emptyDiscoveryText {
+  margin: 0;
+  padding: 1rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--tenant-bg-soft);
+  border: 1px dashed var(--tenant-border-strong);
+  border-radius: 0.9rem;
+}
+
+@media (min-width: 760px) {
+  .profileGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 520px) {
   .areaInfo {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .exploreTabs {
+    display: grid;
+    width: 100%;
+    border-radius: 1rem;
   }
 }

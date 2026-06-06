@@ -31,6 +31,26 @@ type TenantPersonalProfile struct {
 	AvatarURL string
 }
 
+// TenantProfileSummary contains public tenant profile data for roommate discovery.
+type TenantProfileSummary struct {
+	UserID        string
+	Name          string
+	Email         string
+	AvatarURL     string
+	BudgetMax     int
+	PreferredArea string
+	Pets          bool
+	Smoking       bool
+	Age           int
+	Sex           string
+	Situation     string
+	Degree        string
+	Profession    string
+	Socialization string
+	Nightlife     string
+	Compatibility int
+}
+
 // OwnerProfileInput contains the editable fields for an owner profile.
 type OwnerProfileInput struct {
 	FullName    string
