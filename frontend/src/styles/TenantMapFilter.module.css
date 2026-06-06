@@ -121,3 +121,27 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.propertyMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 2px solid var(--tenant-primary);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.propertyMarker:hover {
+  transform: scale(1.15);
+}
+
+.propertyMarkerIcon {
+  width: 12px;
+  height: 12px;
+  color: var(--tenant-primary);
+}

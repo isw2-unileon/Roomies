@@ -1,9 +1,10 @@
-import { MapIcon } from '@heroicons/react/24/outline'
-import { useCallback, useEffect, useRef, useState, type GeoJSONSource } from 'react'
+import { HomeIcon, MapIcon } from '@heroicons/react/24/outline'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { MapMouseEvent } from 'maplibre-gl'
+import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl'
 import { Map, MapMarker, MarkerContent, MapControls, useMap } from '@/components/map/map'
 import { MapPin } from 'lucide-react'
+import type { TenantProperty } from '@/types/tenant'
 import styles from '@/styles/TenantMapFilter.module.css'
 
 export interface MapFilterValues {
@@ -14,13 +15,14 @@ export interface MapFilterValues {
 
 interface TenantMapFilterProps {
   onMapFilterChange?: (filters: MapFilterValues | null) => void
+  properties?: TenantProperty[]
 }
 
 const LEON_CENTER: [number, number] = [-5.567, 42.598]
 const DEFAULT_RADIUS = 1
 const MIN_RADIUS = 0.5
 const MAX_RADIUS = 10
-const RADIUS_STEP = 0.5
+const RADIUS_STEP = 0.1
 const CIRCLE_POINTS = 64
 
 function createCircleGeoJSON(
@@ -135,6 +137,7 @@ function MapClickHandler({
 
 export default function TenantMapFilter({
   onMapFilterChange = () => {},
+  properties = [],
 }: TenantMapFilterProps) {
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
@@ -202,6 +205,17 @@ export default function TenantMapFilter({
             )}
             {marker && (
               <MapCircleLayer center={[marker.longitude, marker.latitude]} radiusKm={radius} />
+            )}
+            {properties.map((p) =>
+              p.latitude && p.longitude ? (
+                <MapMarker key={p.id} longitude={p.longitude} latitude={p.latitude}>
+                  <MarkerContent>
+                    <div className={styles.propertyMarker}>
+                      <HomeIcon className={styles.propertyMarkerIcon} />
+                    </div>
+                  </MarkerContent>
+                </MapMarker>
+              ) : null,
             )}
           </Map>
 

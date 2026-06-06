@@ -104,8 +104,8 @@ describe('tenantService', () => {
       '/api/apartments/map?lat=42.6&lng=-5.57&radius=2',
       { credentials: 'include' },
     )
-    expect(result[0].latitude).toBe(42.6)
-    expect(result[0].longitude).toBe(-5.57)
+    expect(result[0]!.latitude).toBe(42.6)
+    expect(result[0]!.longitude).toBe(-5.57)
   })
 
   test('parses string permission flags from apartment detail safely', async () => {

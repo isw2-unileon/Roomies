@@ -113,6 +113,7 @@ export default function TenantExplorePage() {
 
             <TenantMapFilter
                 onMapFilterChange={handleMapFilterChange}
+                properties={filteredProperties}
             />
 
             <div className={styles.resultsRow}>
