@@ -7,21 +7,35 @@ import (
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const ownerApplicationConflictMessage = "owner application conflicts with the current apartment assignment"
+const ownerApplicationApartmentClosedMessage = "apartment is closed"
+const ownerApplicationApartmentFullMessage = "apartment is full"
 
 // Repository stores application data in PostgreSQL.
 type Repository struct {
-	db *pgxpool.Pool
+	db database
+}
+
+type database interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Begin(ctx context.Context) (pgx.Tx, error)
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
 type ownerApplicationUpdateContext struct {
 	apartmentID     string
+	apartmentStatus string
 	groupID         string
 	applicationType string
 	currentStatus   string
+	totalSpots      int
+	occupiedSpots   int
 }
 
 // NewRepository creates a PostgreSQL application repository.
@@ -723,9 +737,6 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 		if err := r.incrementApartmentOccupancyTx(ctx, tx, updateContext.apartmentID); err != nil {
 			return false, err
 		}
-		if err := r.cancelOtherTenantApplicationsTx(ctx, tx, applicationID, updateContext); err != nil {
-			return false, err
-		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -736,14 +747,15 @@ func (r *Repository) updateOwnerApplicationStatus(ctx context.Context, applicati
 }
 
 func (r *Repository) loadOwnerApplicationUpdateContextTx(ctx context.Context, tx pgx.Tx, applicationID, ownerID string) (*ownerApplicationUpdateContext, error) {
-	lookupQuery := `SELECT app.apartment_id::text, COALESCE(app.group_id::text, ''), app.type, app.status
+	lookupQuery := `SELECT app.apartment_id::text, a.status, COALESCE(app.group_id::text, ''), app.type, app.status, a.total_spots, a.occupied_spots
 	FROM public.applications app
 	INNER JOIN public.apartments a ON a.id = app.apartment_id
 	WHERE app.id = $1
-		AND a.owner_id = $2`
+		AND a.owner_id = $2
+	FOR UPDATE OF app, a`
 
 	var item ownerApplicationUpdateContext
-	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&item.apartmentID, &item.groupID, &item.applicationType, &item.currentStatus); err != nil {
+	if err := tx.QueryRow(ctx, lookupQuery, applicationID, ownerID).Scan(&item.apartmentID, &item.apartmentStatus, &item.groupID, &item.applicationType, &item.currentStatus, &item.totalSpots, &item.occupiedSpots); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pgx.ErrNoRows
 		}
@@ -754,7 +766,16 @@ func (r *Repository) loadOwnerApplicationUpdateContextTx(ctx context.Context, tx
 }
 
 func (r *Repository) ensureOwnerApplicationApprovalAllowedTx(ctx context.Context, tx pgx.Tx, applicationID string, updateContext *ownerApplicationUpdateContext, approve bool) error {
-	if !approve || updateContext.applicationType != "group" {
+	if !approve {
+		return nil
+	}
+	if updateContext.apartmentStatus == "CLOSED" {
+		return errors.New(ownerApplicationApartmentClosedMessage)
+	}
+	if updateContext.occupiedSpots >= updateContext.totalSpots {
+		return errors.New(ownerApplicationApartmentFullMessage)
+	}
+	if updateContext.applicationType != "group" {
 		return nil
 	}
 	conflictExists, err := r.hasAcceptedGroupApplicationForApartmentTx(ctx, tx, updateContext.apartmentID, applicationID)
@@ -910,19 +931,38 @@ func (r *Repository) decrementApartmentOccupancyTx(ctx context.Context, tx pgx.T
 	return nil
 }
 
-func (r *Repository) cancelOtherTenantApplicationsTx(ctx context.Context, tx pgx.Tx, approvedApplicationID string, updateContext *ownerApplicationUpdateContext) error {
-	if updateContext.applicationType == "individual" {
-		const query = `UPDATE public.applications
-			SET status = 'CANCELLED', updated_at = NOW()
-			WHERE tenant_id = (SELECT tenant_id FROM public.applications WHERE id = $1)
-				AND id <> $1
-				AND status = 'PENDING_OWNER'`
+// IsTenantInClosedApartment checks if a tenant has a confirmed spot in a closed apartment.
+func (r *Repository) IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.applications app
+		INNER JOIN public.apartments a ON a.id = app.apartment_id
+		WHERE app.tenant_id = $1
+			AND app.status = 'FULLY_CONFIRMED'
+			AND a.status = 'CLOSED'
+	)`
 
-		if _, err := tx.Exec(ctx, query, approvedApplicationID); err != nil {
-			return fmt.Errorf("cancel other tenant applications: %w", err)
-		}
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, tenantID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check tenant in closed apartment: %w", err)
 	}
-	return nil
+	return exists, nil
+}
+
+// IsApartmentClosed checks if an apartment has CLOSED status.
+func (r *Repository) IsApartmentClosed(ctx context.Context, apartmentID string) (bool, error) {
+	const query = `SELECT EXISTS (
+		SELECT 1
+		FROM public.apartments
+		WHERE id = $1
+			AND status = 'CLOSED'
+	)`
+
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, apartmentID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check apartment closed: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *Repository) ownerApplicationExists(ctx context.Context, applicationID, ownerID string) (bool, error) {

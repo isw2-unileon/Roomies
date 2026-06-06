@@ -141,6 +141,14 @@ func (h *handler) applyToApartment(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "apartment is full"})
 			return
 		}
+		if errors.Is(err, applicationservice.ErrApartmentClosed) {
+			c.JSON(http.StatusConflict, gin.H{"error": "apartment is closed"})
+			return
+		}
+		if errors.Is(err, applicationservice.ErrTenantInClosedApartment) {
+			c.JSON(http.StatusConflict, gin.H{"error": "No puedes solicitar plaza en otros pisos porque ya perteneces a un piso cerrado."})
+			return
+		}
 		if errors.Is(err, applicationservice.ErrApplicationAlreadyExists) {
 			c.JSON(http.StatusConflict, gin.H{"error": "application already exists"})
 			return
@@ -420,6 +428,10 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gin.H{"error": "apartment is full"})
 	case errors.Is(err, applicationservice.ErrApplicationAlreadyExists):
 		c.JSON(http.StatusConflict, gin.H{"error": "application already exists"})
+	case errors.Is(err, applicationservice.ErrApartmentClosed):
+		c.JSON(http.StatusConflict, gin.H{"error": "apartment is closed"})
+	case errors.Is(err, applicationservice.ErrTenantInClosedApartment):
+		c.JSON(http.StatusConflict, gin.H{"error": "tenant belongs to a closed apartment"})
 	case errors.Is(err, applicationservice.ErrApplicationNotCancelable):
 		c.JSON(http.StatusConflict, gin.H{"error": "application is not cancelable"})
 	case errors.Is(err, applicationservice.ErrInterestedTenantsForbidden):

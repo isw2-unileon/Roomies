@@ -31,6 +31,7 @@ type fakeApplicationRepository struct {
 	rejectOwnerApplicationErr     error
 	leaveAcceptedApartmentOK      bool
 	removeAcceptedTenantOK        bool
+	tenantInClosedApartment       bool
 	leftApplicationID             string
 	leftTenantID                  string
 	removedApartmentID            string
@@ -150,6 +151,14 @@ func (f *fakeApplicationRepository) RemoveAcceptedTenant(ctx context.Context, ap
 	return f.removeAcceptedTenantOK, nil
 }
 
+func (f *fakeApplicationRepository) IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	return f.tenantInClosedApartment, nil
+}
+
+func (f *fakeApplicationRepository) IsApartmentClosed(ctx context.Context, apartmentID string) (bool, error) {
+	return false, nil
+}
+
 type fakeApartmentReader struct {
 	apartment *apartment.Apartment
 }
@@ -206,6 +215,31 @@ func TestApplyToApartmentRejectsDuplicateActiveApplication(t *testing.T) {
 	}
 }
 
+func TestApplyToApartmentRejectsTenantInClosedApartmentBeforeFullApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{tenantInClosedApartment: true}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", TotalSpots: 1, OccupiedSpots: 1, Status: apartment.StatusAvailable}}
+	svc := NewService(repo, reader, fakeProfileReader{}, nil)
+
+	_, err := svc.ApplyToApartment(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if !errors.Is(err, ErrTenantInClosedApartment) {
+		t.Fatalf("err = %v, want %v", err, ErrTenantInClosedApartment)
+	}
+}
+
+func TestApplyToApartmentAllowsRequestForFullNonClosedApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", TotalSpots: 3, OccupiedSpots: 3, Status: apartment.StatusAvailable}}
+	svc := NewService(repo, reader, fakeProfileReader{}, nil)
+
+	applicationID, err := svc.ApplyToApartment(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("ApplyToApartment returned error: %v", err)
+	}
+	if applicationID != "application-1" {
+		t.Fatalf("applicationID = %q, want application-1", applicationID)
+	}
+}
+
 func TestListInterestedTenantsCalculatesCompatibility(t *testing.T) {
 	repo := &fakeApplicationRepository{}
 	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
@@ -249,12 +283,26 @@ func TestListInterestedTenantsRejectsOwnerForOtherApartment(t *testing.T) {
 
 func TestListInterestedTenantsHidesClosedApartmentFromTenant(t *testing.T) {
 	repo := &fakeApplicationRepository{}
-	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "CLOSED"}}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "HIDDEN"}}
 	svc := NewService(repo, reader, fakeProfileReader{}, nil)
 
 	_, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "tenant-1", "tenant")
 	if !errors.Is(err, ErrApartmentNotFound) {
 		t.Fatalf("err = %v, want %v", err, ErrApartmentNotFound)
+	}
+}
+
+func TestListInterestedTenantsAllowsTenantToViewOwnClosedApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{}
+	reader := fakeApartmentReader{apartment: &apartment.Apartment{ID: "apartment-1", OwnerID: "owner-1", BaseRent: 400, Area: "centro", TotalSpots: 3, Status: "CLOSED"}}
+	svc := NewService(repo, reader, fakeProfileReader{}, nil)
+
+	tenants, err := svc.ListInterestedTenants(context.Background(), "apartment-1", "tenant-1", "tenant")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tenants == nil {
+		t.Fatalf("expected non-nil empty slice for own closed apartment, got nil")
 	}
 }
 
@@ -457,6 +505,26 @@ func TestApproveOwnerApplicationMapsNotFound(t *testing.T) {
 	err := svc.ApproveOwnerApplication(context.Background(), "application-1", "owner-1", "owner")
 	if !errors.Is(err, ErrOwnerApplicationNotFound) {
 		t.Fatalf("err = %v, want %v", err, ErrOwnerApplicationNotFound)
+	}
+}
+
+func TestApproveOwnerApplicationRejectsClosedApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{approveOwnerApplicationErr: errors.New("apartment is closed")}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.ApproveOwnerApplication(context.Background(), "application-1", "owner-1", "owner")
+	if !errors.Is(err, ErrApartmentClosed) {
+		t.Fatalf("err = %v, want %v", err, ErrApartmentClosed)
+	}
+}
+
+func TestApproveOwnerApplicationRejectsFullApartment(t *testing.T) {
+	repo := &fakeApplicationRepository{approveOwnerApplicationErr: errors.New("apartment is full")}
+	svc := NewService(repo, fakeApartmentReader{}, fakeProfileReader{}, nil)
+
+	err := svc.ApproveOwnerApplication(context.Background(), "application-1", "owner-1", "owner")
+	if !errors.Is(err, ErrApartmentFull) {
+		t.Fatalf("err = %v, want %v", err, ErrApartmentFull)
 	}
 }
 
