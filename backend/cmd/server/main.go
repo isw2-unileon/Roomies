@@ -16,6 +16,8 @@ import (
 	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	authsupabase "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/supabase"
+	grouppostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/group/postgres"
+	groupservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/group/service"
 
 	geocodenominatim "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/nominatim"
 
@@ -44,7 +46,8 @@ func main() {
 	profileRepo := profilepostgres.NewRepository(database.DB)
 	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
 	applicationRepo := applicationpostgres.NewRepository(database.DB)
-	profileService := profileservice.NewService(profileRepo)
+	groupRepo := grouppostgres.NewRepository(database.DB)
+	var storageClient *authsupabase.Client
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
 	if err != nil {
@@ -56,18 +59,20 @@ func main() {
 	if strings.TrimSpace(cfg.SupabaseSecretKey) == "" {
 		logger.Warn("apartment image signing disabled", "reason", "SUPABASE_SECRET_KEY is missing")
 	} else {
-		storageClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseSecretKey)
+		storageClient, err = authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseSecretKey)
 		if err != nil {
 			logger.Warn("apartment image signing disabled", "error", err)
 		} else {
 			apartmentImageSigner = storageClient
 		}
 	}
+	profileService := profileservice.NewService(profileRepo, storageClient)
 
-	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo)
+	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo, storageClient)
+	groupService := groupservice.NewService(groupRepo, storageClient)
 	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner, profileRepo, applicationService)
 	geocodeService := geocodenominatim.NewService()
-	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, geocodeService)
+	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, groupService, geocodeService)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

@@ -2,6 +2,278 @@
   width: 100%;
 }
 
+.detailContainer {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.summarySection {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.groupDescription {
+  font-size: 0.875rem;
+  color: var(--tenant-text-soft);
+}
+
+/* ---- General Data card ---- */
+
+.generalCard {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.generalStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 1rem;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 0.75rem;
+}
+
+.generalStatusIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #067647;
+  flex-shrink: 0;
+}
+
+.generalStatusText {
+  color: #067647;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.generalDivider {
+  height: 1px;
+  margin: 0;
+  background: var(--tenant-border-light);
+  border: 0;
+}
+
+.generalGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.generalItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.generalItemIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--tenant-primary);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.generalItemBody {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.generalItemLabel {
+  color: var(--tenant-text-soft);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.generalItemValue {
+  color: var(--tenant-text);
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.generalDescription {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+
+
+.acceptedText,
+.pendingText,
+.rejectedText {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.acceptedText {
+  color: #067647;
+}
+
+.pendingText {
+  color: #b54708;
+}
+
+.rejectedText {
+  color: #b42318;
+}
+
+.groupMeta p {
+  margin: 0.25rem 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.membersSection,
+.invitationsSection,
+.apartmentLinkSection {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.apartmentLinkSection {
+  display: grid;
+  gap: 1rem;
+}
+
+.acceptGroupButton {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  color: #fff;
+  font-weight: 800;
+  background: #0f766e;
+  border: 1px solid #0f766e;
+  border-radius: 0.6rem;
+}
+
+.deleteGroupButton {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  color: #b42318;
+  font-weight: 800;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 0.6rem;
+}
+
+.leaveGroupButton {
+  justify-self: start;
+  padding: 0.55rem 0.9rem;
+  color: #b42318;
+  font-weight: 800;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 0.6rem;
+}
+
+.acceptGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.deleteGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.leaveGroupButton:disabled {
+  opacity: 0.65;
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 0.45);
+}
+
+.confirmDialog {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 28rem);
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgb(15 23 42 / 0.22);
+}
+
+.confirmTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.confirmDescription {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.confirmCancelButton,
+.confirmDangerButton {
+  padding: 0.55rem 0.9rem;
+  font-weight: 850;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.confirmCancelButton {
+  color: var(--tenant-text);
+  background: #fff;
+  border: 1px solid var(--tenant-border);
+}
+
+.confirmDangerButton {
+  color: #fff;
+  background: #b42318;
+  border: 1px solid #b42318;
+}
+
+.confirmCancelButton:disabled,
+.confirmDangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.membersList,
+.invitationsList {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .backButton {
   display: inline-flex;
   align-items: center;
@@ -167,13 +439,23 @@
 }
 
 .memberCard {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--tenant-surface);
-  border: 1px solid var(--tenant-border);
-  border-radius: 1rem;
-  box-shadow: var(--tenant-shadow-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
+}
+
+.invitationCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
 }
 
 .memberMain {
@@ -184,12 +466,84 @@
 }
 
 .memberAvatar {
-  display: block;
-  width: 4rem;
-  height: 4rem;
-  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
   object-fit: cover;
-  background: #ede9f7;
+  border-radius: 999px;
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.roleOwner {
+  color: #6941c6;
+  font-weight: 900;
+}
+
+.roleMember {
+  color: #067647;
+  font-weight: 900;
+}
+
+.currentUserBadge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e5f6ff;
+  border-radius: 0.5rem;
+}
+
+.memberAccepted,
+.memberPending {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.memberAccepted {
+  color: #067647;
+}
+
+.memberPending {
+  color: #b54708;
+}
+
+.invitationActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.acceptButton {
+  padding: 0.25rem 0.5rem;
+  color: #067647;
+  font-weight: 900;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 0.5rem;
+}
+
+.rejectButton {
+  padding: 0.25rem 0.5rem;
+  color: #b42318;
+  font-weight: 900;
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  border-radius: 0.5rem;
+}
+
+.requestSourceBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.2rem 0.5rem;
+  color: #6941c6;
+  font-size: 0.7rem;
+  font-weight: 900;
+  background: #f4ebff;
   border-radius: 999px;
 }
 
@@ -597,6 +951,327 @@
 .iconMedium {
   width: 1.25rem;
   height: 1.25rem;
+}
+
+.iconTiny {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.detailTopBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.75rem;
+  color: var(--tenant-text);
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.memberCount {
+  color: var(--tenant-text-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.apartmentHeroSection {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+}
+
+.apartmentHero {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.apartmentHeroImage {
+  width: 100%;
+  height: 14rem;
+  object-fit: cover;
+  background: #eeeae5;
+  border-radius: 0.75rem;
+}
+
+.apartmentHeroPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 14rem;
+  color: var(--tenant-primary);
+  background:
+    linear-gradient(135deg, rgba(124, 82, 199, 0.18), rgba(255, 255, 255, 0.85)),
+    var(--tenant-bg-soft);
+  border: 1px dashed var(--tenant-border-strong);
+  border-radius: 0.75rem;
+}
+
+.apartmentHeroIcon {
+  width: 3rem;
+  height: 3rem;
+}
+
+.apartmentHeroBody {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.apartmentTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.apartmentAddress {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.summaryChips {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  color: var(--tenant-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+}
+
+.chipIcon {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: var(--tenant-primary);
+}
+
+.apartmentEmptyCard {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: var(--tenant-bg-soft);
+  border: 1px dashed var(--tenant-border-strong);
+  border-radius: 0.85rem;
+}
+
+.apartmentEmptyIcon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--tenant-primary);
+  flex: 0 0 auto;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--tenant-text-soft);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-border-light);
+}
+
+.closeButtonIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.apartmentDetailButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  padding: 0.6rem 1rem;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  background: var(--tenant-primary);
+  border: 1px solid var(--tenant-primary);
+  border-radius: 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.apartmentDetailButton:hover {
+  background: var(--tenant-primary-strong);
+}
+
+.apartmentDetailButtonIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.apartmentRequestSection {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--tenant-primary-soft);
+  border: 1px solid #d9c9fb;
+  border-radius: 0.85rem;
+}
+
+
+
+.memberStatusIcon {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-right: 0.3rem;
+  vertical-align: -2px;
+}
+
+.requesterName {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.requesterEmail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.2rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.approvalsCount {
+  margin: 0.5rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.requestSourceBadgeMuted {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.7rem;
+  font-weight: 900;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 999px;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: var(--tenant-bg-soft);
+  border: 1px dashed var(--tenant-border-light);
+  border-radius: 0.75rem;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--tenant-bg-soft);
+  border-radius: 0.5rem;
+}
+
+.skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s linear infinite;
+}
+
+@keyframes skeletonShimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonHero {
+  height: 14rem;
+  border-radius: 0.75rem;
+}
+
+.skeletonTitle {
+  height: 1.1rem;
+  width: 40%;
+}
+
+.skeletonLine {
+  height: 0.85rem;
+  width: 100%;
+}
+
+.skeletonLineShort {
+  width: 65%;
+}
+
+.skeletonLineVeryShort {
+  width: 30%;
+}
+
+.skeletonChip {
+  height: 1.85rem;
+  width: 7.5rem;
+  border-radius: 999px;
+}
+
+.skeletonMemberCard {
+  height: 3.25rem;
+  border-radius: 0.75rem;
 }
 
 @media (min-width: 760px) {

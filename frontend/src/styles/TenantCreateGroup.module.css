@@ -1,0 +1,159 @@
+.pageContainer {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.formContainer {
+  display: grid;
+  gap: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.label {
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.input,
+.textarea,
+select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.65rem;
+  font-size: 0.875rem;
+}
+
+.textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.submitButton {
+  padding: 0.65rem 1rem;
+  background: var(--tenant-primary);
+  color: #fff;
+  border-radius: 0.75rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.submitButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.errorMessage {
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.successMessage {
+  color: #027a48;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.helpText {
+  color: var(--tenant-text-muted);
+  font-size: 0.875rem;
+}
+
+.selectorContainer {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.candidatesList {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 10rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.candidateItem {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.candidateItem:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.selectedCandidate {
+  background: var(--tenant-primary-soft);
+  border-color: var(--tenant-primary);
+  font-weight: 700;
+}
+
+.apartmentsList {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.apartmentItem {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.6rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.selectedApartment {
+  border-color: var(--tenant-primary);
+  background: var(--tenant-primary-soft);
+}
+
+.itemTitle {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.itemMeta {
+  color: var(--tenant-text-muted);
+  font-size: 0.82rem;
+}
+
+.emptyItem {
+  color: var(--tenant-text-muted);
+  font-size: 0.875rem;
+  padding: 0.4rem 0.2rem;
+}
+
+@media (min-width: 768px) {
+  .formContainer {
+    padding: 1.5rem;
+  }
+}

@@ -13,14 +13,15 @@ import (
 	authservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth/service"
 	geocodehttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/httpadapter"
 	geocodenominatim "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/nominatim"
+	grouphttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/group/httpadapter"
+	groupservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/group/service"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/platform/config"
 	profilehttp "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/httpadapter"
 	profileservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/profile/service"
 )
 
 // NewRouter builds the HTTP API router.
-func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service, applicationService *applicationservice.Service, geocodeService *geocodenominatim.Service) *gin.Engine {
-
+func NewRouter(cfg *config.Config, authService *authservice.Service, profileService *profileservice.Service, apartmentService *apartmentservice.Service, applicationService *applicationservice.Service, groupService *groupservice.Service, geocodeService *geocodenominatim.Service) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), corsMiddleware(cfg.CORSAllowOrigin))
@@ -58,6 +59,9 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 		applicationhttp.RegisterSharedRoutes(authenticated, applicationService)
 		applicationhttp.RegisterTenantRoutes(tenant, applicationService)
 		applicationhttp.RegisterOwnerRoutes(owner, applicationService)
+	}
+	if groupService != nil {
+		grouphttp.RegisterTenantRoutes(tenant, groupService)
 	}
 	geocodehttp.RegisterRoutes(api, geocodeService)
 	return r

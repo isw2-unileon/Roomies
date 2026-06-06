@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,6 +22,16 @@ type Client struct {
 	baseURL string
 	apiKey  string
 	client  *http.Client
+}
+
+// PublicObjectURL builds the public URL for an object in a public bucket.
+func (c *Client) PublicObjectURL(bucket, objectPath string) string {
+	bucket = strings.Trim(strings.TrimSpace(bucket), "/")
+	objectPath = strings.Trim(strings.TrimSpace(objectPath), "/")
+	if bucket == "" || objectPath == "" {
+		return ""
+	}
+	return c.baseURL + "/storage/v1/object/public/" + url.PathEscape(bucket) + "/" + escapeStorageObjectPath(objectPath)
 }
 
 type tokenResponse struct {
@@ -391,6 +403,55 @@ func (c *Client) CreateSignedURL(ctx context.Context, bucket, objectPath string,
 		return "", errors.New("signed URL response is missing signedURL")
 	}
 	return completeStorageSignedURL(c.baseURL, signedURL), nil
+}
+
+// UploadObject uploads a file to a private Supabase Storage bucket.
+func (c *Client) UploadObject(ctx context.Context, bucket, objectPath, contentType string, fileData []byte) error {
+	bucket = strings.TrimSpace(bucket)
+	objectPath = strings.Trim(strings.TrimSpace(objectPath), "/")
+	if bucket == "" {
+		return errors.New("storage bucket is required")
+	}
+	if objectPath == "" {
+		return errors.New("storage object path is required")
+	}
+	if len(fileData) == 0 {
+		return errors.New("file data is required")
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", filepath.Base(objectPath))
+	if err != nil {
+		return fmt.Errorf("create multipart file: %w", err)
+	}
+	if _, err := part.Write(fileData); err != nil {
+		return fmt.Errorf("write file data: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	storageURL := c.baseURL + "/storage/v1/object/" + url.PathEscape(bucket) + "/" + escapeStorageObjectPath(objectPath)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, storageURL, &body)
+	if err != nil {
+		return fmt.Errorf("create upload request: %w", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("apikey", c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("x-upsert", "true")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request storage upload endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("upload failed (status %d): %s", resp.StatusCode, strings.TrimSpace(string(raw)))
+	}
+	return nil
 }
 
 func completeStorageSignedURL(baseURL, signedURL string) string {

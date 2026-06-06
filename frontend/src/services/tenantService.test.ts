@@ -1,6 +1,18 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getTenantApartmentDetail, listTenantApartments } from './tenantService'
+import {
+	inviteUsersToTenantGroup,
+	getTenantApartmentDetail,
+	getTenantPersonalProfile,
+	deleteTenantGroup,
+	listTenantGroupCandidates,
+	listTenantGroups,
+	listTenantApplications,
+	listTenantApartments,
+	saveTenantProfile,
+	saveTenantPersonalProfile,
+	uploadTenantAvatar,
+} from './tenantService'
 
 describe('tenantService', () => {
   beforeEach(() => {
@@ -24,6 +36,7 @@ describe('tenantService', () => {
             status: 'AVAILABLE',
             created_at: '2026-05-21T10:00:00Z',
             image_url: 'https://example.test/apt.jpg',
+            image_urls: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
           },
         ],
       }),
@@ -42,8 +55,11 @@ describe('tenantService', () => {
         rent: 420,
         compatibilityScore: 0,
         status: 'available',
-        images: ['https://example.test/apt.jpg'],
+        images: ['https://example.test/apt.jpg', 'https://example.test/apt-room.jpg'],
         createdAt: '2026-05-21T10:00:00Z',
+        bathrooms: 0,
+        surfaceM2: 0,
+        floor: 0,
       },
     ])
 
@@ -136,4 +152,298 @@ describe('tenantService', () => {
 
     expect(fetch).toHaveBeenCalledWith('/api/apartments/apt-22', { credentials: 'include' })
   })
+
+  test('loads tenant personal profile data', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({
+		user_id: 'user-1',
+		full_name: 'Jairo Test',
+		email: 'jairo@example.test',
+		avatar_url: 'data:image/png;base64,abc',
+	  }),
+	} as Response)
+
+	await expect(getTenantPersonalProfile()).resolves.toEqual({
+	  userId: 'user-1',
+	  fullName: 'Jairo Test',
+	  email: 'jairo@example.test',
+	  avatarUrl: 'data:image/png;base64,abc',
+	})
+
+	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/personal', { credentials: 'include' })
+  })
+
+  test('saves tenant personal profile data', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({ message: 'tenant personal profile saved' }),
+	} as Response)
+
+	await expect(saveTenantPersonalProfile({
+	  fullName: 'Jairo Test',
+	})).resolves.toBe('tenant personal profile saved')
+
+	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/personal', {
+	  method: 'PUT',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({
+		full_name: 'Jairo Test',
+	  }),
+	  credentials: 'include',
+	})
+  })
+
+  test('uploads tenant avatar as multipart form data', async () => {
+	vi.spyOn(global, 'fetch').mockResolvedValue({
+	  ok: true,
+	  json: async () => ({ avatar_url: 'https://example.test/avatar.png' }),
+	} as Response)
+
+	const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })
+	await expect(uploadTenantAvatar(file)).resolves.toBe('https://example.test/avatar.png')
+
+	expect(fetch).toHaveBeenCalledWith('/api/tenant-profile/avatar', expect.objectContaining({
+	  method: 'POST',
+	  body: expect.any(FormData),
+	  credentials: 'include',
+	}))
+  })
+
+	test('saves tenant onboarding profile with updated fields', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ message: 'tenant profile saved' }),
+	  } as Response)
+
+	  await expect(saveTenantProfile({
+		budgetMax: 650,
+		preferredArea: 'Leon',
+		pets: true,
+		smoking: false,
+		age: 23,
+		sex: 'female',
+		situation: 'student',
+		degree: 'Arquitectura',
+		socializationLevel: 'medium',
+		nightlifeLevel: 'low',
+	  })).resolves.toBe('tenant profile saved')
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant-profile', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+		  budget_max: 650,
+		  preferred_area: 'Leon',
+		  pets: true,
+		  smoking: false,
+		  age: 23,
+		  sex: 'female',
+		  situation: 'student',
+		  degree: 'Arquitectura',
+		  profession: undefined,
+		  socialization_level: 'medium',
+		  nightlife_level: 'low',
+		}),
+		credentials: 'include',
+	  })
+	})
+
+	test('maps group applications in tenant applications list', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({
+		  applications: [
+			{
+			  id: 'app-group-1',
+			  apartment_id: 'apt-9',
+			  property_title: 'Piso centro',
+			  owner_name: 'Maria Owner',
+			  address: 'Calle Ancha 12',
+			  image_url: 'https://example.test/apt.jpg',
+			  places: 4,
+			  size: 0,
+			  bathrooms: 0,
+			  status: 'pending',
+			  created_at: '2026-05-21',
+			  date_label: 'Solicitada el 2026-05-21',
+			  compatibility: 81,
+			  request_type: 'Solicitud de grupo · Centro Leon',
+			  status_message: 'Pendiente',
+			  application_type: 'group',
+			  is_group_application: true,
+			  group_id: 'group-1',
+			  group_name: 'Centro Leon',
+			  submitted_by_user_id: 'tenant-1',
+			  submitted_by_name: 'Jairo Test',
+			  can_cancel: false,
+			  group_members: [
+				{ user_id: 'tenant-1', name: 'Jairo Test', email: 'jairo@example.test', avatar_url: '' },
+				{ user_id: 'tenant-2', name: 'Laura Test', email: 'laura@example.test', avatar_url: '' },
+			  ],
+			},
+		  ],
+		}),
+	  } as Response)
+
+	  await expect(listTenantApplications()).resolves.toEqual([
+		{
+		  id: 'app-group-1',
+		  propertyId: 'apt-9',
+		  propertyTitle: 'Piso centro',
+		  ownerName: 'Maria Owner',
+		  address: 'Calle Ancha 12',
+		  image: 'https://example.test/apt.jpg',
+		  places: 4,
+		  size: 0,
+		  bathrooms: 0,
+		  status: 'pending',
+		  createdAt: '2026-05-21',
+		  dateLabel: 'Solicitada el 2026-05-21',
+		  compatibility: 81,
+		  requestType: 'Solicitud de grupo · Centro Leon',
+		  statusMessage: 'Pendiente',
+		  applicationType: 'group',
+		  isGroupApplication: true,
+		  groupId: 'group-1',
+		  groupName: 'Centro Leon',
+		  submittedByUserId: 'tenant-1',
+		  submittedByName: 'Jairo Test',
+		  canCancel: false,
+		  groupMembers: [
+			{ userId: 'tenant-1', name: 'Jairo Test', email: 'jairo@example.test', avatarUrl: '' },
+			{ userId: 'tenant-2', name: 'Laura Test', email: 'laura@example.test', avatarUrl: '' },
+		  ],
+		},
+	  ])
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/applications', { credentials: 'include' })
+	})
+
+	test('maps current join request state in tenant groups list', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({
+		  groups: [
+			{
+			  id: 'group-1',
+			  name: 'Centro Leon',
+			  description: 'Grupo tranquilo',
+			  status: 'FORMING',
+			  created_by: 'tenant-9',
+			  created_at: '2026-06-01T12:00:00Z',
+			  user_relation: 'viewer',
+			  invitation_id: '',
+			  accepted_members_count: 2,
+			  pending_invitations_count: 0,
+			  is_fully_accepted: false,
+			  average_budget_min: 300,
+			  average_budget_max: 450,
+			  apartment: null,
+			  current_apartment_request: null,
+			  current_join_request: {
+				id: 'join-request-1',
+				group_id: 'group-1',
+				requester_user_id: 'tenant-1',
+				status: 'REJECTED',
+				created_at: '2026-06-02T10:00:00Z',
+				updated_at: '2026-06-03T11:00:00Z',
+			  },
+			},
+		  ],
+		}),
+	  } as Response)
+
+    await expect(listTenantGroups()).resolves.toMatchObject([
+      {
+        id: 'group-1',
+        name: 'Centro Leon',
+        description: 'Grupo tranquilo',
+        status: 'FORMING',
+        createdBy: 'tenant-9',
+        createdAt: '2026-06-01T12:00:00Z',
+        userRelation: 'viewer',
+        invitationId: '',
+        acceptedMembersCount: 2,
+        pendingInvitationsCount: 0,
+        isFullyAccepted: false,
+        averageBudgetMax: 450,
+        apartment: null,
+        currentApartmentRequest: null,
+        currentJoinRequest: {
+          id: 'join-request-1',
+          groupId: 'group-1',
+          requesterUserId: 'tenant-1',
+          status: 'REJECTED',
+          createdAt: '2026-06-02T10:00:00Z',
+          updatedAt: '2026-06-03T11:00:00Z',
+        },
+      },
+    ])
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups', { credentials: 'include' })
+	})
+
+	test('sends tenant group status filters with normalized values', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ groups: [] }),
+	  } as Response)
+
+	  await listTenantGroups({
+		search: 'centro',
+		status: 'request_sent',
+		hasApartment: 'false',
+		members: 3,
+		sort: 'members',
+	  })
+
+	  expect(fetch).toHaveBeenCalledWith(
+		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members',
+		{ credentials: 'include' },
+	  )
+	})
+
+	test('deletes tenant group with delete method', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		status: 204,
+	  } as Response)
+
+	  await expect(deleteTenantGroup('group-1')).resolves.toBeUndefined()
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups/group-1', {
+		credentials: 'include',
+		method: 'DELETE',
+	  })
+	})
+
+	test('sends group id when loading invitable candidates', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ candidates: [] }),
+	  } as Response)
+
+	  await listTenantGroupCandidates({ search: 'laura', groupId: 'group-1' })
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/group-candidates?search=laura&group_id=group-1', {
+		credentials: 'include',
+	  })
+	})
+
+	test('invites users to an existing group', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ message: 'group invitations created' }),
+	  } as Response)
+
+	  await expect(inviteUsersToTenantGroup('group-1', ['tenant-2', 'tenant-3'])).resolves.toBe('group invitations created')
+
+	  expect(fetch).toHaveBeenCalledWith('/api/tenant/groups/group-1/invitations', {
+		credentials: 'include',
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ invited_user_ids: ['tenant-2', 'tenant-3'] }),
+	  })
+	})
 })

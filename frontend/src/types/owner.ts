@@ -1,6 +1,7 @@
 export type PropertyStatus = 'open' | 'closed' | 'full'
 export type MatchStatus = 'pending' | 'approved' | 'rejected'
-export type OwnerNavTab = 'explore' | 'properties' | 'requests' | 'messages' | 'notifications' | 'profile'
+export type OwnerApplicationType = 'individual' | 'group'
+export type OwnerNavTab = 'properties' | 'applications' | 'messages' | 'notifications' | 'profile'
 export type OwnerIssueStatus = 'pending' | 'in_progress' | 'resolved'
 
 export interface OwnerProperty {
@@ -25,13 +26,18 @@ export interface PropertyLike {
 }
 
 export interface OwnerProfile {
-    name: string
-    role: string
+    userId: string
+    fullName: string
+    email: string
+    avatarUrl: string
+    displayName: string
+    phone: string
 }
 
 export interface OwnerDashboardProperty {
     id: string
     title: string
+    description?: string
     address: string
     area?: string
     totalSpots: number
@@ -44,16 +50,50 @@ export interface OwnerDashboardProperty {
     nextDueDate?: string
     requests?: number
     image: string
+    imageUrls?: string[]
+    imagePaths?: string[]
+    latitude?: number
+    longitude?: number
+    bathrooms?: number
+    surfaceM2?: number
+    floor?: number
+    smokingAllowed?: boolean | null
+    petsAllowed?: boolean | null
+    studentsAllowed?: boolean | null
+    notes?: string
 }
 
 export interface OwnerDashboardRequest {
     id: string
-    tenant: string
-    profile: string
-    property: string
+    apartmentId: string
+    propertyTitle: string
     address: string
-    compatibility: number
-    requestedAt: string
+    type: OwnerApplicationType
+    status: string
+    createdAt: string
+    tenant?: OwnerApplicationApplicant
+    group?: OwnerApplicationGroup
+}
+
+export interface OwnerApplicationApplicant {
+	userId: string
+	name: string
+	email: string
+	avatarUrl: string
+}
+
+export interface OwnerApplicationGroupMember {
+	userId: string
+	name: string
+	email: string
+	avatarUrl: string
+}
+
+export interface OwnerApplicationGroup {
+	groupId: string
+	name: string
+	creator: OwnerApplicationApplicant
+	members: OwnerApplicationGroupMember[]
 }
 
 export interface OwnerDashboardPayment {

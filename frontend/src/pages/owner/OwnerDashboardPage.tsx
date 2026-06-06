@@ -1,41 +1,34 @@
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useNotice } from '@/hooks/useNotice'
 import AuthNotice from '@/components/auth/AuthNotice'
-import OwnerActivityList from '@/components/owner/OwnerActivityList'
-import OwnerHelpCard from '@/components/owner/OwnerHelpCard'
-import OwnerIssuesList from '@/components/owner/OwnerIssuesList'
-import OwnerPaymentsList from '@/components/owner/OwnerPaymentsList'
-import OwnerPropertyGrid from '@/components/owner/OwnerPropertyGrid'
-import OwnerRequestsTable from '@/components/owner/OwnerRequestsTable'
-import OwnerSidebar from '@/components/owner/OwnerSidebar'
-import OwnerSummaryCard from '@/components/owner/OwnerSummaryCard'
-import OwnerTopBar from '@/components/owner/OwnerTopBar'
+import OwnerLayout from '@/components/owner/OwnerLayout'
+import OwnerActivityList from '@/components/owner/owner_properties/OwnerActivityList'
+import OwnerHelpCard from '@/components/owner/owner_properties/OwnerHelpCard'
+import OwnerIssuesList from '@/components/owner/owner_properties/OwnerIssuesList'
+import OwnerPaymentsList from '@/components/owner/owner_properties/OwnerPaymentsList'
+import OwnerPropertyGrid from '@/components/owner/owner_properties/OwnerPropertyGrid'
+import OwnerSummaryCard from '@/components/owner/owner_properties/OwnerSummaryCard'
 import {
   mockOwnerActivity,
   mockOwnerIssues,
   mockOwnerPayments,
-  mockOwnerProfile,
-  mockOwnerRequests,
 } from '@/mocks/ownerData'
 import styles from '@/styles/OwnerDashboard.module.css'
 import { paths } from '@/routes/paths'
-import { getProfileStatus, logout } from '@/services/authService'
+import { getProfileStatus } from '@/services/authService'
 import { listOwnerApartments } from '@/services/ownerService'
-import type { OwnerDashboardProperty, OwnerIssueStatus, OwnerNavTab } from '@/types/owner'
-
-const OWNER_ONLY_MESSAGE = 'Esta seccion solo esta disponible para propietarios. Inicia sesion con una cuenta owner.'
+import type { OwnerDashboardProperty, OwnerIssueStatus } from '@/types/owner'
 
 export default function OwnerDashboardPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<OwnerNavTab>('properties')
   const [issues, setIssues] = useState(mockOwnerIssues)
   const [ownerProperties, setOwnerProperties] = useState<OwnerDashboardProperty[]>([])
   const [isLoadingProperties, setIsLoadingProperties] = useState(false)
   const { notice, showError, clearNotice } = useNotice()
-  const unreadMessages = 1
-  const unreadNotifications = 3
 
   const occupancy = useMemo(() => {
     const total = ownerProperties.reduce((acc, property) => acc + property.totalSpots, 0)
@@ -59,7 +52,7 @@ export default function OwnerDashboardPage() {
         }
         if (profileStatus.role !== 'owner') {
           setOwnerProperties([])
-          showError(OWNER_ONLY_MESSAGE)
+          showError(t('ownerDashboard.properties.ownerOnly'))
           return
         }
 
@@ -70,7 +63,7 @@ export default function OwnerDashboardPage() {
       } catch (error) {
         if (!ignoreResult) {
           setOwnerProperties([])
-          showError(error instanceof Error ? error.message : 'No se pudieron cargar tus pisos publicados.')
+          showError(error instanceof Error ? error.message : t('ownerDashboard.properties.loadError'))
         }
       } finally {
         if (!ignoreResult) {
@@ -79,115 +72,72 @@ export default function OwnerDashboardPage() {
       }
     }
 
-    if (activeTab === 'properties') {
-      void loadOwnerProperties()
-    }
+    void loadOwnerProperties()
 
     return () => {
       ignoreResult = true
     }
-  }, [activeTab, clearNotice, showError])
+  }, [clearNotice, showError, t])
 
   function handleStatusChange(id: string, status: OwnerIssueStatus) {
     setIssues((prev) => prev.map((issue) => (issue.id === id ? { ...issue, status } : issue)))
   }
 
-  async function handleLogout() {
-    try {
-      await logout()
-    } finally {
-      navigate(paths.login, { replace: true })
-    }
+  function handleEditProperty(property: OwnerDashboardProperty) {
+    navigate(paths.ownerPublishProperty, { state: { propertyId: property.id } })
   }
 
   return (
-    <main className={styles.page}>
-      <div className={styles.layout}>
-        <div className={styles.desktopSidebar}>
-          <OwnerSidebar
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onLogout={handleLogout}
-            unreadNotifications={unreadNotifications}
-          />
+    <OwnerLayout>
+      <div className={styles.ownerMainGrid}>
+        <div className={styles.ownerPrimaryColumn}>
+          <section className={styles.ownerSectionCard}>
+            <header className={styles.ownerSectionHeader}>
+              <h1 className={styles.ownerSectionTitle}>{t('ownerDashboard.properties.title')}</h1>
+              <button
+                type="button"
+                className={styles.ownerPublishButton}
+                onClick={() => navigate(paths.ownerPublishProperty)}
+              >
+                <PlusIcon className={styles.ownerIconSmall} aria-hidden="true" />
+                {t('ownerDashboard.properties.publish')}
+              </button>
+            </header>
+            <AuthNotice kind={notice.kind} message={notice.message} />
+            {isLoadingProperties ? (
+              <p className={styles.ownerPropertyEmpty}>{t('ownerDashboard.properties.loading')}</p>
+            ) : (
+              <OwnerPropertyGrid properties={ownerProperties} onEdit={handleEditProperty} />
+            )}
+          </section>
+
+
+          <section className={styles.ownerSectionCard}>
+            <header className={styles.ownerSectionHeader}>
+              <h2 className={styles.ownerSectionTitle}>{t('ownerDashboard.payments.title')}</h2>
+            </header>
+            <OwnerPaymentsList payments={mockOwnerPayments} />
+          </section>
+
+          <section className={styles.ownerSectionCard}>
+            <header className={styles.ownerSectionHeader}>
+              <h2 className={styles.ownerSectionTitle}>{t('ownerDashboard.issues.title')}</h2>
+            </header>
+            <OwnerIssuesList issues={issues} onStatusChange={handleStatusChange} />
+          </section>
         </div>
 
-        <div className={styles.mainColumn}>
-          <OwnerTopBar
-            profile={mockOwnerProfile}
-            unreadMessages={unreadMessages}
-            unreadNotifications={unreadNotifications}
+        <aside className={styles.ownerSideColumn}>
+          <OwnerSummaryCard
+            occupied={occupancy.occupied}
+            total={occupancy.total}
+            free={occupancy.free}
+            percent={occupancy.percent}
           />
-
-          <div className={styles.content}>
-            <div className={styles.mobileSidebar}>
-              <OwnerSidebar
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                onLogout={handleLogout}
-                unreadNotifications={unreadNotifications}
-              />
-            </div>
-
-            <div className={styles.ownerMainGrid}>
-              <div className={styles.ownerPrimaryColumn}>
-                <section className={styles.ownerSectionCard}>
-                  <header className={styles.ownerSectionHeader}>
-                    <h1 className={styles.ownerSectionTitle}>Mis pisos</h1>
-                    <button
-                      type="button"
-                      className={styles.ownerPublishButton}
-                      onClick={() => navigate(paths.ownerPublishProperty)}
-                    >
-                      <PlusIcon className={styles.ownerIconSmall} aria-hidden="true" />
-                      Publicar piso
-                    </button>
-                  </header>
-                  <AuthNotice kind={notice.kind} message={notice.message} />
-                  {isLoadingProperties ? (
-                    <p className={styles.ownerPropertyEmpty}>Cargando pisos publicados...</p>
-                  ) : (
-                    <OwnerPropertyGrid properties={ownerProperties} />
-                  )}
-                </section>
-
-                <section className={styles.ownerSectionCard}>
-                  <header className={styles.ownerSectionHeader}>
-                    <h2 className={styles.ownerSectionTitle}>Solicitudes recibidas</h2>
-                    <button type="button" className={styles.ownerTextButton}>Ver todas las solicitudes</button>
-                  </header>
-                  <OwnerRequestsTable requests={mockOwnerRequests} />
-                </section>
-
-                <section className={styles.ownerSectionCard}>
-                  <header className={styles.ownerSectionHeader}>
-                    <h2 className={styles.ownerSectionTitle}>Pagos recibidos</h2>
-                  </header>
-                  <OwnerPaymentsList payments={mockOwnerPayments} />
-                </section>
-
-                <section className={styles.ownerSectionCard}>
-                  <header className={styles.ownerSectionHeader}>
-                    <h2 className={styles.ownerSectionTitle}>Incidencias y mantenimiento</h2>
-                  </header>
-                  <OwnerIssuesList issues={issues} onStatusChange={handleStatusChange} />
-                </section>
-              </div>
-
-              <aside className={styles.ownerSideColumn}>
-                <OwnerSummaryCard
-                  occupied={occupancy.occupied}
-                  total={occupancy.total}
-                  free={occupancy.free}
-                  percent={occupancy.percent}
-                />
-                <OwnerActivityList items={mockOwnerActivity} />
-                <OwnerHelpCard />
-              </aside>
-            </div>
-          </div>
-        </div>
+          <OwnerActivityList items={mockOwnerActivity} />
+          <OwnerHelpCard />
+        </aside>
       </div>
-    </main>
+    </OwnerLayout>
   )
 }

@@ -1,11 +1,13 @@
 package httpadapter
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/application"
 	applicationservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/application/service"
 )
 
@@ -16,6 +18,7 @@ type handler struct {
 type applyApartmentResponse struct {
 	ApplicationID string `json:"application_id"`
 	Status        string `json:"status"`
+	Created       bool   `json:"created,omitempty"`
 }
 
 type interestedTenantResponse struct {
@@ -28,33 +31,80 @@ type interestedTenantResponse struct {
 }
 
 type tenantApplicationResponse struct {
-	ID            string `json:"id"`
-	ApartmentID   string `json:"apartment_id"`
-	PropertyTitle string `json:"property_title"`
-	OwnerName     string `json:"owner_name"`
-	Address       string `json:"address"`
-	ImageURL      string `json:"image_url"`
-	Places        int    `json:"places"`
-	Size          int    `json:"size"`
-	Bathrooms     int    `json:"bathrooms"`
-	Status        string `json:"status"`
-	CreatedAt     string `json:"created_at"`
-	DateLabel     string `json:"date_label"`
-	Compatibility int    `json:"compatibility"`
-	RequestType   string `json:"request_type"`
-	StatusMessage string `json:"status_message"`
+	ID                 string                `json:"id"`
+	ApartmentID        string                `json:"apartment_id"`
+	PropertyTitle      string                `json:"property_title"`
+	OwnerName          string                `json:"owner_name"`
+	Address            string                `json:"address"`
+	ImageURL           string                `json:"image_url"`
+	Places             int                   `json:"places"`
+	Size               int                   `json:"size"`
+	Bathrooms          int                   `json:"bathrooms"`
+	Status             string                `json:"status"`
+	CreatedAt          string                `json:"created_at"`
+	DateLabel          string                `json:"date_label"`
+	Compatibility      int                   `json:"compatibility"`
+	RequestType        string                `json:"request_type"`
+	StatusMessage      string                `json:"status_message"`
+	ApplicationType    string                `json:"application_type,omitempty"`
+	IsGroupApplication bool                  `json:"is_group_application,omitempty"`
+	GroupID            string                `json:"group_id,omitempty"`
+	GroupName          string                `json:"group_name,omitempty"`
+	SubmittedByUserID  string                `json:"submitted_by_user_id,omitempty"`
+	SubmittedByName    string                `json:"submitted_by_name,omitempty"`
+	GroupMembers       []groupMemberResponse `json:"group_members,omitempty"`
+	CanCancel          bool                  `json:"can_cancel"`
+}
+
+type applicantResponse struct {
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type groupMemberResponse struct {
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type groupDetailsResponse struct {
+	GroupID string                `json:"group_id"`
+	Name    string                `json:"name"`
+	Creator applicantResponse     `json:"creator"`
+	Members []groupMemberResponse `json:"members"`
+}
+
+type ownerApplicationResponse struct {
+	ID            string                `json:"id"`
+	ApartmentID   string                `json:"apartment_id"`
+	PropertyTitle string                `json:"property_title"`
+	Address       string                `json:"address"`
+	Type          string                `json:"type"`
+	Status        string                `json:"status"`
+	CreatedAt     string                `json:"created_at"`
+	Tenant        *applicantResponse    `json:"tenant,omitempty"`
+	Group         *groupDetailsResponse `json:"group,omitempty"`
 }
 
 // RegisterTenantRoutes wires tenant application endpoints into the API router.
 func RegisterTenantRoutes(api *gin.RouterGroup, applicationService *applicationservice.Service) {
 	h := &handler{applicationService: applicationService}
 	api.POST("/apartments/:id/applications", h.applyToApartment)
+	api.POST("/tenant/groups/:id/applications", h.applyGroupToAssignedApartment)
 	api.POST("/applications/:id/cancel", h.cancelTenantApplication)
 	api.GET("/tenant/applications", h.listTenantApplications)
 }
 
 // RegisterOwnerRoutes wires owner application endpoints into the API router.
-func RegisterOwnerRoutes(*gin.RouterGroup, *applicationservice.Service) {
+func RegisterOwnerRoutes(api *gin.RouterGroup, applicationService *applicationservice.Service) {
+	h := &handler{applicationService: applicationService}
+	api.GET("/owner/applications", h.listOwnerApplications)
+	api.GET("/owner/applications/:id", h.getOwnerApplication)
+	api.POST("/owner/applications/:id/approve", h.approveOwnerApplication)
+	api.POST("/owner/applications/:id/reject", h.rejectOwnerApplication)
 }
 
 // RegisterSharedRoutes wires authenticated application endpoints available to multiple roles.
@@ -95,6 +145,35 @@ func (h *handler) applyToApartment(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, applyApartmentResponse{ApplicationID: applicationID, Status: "pending"})
+}
+
+func (h *handler) applyGroupToAssignedApartment(c *gin.Context) {
+	userID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	groupID := strings.TrimSpace(c.Param("id"))
+	if groupID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group id is required"})
+		return
+	}
+
+	applicationRecord, created, err := h.applicationService.ApplyGroupToAssignedApartment(c.Request.Context(), groupID, userID, role)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+	if applicationRecord == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create group application"})
+		return
+	}
+
+	statusCode := http.StatusOK
+	if created {
+		statusCode = http.StatusCreated
+	}
+	c.JSON(statusCode, applyApartmentResponse{ApplicationID: applicationRecord.ID, Status: applicationRecord.Status, Created: created})
 }
 
 func (h *handler) listInterestedTenants(c *gin.Context) {
@@ -176,25 +255,192 @@ func (h *handler) listTenantApplications(c *gin.Context) {
 	}
 	response := make([]tenantApplicationResponse, 0, len(applications))
 	for _, item := range applications {
+		members := make([]groupMemberResponse, 0, len(item.GroupMembers))
+		for _, member := range item.GroupMembers {
+			members = append(members, groupMemberResponse{
+				UserID:    member.UserID,
+				Name:      member.Name,
+				Email:     member.Email,
+				AvatarURL: member.AvatarURL,
+			})
+		}
 		response = append(response, tenantApplicationResponse{
-			ID:            item.ID,
-			ApartmentID:   item.ApartmentID,
-			PropertyTitle: item.PropertyTitle,
-			OwnerName:     item.OwnerName,
-			Address:       item.Address,
-			ImageURL:      item.ImageURL,
-			Places:        item.Places,
-			Size:          item.Size,
-			Bathrooms:     item.Bathrooms,
-			Status:        item.Status,
-			CreatedAt:     item.CreatedAt,
-			DateLabel:     item.DateLabel,
-			Compatibility: item.CompatibilityScore,
-			RequestType:   item.RequestType,
-			StatusMessage: item.StatusMessage,
+			ID:                 item.ID,
+			ApartmentID:        item.ApartmentID,
+			PropertyTitle:      item.PropertyTitle,
+			OwnerName:          item.OwnerName,
+			Address:            item.Address,
+			ImageURL:           item.ImageURL,
+			Places:             item.Places,
+			Size:               item.Size,
+			Bathrooms:          item.Bathrooms,
+			Status:             item.Status,
+			CreatedAt:          item.CreatedAt,
+			DateLabel:          item.DateLabel,
+			Compatibility:      item.CompatibilityScore,
+			RequestType:        item.RequestType,
+			StatusMessage:      item.StatusMessage,
+			ApplicationType:    item.Type,
+			IsGroupApplication: strings.EqualFold(item.Type, "group"),
+			GroupID:            item.GroupID,
+			GroupName:          item.GroupName,
+			SubmittedByUserID:  item.SubmittedByUserID,
+			SubmittedByName:    item.SubmittedByName,
+			GroupMembers:       members,
+			CanCancel:          item.CanCancel,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"applications": response})
+}
+
+func (h *handler) listOwnerApplications(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	applications, err := h.applicationService.ListOwnerApplications(c.Request.Context(), ownerID, role)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	response := make([]ownerApplicationResponse, 0, len(applications))
+	for _, item := range applications {
+		response = append(response, ownerApplicationResponseFromDomain(item))
+	}
+	c.JSON(http.StatusOK, gin.H{"applications": response})
+}
+
+func (h *handler) getOwnerApplication(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	applicationID := strings.TrimSpace(c.Param("id"))
+	if applicationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "application id is required"})
+		return
+	}
+
+	item, err := h.applicationService.GetOwnerApplicationByID(c.Request.Context(), applicationID, ownerID, role)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"application": ownerApplicationResponseFromDomain(*item)})
+}
+
+func (h *handler) approveOwnerApplication(c *gin.Context) {
+	h.respondOwnerApplicationDecision(c, h.applicationService.ApproveOwnerApplication, "application approved")
+}
+
+func (h *handler) rejectOwnerApplication(c *gin.Context) {
+	h.respondOwnerApplicationDecision(c, h.applicationService.RejectOwnerApplication, "application rejected")
+}
+
+func (h *handler) respondOwnerApplicationDecision(
+	c *gin.Context,
+	action func(ctx context.Context, applicationID, ownerID, role string) error,
+	successMessage string,
+) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+
+	applicationID := strings.TrimSpace(c.Param("id"))
+	if applicationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "application id is required"})
+		return
+	}
+
+	if err := action(c.Request.Context(), applicationID, ownerID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": successMessage})
+}
+
+func (h *handler) handleServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, applicationservice.ErrTenantRequired):
+		c.JSON(http.StatusForbidden, gin.H{"error": "applications are only available for tenant users"})
+	case errors.Is(err, applicationservice.ErrOwnerRequired):
+		c.JSON(http.StatusForbidden, gin.H{"error": "applications are only available for owner users"})
+	case errors.Is(err, applicationservice.ErrApartmentNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
+	case errors.Is(err, applicationservice.ErrApartmentFull):
+		c.JSON(http.StatusConflict, gin.H{"error": "apartment is full"})
+	case errors.Is(err, applicationservice.ErrApplicationAlreadyExists):
+		c.JSON(http.StatusConflict, gin.H{"error": "application already exists"})
+	case errors.Is(err, applicationservice.ErrApplicationNotCancelable):
+		c.JSON(http.StatusConflict, gin.H{"error": "application is not cancelable"})
+	case errors.Is(err, applicationservice.ErrInterestedTenantsForbidden):
+		c.JSON(http.StatusForbidden, gin.H{"error": "interested tenants are not available for this user"})
+	case errors.Is(err, applicationservice.ErrGroupNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
+	case errors.Is(err, applicationservice.ErrGroupApplicationForbidden):
+		c.JSON(http.StatusForbidden, gin.H{"error": "only the group creator can submit this request"})
+	case errors.Is(err, applicationservice.ErrGroupNotReady):
+		c.JSON(http.StatusConflict, gin.H{"error": "group is not fully accepted"})
+	case errors.Is(err, applicationservice.ErrGroupApartmentRequired):
+		c.JSON(http.StatusConflict, gin.H{"error": "group has no assigned apartment"})
+	case errors.Is(err, applicationservice.ErrOwnerApplicationNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
+	case errors.Is(err, applicationservice.ErrOwnerApplicationAlreadyHandled):
+		c.JSON(http.StatusConflict, gin.H{"error": "application is not pending owner review"})
+	case errors.Is(err, applicationservice.ErrOwnerApplicationConflict):
+		c.JSON(http.StatusConflict, gin.H{"error": "another group has already been accepted for this apartment"})
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+}
+
+func ownerApplicationResponseFromDomain(item application.OwnerApplication) ownerApplicationResponse {
+	response := ownerApplicationResponse{
+		ID:            item.ID,
+		ApartmentID:   item.ApartmentID,
+		PropertyTitle: item.PropertyTitle,
+		Address:       item.Address,
+		Type:          item.Type,
+		Status:        item.Status,
+		CreatedAt:     item.CreatedAt,
+	}
+	if item.Tenant != nil {
+		response.Tenant = &applicantResponse{
+			UserID:    item.Tenant.UserID,
+			Name:      item.Tenant.Name,
+			Email:     item.Tenant.Email,
+			AvatarURL: item.Tenant.AvatarURL,
+		}
+	}
+	if item.Group != nil {
+		members := make([]groupMemberResponse, 0, len(item.Group.Members))
+		for _, member := range item.Group.Members {
+			members = append(members, groupMemberResponse{
+				UserID:    member.UserID,
+				Name:      member.Name,
+				Email:     member.Email,
+				AvatarURL: member.AvatarURL,
+			})
+		}
+		response.Group = &groupDetailsResponse{
+			GroupID: item.Group.GroupID,
+			Name:    item.Group.Name,
+			Creator: applicantResponse{
+				UserID:    item.Group.Creator.UserID,
+				Name:      item.Group.Creator.Name,
+				Email:     item.Group.Creator.Email,
+				AvatarURL: item.Group.Creator.AvatarURL,
+			},
+			Members: members,
+		}
+	}
+	return response
 }
 
 func (h *handler) resolveUserAndRole(c *gin.Context) (string, string, bool) {

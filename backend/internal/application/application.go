@@ -12,17 +12,18 @@ type InterestedTenant struct {
 	Compatibility int
 }
 
-// InterestedTenantCandidate contains interested tenant data plus profile preferences.
+// InterestedTenantCandidate contains interested tenant data plus profile preferences for matching.
 type InterestedTenantCandidate struct {
 	InterestedTenant
-	BudgetMin     int
 	BudgetMax     int
 	PreferredArea string
 	Pets          bool
 	Smoking       bool
-	NoiseLevel    string
-	Cleanliness   string
-	WorkSchedule  string
+	Situation     string
+	Degree        string
+	Profession    string
+	Socialization string
+	Nightlife     string
 }
 
 // TenantApplication contains tenant-facing application data.
@@ -36,12 +37,80 @@ type TenantApplication struct {
 	Places             int
 	Size               int
 	Bathrooms          int
+	Type               string
 	Status             string
 	CreatedAt          string
 	DateLabel          string
 	CompatibilityScore int
 	RequestType        string
 	StatusMessage      string
+	GroupID            string
+	GroupName          string
+	SubmittedByUserID  string
+	SubmittedByName    string
+	GroupMembers       []GroupMember
+	CanCancel          bool
+}
+
+// Record contains core application metadata used across tenant and owner flows.
+type Record struct {
+	ID          string
+	ApartmentID string
+	TenantID    string
+	GroupID     string
+	Type        string
+	Status      string
+	CreatedAt   string
+}
+
+// GroupApplicationContext contains group metadata required to validate a group application.
+type GroupApplicationContext struct {
+	GroupID         string
+	GroupName       string
+	ApartmentID     string
+	CreatedBy       string
+	IsCreator       bool
+	IsMember        bool
+	IsFullyAccepted bool
+	AcceptedMembers int
+	PendingInvites  int
+}
+
+// Applicant contains user-facing applicant data.
+type Applicant struct {
+	UserID    string
+	Name      string
+	Email     string
+	AvatarURL string
+}
+
+// GroupMember contains the public group member data shown to owners.
+type GroupMember struct {
+	UserID    string
+	Name      string
+	Email     string
+	AvatarURL string
+}
+
+// GroupDetails contains owner-facing data for a group application.
+type GroupDetails struct {
+	GroupID string
+	Name    string
+	Creator Applicant
+	Members []GroupMember
+}
+
+// OwnerApplication contains application data shown in the owner requests panel.
+type OwnerApplication struct {
+	ID            string
+	ApartmentID   string
+	PropertyTitle string
+	Address       string
+	Type          string
+	Status        string
+	CreatedAt     string
+	Tenant        *Applicant
+	Group         *GroupDetails
 }
 
 // MapStatus converts database application statuses into tenant-facing statuses.

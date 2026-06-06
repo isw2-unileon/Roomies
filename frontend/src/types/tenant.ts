@@ -5,23 +5,24 @@ export interface TenantProfile {
     age: number
     preferredArea: string
     preferredAreaKey: string
-    budgetMin: number
     budgetMax: number
-    moveInDate: string
     pets: boolean
     smoking: boolean
-    noiseLevel: string
-    cleanliness: string
-    workSchedule: string
-    sleepSchedule?: string
-    socialLifestyle?: string
-    studyHabits?: string
-    language?: string
-    university?: string
-    guestPreferences?: string
-    partyFrequency?: string
+    sex?: string
+    situation?: string
+    degree?: string
+    profession?: string
+    socializationLevel?: string
+    nightlifeLevel?: string
     profileCompletion: number
     compatibilityAverage: number
+}
+
+export interface TenantPersonalProfile {
+    userId: string
+    fullName: string
+    email: string
+    avatarUrl: string
 }
 
 export interface TenantProperty {
@@ -40,6 +41,9 @@ export interface TenantProperty {
     createdAt: string
     latitude: number
     longitude: number
+    bathrooms: number
+    surfaceM2: number
+    floor: number
 }
 
 export type PropertyAvailability = 'available' | 'occupied' | 'full'
@@ -60,6 +64,21 @@ export interface TenantApplication {
     compatibility: number
     requestType: string
     statusMessage: string
+    applicationType: 'individual' | 'group'
+    isGroupApplication: boolean
+    groupId: string
+    groupName: string
+    submittedByUserId: string
+    submittedByName: string
+    groupMembers: TenantApplicationGroupMember[]
+    canCancel: boolean
+}
+
+export interface TenantApplicationGroupMember {
+    userId: string
+    name: string
+    email: string
+    avatarUrl: string
 }
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
@@ -114,9 +133,8 @@ export interface TenantMessage {
 export interface TenantPropertyRules {
     smokingAllowed: boolean | null
     petsAllowed: boolean | null
-    maxNoiseLevel: string
-    cleanlinessExpectation: string
-    preferredSchedule: string
+    studentsAllowed: boolean | null
+    notes: string
 }
 
 export interface TenantPropertyDetail {
@@ -136,4 +154,139 @@ export interface InterestedTenant {
     studies: string
     avatarUrl: string
     compatibility: number
+}
+
+export type TenantGroupApiStatus =
+    | 'FORMING'
+    | 'READY'
+    | 'APPLIED'
+    | 'ACCEPTED'
+    | 'REJECTED'
+    | 'CLOSED'
+
+export type TenantGroupUserRelation = 'creator' | 'member' | 'pending_invitation' | 'viewer'
+
+export type TenantGroupMemberRole = 'owner' | 'member'
+
+export type TenantGroupMemberStatus = 'ACCEPTED' | 'LEFT'
+
+export type TenantGroupInvitationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
+export type TenantGroupJoinRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type TenantGroupJoinVoteDecision = 'APPROVE' | 'REJECT'
+export type TenantGroupJoinRequestSource = 'DIRECT_REQUEST' | 'GROUP_INVITATION'
+
+export interface TenantGroupApartment {
+    id: string
+    title: string
+    address: string
+    area: string
+    totalSpots: number
+    occupiedSpots: number
+    availableSpots: number
+    baseRent: number
+    imageUrl: string
+}
+
+export interface TenantGroupApartmentRequest {
+	id: string
+	apartmentId: string
+	groupId: string
+	type: string
+	status: string
+	createdAt: string
+}
+
+export interface TenantGroupCurrentJoinRequest {
+	id: string
+	groupId: string
+	requesterUserId: string
+	source: TenantGroupJoinRequestSource
+	status: TenantGroupJoinRequestStatus
+	createdAt: string
+	updatedAt: string
+}
+
+export interface TenantGroupListItem {
+    id: string
+    name: string
+    description: string
+    status: TenantGroupApiStatus
+    createdBy: string
+    createdAt: string
+    userRelation: TenantGroupUserRelation
+    invitationId: string
+    acceptedMembersCount: number
+    pendingInvitationsCount: number
+    isFullyAccepted: boolean
+    averageBudgetMin: number
+    averageBudgetMax: number
+    apartment: TenantGroupApartment | null
+	currentApartmentRequest: TenantGroupApartmentRequest | null
+	currentJoinRequest: TenantGroupCurrentJoinRequest | null
+}
+
+export interface TenantGroupProfile {
+    userId: string
+    name: string
+    email: string
+    avatarUrl: string
+    age: number
+    sex: string
+    situation: string
+    university?: string
+    degree: string
+    profession: string
+    budgetMax: number
+    preferredArea: string
+    pets: boolean
+    smoking: boolean
+    socializationLevel: string
+    nightlifeLevel: string
+}
+
+export interface TenantGroupAcceptedMember extends TenantGroupProfile {
+    role: TenantGroupMemberRole
+    status: TenantGroupMemberStatus
+    hasAccepted: boolean
+    isCurrentUser: boolean
+}
+
+export type TenantGroupCandidate = TenantGroupProfile 
+
+export interface TenantGroupInvitation {
+    id: string
+    groupId: string
+    invitedBy: string
+    invitedUserId: string
+    status: TenantGroupInvitationStatus
+    createdAt: string
+    respondedAt: string
+    user: TenantGroupCandidate
+}
+
+export interface TenantGroupJoinVote {
+    requestId: string
+    voterUserId: string
+    voterName: string
+    decision: TenantGroupJoinVoteDecision
+    createdAt: string
+    updatedAt: string
+}
+
+export interface TenantGroupJoinRequest {
+    id: string
+    groupId: string
+    requesterUserId: string
+    source: TenantGroupJoinRequestSource
+    status: TenantGroupJoinRequestStatus
+    createdAt: string
+    updatedAt: string
+    requester: TenantGroupCandidate
+    votes: TenantGroupJoinVote[]
+}
+
+export interface TenantGroupDetailItem extends TenantGroupListItem {
+    members: TenantGroupAcceptedMember[]
+    pendingInvitations: TenantGroupInvitation[]
+    joinRequests: TenantGroupJoinRequest[]
 }

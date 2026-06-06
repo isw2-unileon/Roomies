@@ -79,10 +79,12 @@ export default function TenantPropertyCard({ property, onDetails = () => {} }: T
                             })}
                         </span>
                     </div>
-                    <div className={styles.metaItem}>
-                        <UsersIcon className={styles.iconSmall} aria-hidden="true" />
-                        <span>{t('tenantDashboard.property.roommates', { count: property.totalRooms - property.availableRooms + 1 })}</span>
-                    </div>
+                    {property.totalRooms - property.availableRooms > 0 && (
+                        <div className={styles.metaItem}>
+                            <UsersIcon className={styles.iconSmall} aria-hidden="true" />
+                            <span>{t('tenantDashboard.property.roommates', { count: property.totalRooms - property.availableRooms })}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className={styles.footer}>

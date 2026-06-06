@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
@@ -7,16 +7,37 @@ import App from '@/App'
 import { paths } from './paths'
 
 const authServiceMock = vi.hoisted(() => ({
+  getProfileStatus: vi.fn(async () => ({ role: 'tenant', needsOnboarding: false })),
   logout: vi.fn(async () => undefined),
 }))
 
 vi.mock('@/services/tenantService', () => ({
   listTenantApartments: vi.fn(async () => []),
+  getTenantPersonalProfile: vi.fn(async () => ({
+    userId: 'tenant-1',
+    fullName: 'Jairo Test',
+    email: 'jairo@example.test',
+    avatarUrl: '',
+  })),
+  saveTenantPersonalProfile: vi.fn(async () => 'tenant personal profile saved'),
+  uploadTenantAvatar: vi.fn(async () => 'https://example.test/avatar.png'),
 }))
 
 vi.mock('@/services/authService', () => ({
-  getProfileStatus: vi.fn(async () => ({ role: 'tenant', needsOnboarding: false })),
+  getProfileStatus: authServiceMock.getProfileStatus,
   logout: authServiceMock.logout,
+  forgotPassword: vi.fn(async () => 'recovery email sent'),
+}))
+
+vi.mock('@/services/ownerService', () => ({
+  listOwnerApartments: vi.fn(async () => []),
+  getOwnerApartment: vi.fn(async () => undefined),
+  createApartment: vi.fn(async () => ({})),
+  updateOwnerApartment: vi.fn(async () => ({})),
+}))
+
+vi.mock('@/components/owner/owner_publish_property/LocationPicker', () => ({
+  default: () => <div data-testid="location-picker" />,
 }))
 
 function renderAppAt(path: string) {
@@ -27,6 +48,8 @@ function renderAppAt(path: string) {
 describe('AppRouter', () => {
   beforeEach(() => {
     localStorage.clear()
+    authServiceMock.getProfileStatus.mockReset()
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'tenant', needsOnboarding: false })
     authServiceMock.logout.mockClear()
   })
 
@@ -62,12 +85,14 @@ describe('AppRouter', () => {
     expect(screen.queryByRole('combobox', { name: /idioma de la interfaz/i })).not.toBeInTheDocument()
   })
 
-  test('renders language preferences inside the tenant profile page', async () => {
+  test('renders personal data and configuration inside the tenant profile page', async () => {
     renderAppAt(paths.tenantProfile)
 
     expect(await screen.findByRole('heading', { name: /perfil/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /datos personales/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^preferencias$/i })).toBeInTheDocument()
     expect(screen.getByText(/elige el idioma de la interfaz/i)).toBeInTheDocument()
+    expect(screen.queryByText(/preferencias de búsqueda/i)).not.toBeInTheDocument()
     const languageSelect = screen.getByRole('combobox', { name: /idioma de la interfaz/i })
     expect(languageSelect).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Español' })).toBeInTheDocument()
@@ -104,5 +129,46 @@ describe('AppRouter', () => {
     await user.click(screen.getByRole('button', { name: /cerrar invitación/i }))
 
     expect(screen.queryByRole('dialog', { name: /invita a un amigo/i })).not.toBeInTheDocument()
+  })
+
+  test('renders owner pages with the shared owner sidebar and no top bar', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt(paths.ownerMessages)
+
+    expect(await screen.findByRole('heading', { name: /mensajes/i })).toBeInTheDocument()
+    const sidebar = await screen.findByRole('complementary', { name: /panel de propietario/i })
+    expect(within(sidebar).getByRole('navigation', { name: /navegación de propietario/i })).toBeInTheDocument()
+    expect(within(sidebar).getByRole('link', { name: /mensajes/i })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('textbox', { name: /buscar/i })).not.toBeInTheDocument()
+  })
+
+  test('owner publish page keeps properties active and links back to properties', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt(paths.ownerPublishProperty)
+
+    expect(await screen.findByRole('link', { name: /volver a mis pisos/i })).toHaveAttribute('href', paths.ownerProperties)
+    const sidebar = screen.getByRole('complementary', { name: /panel de propietario/i })
+    expect(within(sidebar).getByRole('link', { name: /mis pisos/i })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('textbox', { name: /buscar/i })).not.toBeInTheDocument()
+  })
+
+  test('redirects owners away from tenant onboarding', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt(paths.tenantOnboarding)
+
+    await waitFor(() => expect(authServiceMock.getProfileStatus).toHaveBeenCalled())
+    expect(screen.queryByRole('heading', { name: /perfil de inquilino/i })).not.toBeInTheDocument()
+  })
+
+  test('does not expose the removed owner coming soon route', async () => {
+    authServiceMock.getProfileStatus.mockResolvedValue({ role: 'owner', needsOnboarding: false })
+
+    renderAppAt('/owner/coming-soon')
+
+    expect(await screen.findByRole('heading', { name: /bienvenido de nuevo/i })).toBeInTheDocument()
+    expect(window.location.pathname).toBe(paths.login)
   })
 })

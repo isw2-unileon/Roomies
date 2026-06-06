@@ -6,12 +6,12 @@
 .layout {
   display: flex;
   height: 100vh;
+  overflow: hidden;
 }
 
 .desktopSidebar {
   display: none;
   flex-shrink: 0;
-  width: 16rem;
 }
 
 .mainColumn {
@@ -38,8 +38,8 @@
 
 .ownerSidebar {
   display: flex;
-  min-height: calc(100vh - 2rem);
   height: 100%;
+  width: 16rem;
   flex-direction: column;
   padding: 1rem;
   color: var(--tenant-text);
@@ -47,6 +47,11 @@
   border: 1px solid var(--tenant-border-light);
   border-radius: 1.5rem;
   box-shadow: var(--tenant-shadow-soft);
+  transition: width 0.2s ease;
+}
+
+.ownerSidebarCollapsed {
+  width: 5.25rem;
 }
 
 .ownerSidebarHeader {
@@ -86,6 +91,51 @@
   letter-spacing: -0.03em;
 }
 
+.ownerSidebarCollapsed .ownerBrandName {
+  display: none;
+}
+
+.ownerMenuButton,
+.mobileMenuButton,
+.mobileCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.5rem;
+  color: var(--tenant-text-soft);
+  background: transparent;
+  border: 1px solid var(--tenant-border);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ownerMenuButton:hover,
+.mobileMenuButton:hover,
+.mobileCloseButton:hover {
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+}
+
+.ownerMenuButton:focus-visible,
+.mobileMenuButton:focus-visible,
+.mobileCloseButton:focus-visible,
+.ownerNavButton:focus-visible,
+.ownerLogoutButton:focus-visible,
+.ownerPropertyEditButton:focus-visible,
+.skipLink:focus-visible {
+  outline: 3px solid var(--tenant-primary);
+  outline-offset: 3px;
+}
+
+.ownerMobileOnlyIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--tenant-text-soft);
+}
+
 .ownerNav {
   display: flex;
   flex-direction: column;
@@ -94,6 +144,7 @@
 }
 
 .ownerNavButton {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -102,6 +153,7 @@
   color: var(--tenant-text-muted);
   font-size: 0.875rem;
   font-weight: 700;
+  text-decoration: none;
   text-align: left;
   background: transparent;
   border: 0;
@@ -122,6 +174,34 @@
 
 .ownerNavLabel {
   flex: 1;
+}
+
+.ownerSidebarCollapsed .ownerNavButton {
+  gap: 0;
+  justify-content: center;
+}
+
+.ownerSidebarCollapsed .ownerNavLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+.ownerSidebarCollapsed .ownerNavBadge {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  font-size: 0.5625rem;
+  border: 2px solid var(--tenant-surface);
 }
 
 .ownerNavBadge {
@@ -161,6 +241,86 @@
 .ownerLogoutButton:hover {
   color: var(--tenant-text);
   background: var(--tenant-bg-soft);
+}
+
+.ownerSidebarCollapsed .ownerLogoutButton {
+  justify-content: center;
+}
+
+.ownerSidebarCollapsed .ownerLogoutLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+.skipLink {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 60;
+  transform: translateY(-160%);
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 800;
+  background: var(--tenant-primary);
+  border-radius: 0.875rem;
+  transition: transform 0.2s ease;
+}
+
+.skipLink:focus-visible {
+  transform: translateY(0);
+}
+
+.utilityBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 4rem;
+  padding: 0.75rem 1rem;
+  background: rgba(248, 247, 245, 0.88);
+  border-bottom: 1px solid var(--tenant-border-light);
+  backdrop-filter: blur(16px);
+}
+
+.mobileLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.mobileBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 20, 33, 0.42);
+  border: 0;
+  cursor: pointer;
+}
+
+.mobilePanel {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.75rem;
+}
+
+.mobileCloseButton {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 2;
+  color: var(--tenant-text);
+  background: var(--tenant-surface);
+  box-shadow: var(--tenant-shadow-soft);
 }
 
 .ownerTopBar {
@@ -340,6 +500,13 @@
   font-weight: 800;
 }
 
+.ownerSectionSubtitle {
+  margin: 0.25rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
 .ownerPublishButton {
   display: inline-flex;
   align-items: center;
@@ -443,6 +610,28 @@
   font-weight: 700;
 }
 
+.ownerPropertyActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+
+.ownerPropertyEditButton {
+  padding: 0.5rem 0.85rem;
+  color: var(--tenant-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: var(--tenant-primary-soft);
+  border: 1px solid rgba(100, 54, 199, 0.18);
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.ownerPropertyEditButton:hover {
+  color: #fff;
+  background: var(--tenant-primary);
+}
+
 .ownerPropertyEmpty {
   margin: 0;
   padding: 1rem;
@@ -531,6 +720,57 @@
 
 .ownerActionReject:hover {
   background: #ffeceb;
+}
+
+.ownerRequestDetailCard {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1rem;
+  background: #fffdfb;
+}
+
+.ownerRequestDetailTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.ownerRequestDetailMeta {
+  margin: 0;
+  color: var(--tenant-text-muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.ownerRequestMembersList {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ownerRequestMemberItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #f0ece8;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.ownerRequestMemberItem strong {
+  color: var(--tenant-text);
+}
+
+.ownerRequestMemberItem span {
+  color: var(--tenant-text-soft);
+  font-size: 0.86rem;
 }
 
 .ownerDonutWrap {
@@ -768,6 +1008,43 @@
   height: 1.5rem;
 }
 
+.ownerPlaceholder {
+  display: grid;
+  min-height: min(30rem, calc(100vh - 2rem));
+  place-items: center;
+  gap: 0.45rem;
+  padding: 2rem;
+  text-align: center;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1.25rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.ownerPlaceholderKicker {
+  color: var(--tenant-primary);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ownerPlaceholderTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+.ownerPlaceholderSubtitle {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
 @media (min-width: 640px) {
   .ownerProfileText {
     display: block;
@@ -783,9 +1060,14 @@
 @media (min-width: 1024px) {
   .desktopSidebar {
     display: block;
+    height: 100vh;
   }
 
   .mobileSidebar {
+    display: none;
+  }
+
+  .utilityBar {
     display: none;
   }
 
@@ -798,7 +1080,6 @@
   }
 
   .ownerSidebar {
-    min-height: 100vh;
     border-top: 0;
     border-bottom: 0;
     border-left: 0;

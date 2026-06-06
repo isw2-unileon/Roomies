@@ -1,71 +1,51 @@
-import { EllipsisHorizontalIcon } from '@heroicons/react/24/outline'
+import { CheckBadgeIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
 
+import placeholderAvatar from '@/assets/placeholder-avatar.png'
+import type { TenantGroupAcceptedMember } from '@/types/tenant'
 import styles from '@/styles/TenantGroupDetail.module.css'
-import type { TenantGroupMember } from '@/types/tenant'
 
 interface TenantGroupMemberCardProps {
-    member: TenantGroupMember
+  member: TenantGroupAcceptedMember
 }
 
 export default function TenantGroupMemberCard({ member }: TenantGroupMemberCardProps) {
-    return (
-        <article className={styles.memberCard}>
-            <div className={styles.memberMain}>
-                <img
-                    className={styles.memberAvatar}
-                    src={member.avatar}
-                    alt=""
-                    loading="lazy"
-                />
+  const { t } = useTranslation()
+  const [imageFailed, setImageFailed] = useState(false)
+  const roleClass =
+    member.role === 'owner' ? styles.roleOwner : styles.roleMember
+  const avatarSrc = !imageFailed && member.avatarUrl ? member.avatarUrl : placeholderAvatar
+  const roleLabel = member.role === 'owner'
+    ? t('tenantGroups.detail.members.roleOwner')
+    : t('tenantGroups.detail.members.roleMember')
 
-                <div className={styles.memberData}>
-                    <div className={styles.memberNameRow}>
-                        {member.isCurrentUser ? (
-                            <span className={styles.youBadge}>Tú</span>
-                        ) : null}
-
-                        <h2 className={styles.memberName}>
-                            {member.name}, {member.age}
-                        </h2>
-                    </div>
-
-                    <p className={styles.memberStudies}>{member.studies}</p>
-
-                    <div className={styles.tags}>
-                        {member.tags.map((tag) => (
-                            <span key={tag} className={styles.tag}>
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {member.role ? (
-                <span className={styles.roleBadge}>{member.role}</span>
-            ) : (
-                <span />
-            )}
-
-            <div className={styles.compatibilityBlock}>
-                <span className={styles.compatibilityLabel}>
-                    Compatibilidad con el grupo
-                </span>
-                <strong className={styles.compatibilityValue}>
-                    {member.compatibility}%
-                </strong>
-                <span className={styles.compatibilityText}>
-                    Muy compatible
-                </span>
-            </div>
-
-            <button
-                type="button"
-                className={styles.memberOptionsButton}
-                aria-label={`Más opciones de ${member.name}`}
-            >
-                <EllipsisHorizontalIcon className={styles.iconMedium} aria-hidden="true" />
-            </button>
-        </article>
-    )
+  return (
+    <div className={styles.memberCard}>
+      <img
+        src={avatarSrc}
+        alt={member.name}
+        className={styles.memberAvatar}
+        onError={() => setImageFailed(true)}
+      />
+      <div className={styles.memberInfo}>
+        <p className={styles.memberName}>{member.name}</p>
+        <p className={roleClass}>{roleLabel}</p>
+        <p className={member.hasAccepted ? styles.memberAccepted : styles.memberPending}>
+          {member.hasAccepted ? (
+            <>
+              <CheckBadgeIcon className={styles.memberStatusIcon} aria-hidden="true" />
+              {t('tenantGroups.status.approved')}
+            </>
+          ) : (
+            <>
+              <ClockIcon className={styles.memberStatusIcon} aria-hidden="true" />
+              {t('tenantGroups.status.pending')}
+            </>
+          )}
+        </p>
+        {member.isCurrentUser && <span className={styles.currentUserBadge}>{t('tenantGroups.detail.members.you')}</span>}
+      </div>
+    </div>
+  )
 }

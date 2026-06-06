@@ -61,36 +61,38 @@ func (r *Repository) NeedsTenantProfile(ctx context.Context, userID, role string
 	return !exists, nil
 }
 
-// GetTenantProfileByUserID returns tenant profile data for compatibility.
-func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfile, error) {
+// GetTenantProfileByUserID returns tenant profile data for matching.
+func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error) {
 	const query = `SELECT
 		user_id,
-		COALESCE(budget_min, 0),
 		COALESCE(budget_max, 0),
 		COALESCE(preferred_area, ''),
 		COALESCE(pets, FALSE),
 		COALESCE(smoking, FALSE),
-		COALESCE(noise_level, ''),
-		COALESCE(cleanliness, ''),
-		COALESCE(work_schedule, ''),
 		COALESCE(age, 0),
-		COALESCE(university, '')
+		COALESCE(sex, ''),
+		COALESCE(tenant_situation, ''),
+		COALESCE(degree, ''),
+		COALESCE(profession, ''),
+		COALESCE(socialization_level, ''),
+		COALESCE(nightlife_level, '')
 	FROM public.tenant_profiles
 	WHERE user_id = $1`
 
-	var tenantProfile profile.TenantProfile
+	var p profile.TenantProfileInput
 	err := r.db.QueryRow(ctx, query, userID).Scan(
-		&tenantProfile.UserID,
-		&tenantProfile.BudgetMin,
-		&tenantProfile.BudgetMax,
-		&tenantProfile.PreferredArea,
-		&tenantProfile.Pets,
-		&tenantProfile.Smoking,
-		&tenantProfile.NoiseLevel,
-		&tenantProfile.Cleanliness,
-		&tenantProfile.WorkSchedule,
-		&tenantProfile.Age,
-		&tenantProfile.University,
+		&p.UserID,
+		&p.BudgetMax,
+		&p.PreferredArea,
+		&p.Pets,
+		&p.Smoking,
+		&p.Age,
+		&p.Sex,
+		&p.Situation,
+		&p.Degree,
+		&p.Profession,
+		&p.Socialization,
+		&p.Nightlife,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -98,7 +100,29 @@ func (r *Repository) GetTenantProfileByUserID(ctx context.Context, userID string
 		}
 		return nil, fmt.Errorf("get tenant profile by user id: %w", err)
 	}
-	return &tenantProfile, nil
+	return &p, nil
+}
+
+// GetTenantPersonalProfile returns editable account data from users table.
+func (r *Repository) GetTenantPersonalProfile(ctx context.Context, userID string) (*profile.TenantPersonalProfile, error) {
+	const query = `SELECT id, COALESCE(full_name, ''), COALESCE(email, ''), COALESCE(avatar_url, '')
+	FROM public.users
+	WHERE id = $1`
+
+	var personalProfile profile.TenantPersonalProfile
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&personalProfile.UserID,
+		&personalProfile.FullName,
+		&personalProfile.Email,
+		&personalProfile.AvatarURL,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get tenant personal profile: %w", err)
+	}
+	return &personalProfile, nil
 }
 
 // UpsertTenantProfile updates or inserts tenant profile.
@@ -106,43 +130,31 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 	result, err := r.db.Exec(
 		ctx,
 		`UPDATE public.tenant_profiles SET
-			budget_min = $2,
-			budget_max = $3,
-			preferred_area = $4,
-			move_in_date = $5,
-			pets = $6,
-			smoking = $7,
-			noise_level = $8,
-			cleanliness = $9,
-			work_schedule = $10,
-			sleep_schedule = $11,
-			social_lifestyle = $12,
-			study_habits = $13,
-			language = $14,
-			university = $15,
-			age = $16,
-			guest_preferences = $17,
-			party_frequency = $18,
+			budget_max = $2,
+			preferred_area = $3,
+			pets = $4,
+			smoking = $5,
+			age = $6,
+			sex = $7,
+			tenant_situation = $8,
+			degree = $9,
+			profession = $10,
+			socialization_level = $11,
+			nightlife_level = $12,
 			updated_at = NOW()
 		WHERE user_id = $1`,
 		userID,
-		input.BudgetMin,
 		input.BudgetMax,
 		strings.TrimSpace(input.PreferredArea),
-		input.MoveInDate,
 		input.Pets,
 		input.Smoking,
-		input.NoiseLevel,
-		input.Cleanliness,
-		nullIfEmpty(input.WorkSchedule),
-		nullIfEmpty(input.SleepSchedule),
-		nullIfEmpty(input.SocialLifestyle),
-		nullIfEmpty(input.StudyHabits),
-		nullIfEmpty(input.Language),
-		nullIfEmpty(input.University),
 		input.Age,
-		nullIfEmpty(input.GuestPreferences),
-		nullIfEmpty(input.PartyFrequency),
+		nullIfEmpty(input.Sex),
+		nullIfEmpty(input.Situation),
+		nullIfEmpty(input.Degree),
+		nullIfEmpty(input.Profession),
+		nullIfEmpty(input.Socialization),
+		nullIfEmpty(input.Nightlife),
 	)
 	if err != nil {
 		return err
@@ -153,29 +165,63 @@ func (r *Repository) UpsertTenantProfile(ctx context.Context, userID string, inp
 	_, err = r.db.Exec(
 		ctx,
 		`INSERT INTO public.tenant_profiles
-			(user_id, budget_min, budget_max, preferred_area, move_in_date, pets, smoking, noise_level, cleanliness, work_schedule, sleep_schedule, social_lifestyle, study_habits, language, university, age, guest_preferences, party_frequency, updated_at)
+			(user_id, budget_max, preferred_area, pets, smoking, age, sex, tenant_situation, degree, profession, socialization_level, nightlife_level, updated_at)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())`,
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
 		userID,
-		input.BudgetMin,
 		input.BudgetMax,
 		strings.TrimSpace(input.PreferredArea),
-		input.MoveInDate,
 		input.Pets,
 		input.Smoking,
-		nullIfEmpty(input.NoiseLevel),
-		nullIfEmpty(input.Cleanliness),
-		nullIfEmpty(input.WorkSchedule),
-		nullIfEmpty(input.SleepSchedule),
-		nullIfEmpty(input.SocialLifestyle),
-		nullIfEmpty(input.StudyHabits),
-		nullIfEmpty(input.Language),
-		nullIfEmpty(input.University),
 		input.Age,
-		nullIfEmpty(input.GuestPreferences),
-		nullIfEmpty(input.PartyFrequency),
+		nullIfEmpty(input.Sex),
+		nullIfEmpty(input.Situation),
+		nullIfEmpty(input.Degree),
+		nullIfEmpty(input.Profession),
+		nullIfEmpty(input.Socialization),
+		nullIfEmpty(input.Nightlife),
 	)
 	return err
+}
+
+// UpdateTenantPersonalProfile updates editable fields from users table.
+func (r *Repository) UpdateTenantPersonalProfile(ctx context.Context, userID string, input profile.TenantPersonalProfileInput) error {
+	result, err := r.db.Exec(
+		ctx,
+		`UPDATE public.users SET
+			full_name = $2,
+			updated_at = NOW()
+		WHERE id = $1`,
+		userID,
+		strings.TrimSpace(input.FullName),
+	)
+	if err != nil {
+		return fmt.Errorf("update tenant personal profile: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("user profile not found")
+	}
+	return nil
+}
+
+// UpdateTenantAvatarURL persists the current avatar URL for a user.
+func (r *Repository) UpdateTenantAvatarURL(ctx context.Context, userID, avatarURL string) error {
+	result, err := r.db.Exec(
+		ctx,
+		`UPDATE public.users SET
+			avatar_url = $2,
+			updated_at = NOW()
+		WHERE id = $1`,
+		userID,
+		nullIfEmpty(avatarURL),
+	)
+	if err != nil {
+		return fmt.Errorf("update tenant avatar url: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("user profile not found")
+	}
+	return nil
 }
 
 // UpsertUserProfile inserts/updates app user profile.
@@ -193,6 +239,62 @@ func (r *Repository) UpsertUserProfile(ctx context.Context, userID, email, fullN
 	)
 	if err != nil {
 		return fmt.Errorf("store user profile: %w", err)
+	}
+	return nil
+}
+
+// GetOwnerProfile returns the full profile for an owner user.
+func (r *Repository) GetOwnerProfile(ctx context.Context, userID string) (*profile.OwnerProfile, error) {
+	const query = `SELECT
+		u.id,
+		COALESCE(u.full_name, ''),
+		COALESCE(u.email, ''),
+		COALESCE(u.avatar_url, ''),
+		COALESCE(op.display_name, ''),
+		COALESCE(op.phone, '')
+	FROM public.users u
+	LEFT JOIN public.owner_profiles op ON op.user_id = u.id
+	WHERE u.id = $1`
+
+	var p profile.OwnerProfile
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&p.UserID,
+		&p.FullName,
+		&p.Email,
+		&p.AvatarURL,
+		&p.DisplayName,
+		&p.Phone,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get owner profile: %w", err)
+	}
+	return &p, nil
+}
+
+// UpdateOwnerProfile updates editable owner profile fields.
+func (r *Repository) UpdateOwnerProfile(ctx context.Context, userID string, input profile.OwnerProfileInput) error {
+	if _, err := r.db.Exec(ctx,
+		`UPDATE public.users SET full_name = $2, updated_at = NOW() WHERE id = $1`,
+		userID, strings.TrimSpace(input.FullName),
+	); err != nil {
+		return fmt.Errorf("update owner full name: %w", err)
+	}
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO public.owner_profiles (user_id, display_name, phone)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id) DO UPDATE SET
+			display_name = EXCLUDED.display_name,
+			phone = EXCLUDED.phone,
+			updated_at = NOW()`,
+		userID,
+		nullIfEmpty(input.DisplayName),
+		nullIfEmpty(input.Phone),
+	)
+	if err != nil {
+		return fmt.Errorf("update owner profile: %w", err)
 	}
 	return nil
 }

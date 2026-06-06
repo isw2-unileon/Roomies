@@ -62,8 +62,12 @@ export const mockLikes: PropertyLike[] = [
 ]
 
 export const mockOwnerProfile: OwnerProfile = {
-    name: 'Carlos Martinez',
-    role: 'Propietario',
+    userId: 'owner-1',
+    fullName: 'Carlos Martinez',
+    email: 'carlos@mail.com',
+    avatarUrl: '',
+    displayName: 'Propietario',
+    phone: '',
 }
 
 export const mockOwnerProperties: OwnerDashboardProperty[] = [
@@ -108,30 +112,66 @@ export const mockOwnerProperties: OwnerDashboardProperty[] = [
 export const mockOwnerRequests: OwnerDashboardRequest[] = [
     {
         id: 'or1',
-        tenant: 'Javier Ruiz, 22',
-        profile: 'Estudiante de Ingenieria',
-        property: 'Piso en el centro',
+        apartmentId: 'op1',
+        propertyTitle: 'Piso en el centro',
         address: 'Calle Ancha, 12',
-        compatibility: 87,
-        requestedAt: '12/05/2024',
+        type: 'individual',
+        status: 'PENDING_OWNER',
+        createdAt: '12/05/2024',
+        tenant: {
+            userId: 'tenant-1',
+            name: 'Javier Ruiz',
+            email: 'javier@mail.com',
+            avatarUrl: '',
+        },
     },
     {
         id: 'or2',
-        tenant: 'Laura Martinez, 21',
-        profile: 'Estudiante de Veterinaria',
-        property: 'Piso junto a la universidad',
+        apartmentId: 'op2',
+        propertyTitle: 'Piso junto a la universidad',
         address: 'Av. Facultad, 21',
-        compatibility: 90,
-        requestedAt: '11/05/2024',
+        type: 'group',
+        status: 'PENDING_OWNER',
+        createdAt: '11/05/2024',
+        group: {
+            groupId: 'group-1',
+            name: 'Roomies Centro',
+            creator: {
+                userId: 'tenant-2',
+                name: 'Laura Martinez',
+                email: 'laura@mail.com',
+                avatarUrl: '',
+            },
+            members: [
+                {
+                    userId: 'tenant-2',
+                    name: 'Laura Martinez',
+                    email: 'laura@mail.com',
+                    avatarUrl: '',
+                },
+                {
+                    userId: 'tenant-3',
+                    name: 'Pablo Serrano',
+                    email: 'pablo@mail.com',
+                    avatarUrl: '',
+                },
+            ],
+        },
     },
     {
         id: 'or3',
-        tenant: 'Pablo Serrano, 23',
-        profile: 'Estudiante de Derecho',
-        property: 'Piso en el centro',
+        apartmentId: 'op1',
+        propertyTitle: 'Piso en el centro',
         address: 'Calle Ancha, 12',
-        compatibility: 78,
-        requestedAt: '10/05/2024',
+        type: 'individual',
+        status: 'REJECTED_BY_OWNER',
+        createdAt: '10/05/2024',
+        tenant: {
+            userId: 'tenant-4',
+            name: 'Pablo Serrano',
+            email: 'pablo@mail.com',
+            avatarUrl: '',
+        },
     },
 ]
 
