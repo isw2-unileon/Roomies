@@ -1,0 +1,147 @@
+.panel {
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.toggleButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  color: var(--tenant-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.mapContainer {
+  margin-top: 1rem;
+}
+
+.map {
+  height: 280px;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--tenant-border);
+}
+
+.controls {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sliderLabel {
+  color: var(--tenant-text-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sliderValue {
+  color: var(--tenant-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  background: var(--tenant-border);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--tenant-primary);
+  border-radius: 50%;
+  border: 2px solid var(--tenant-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--tenant-primary);
+  border-radius: 50%;
+  border: 2px solid var(--tenant-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.searchButton {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: var(--tenant-primary);
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.searchButton:hover {
+  background: var(--tenant-primary-strong);
+}
+
+.searchButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.propertyMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 2px solid var(--tenant-primary);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.propertyMarker:hover {
+  transform: scale(1.15);
+}
+
+.propertyMarkerIcon {
+  width: 12px;
+  height: 12px;
+  color: var(--tenant-primary);
+}

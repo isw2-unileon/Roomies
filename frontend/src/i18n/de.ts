@@ -387,6 +387,11 @@ const de = {
         address: 'C/ Azabachería 4',
       },
     },
+    mapFilter: {
+      title: 'Kartensuche',
+      radius: 'Suchradius',
+      searchHere: 'Hier suchen',
+    },
     empty: {
       title: 'Keine Wohnungen gefunden',
       subtitle: 'Versuche, die Filter zu ändern oder in einer anderen Gegend zu suchen.',

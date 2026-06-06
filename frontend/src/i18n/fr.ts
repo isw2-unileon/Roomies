@@ -387,6 +387,11 @@ const fr = {
         address: 'C/ Azabachería 4',
       },
     },
+    mapFilter: {
+      title: 'Recherche par carte',
+      radius: 'Rayon de recherche',
+      searchHere: 'Chercher ici',
+    },
     empty: {
       title: 'Aucun logement trouvé',
       subtitle: 'Essayez de modifier les filtres ou de chercher dans une autre zone.',

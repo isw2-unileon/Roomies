@@ -19,14 +19,6 @@ interface TenantFiltersProps {
     onFilterChange?: (filters: FilterValues) => void
 }
 
-const areas = [
-    { value: 'all', labelKey: 'tenantDashboard.areas.all' },
-    { value: 'centro', labelKey: 'tenantDashboard.areas.centro' },
-    { value: 'vegazana', labelKey: 'tenantDashboard.areas.vegazana' },
-    { value: 'chantria', labelKey: 'tenantDashboard.areas.chantria' },
-    { value: 'eras', labelKey: 'tenantDashboard.areas.eras' },
-    { value: 'campus', labelKey: 'tenantDashboard.areas.campus' },
-]
 const availabilityOptions = [
     { value: 'available', labelKey: 'tenantDashboard.filters.availability.available' },
     { value: 'soon', labelKey: 'tenantDashboard.filters.availability.soon' },
@@ -41,7 +33,7 @@ const sortOptions = [
 ]
 
 export const DEFAULT_FILTER_VALUES: FilterValues = {
-    area: 'all',
+    area: '',
     priceMin: 0,
     priceMax: 1000,
     totalRoomsMin: 0,
@@ -82,17 +74,14 @@ export default function TenantFilters({ onFilterChange = () => {} }: TenantFilte
                 <div className={styles.fieldsGrid}>
                     <div className={styles.field}>
                         <label className={styles.label}>{t('tenantDashboard.filters.location')}</label>
-                        <select
+                        <input
+                            type="text"
                             value={filters.area}
                             onChange={(e) => updateFilter('area', e.target.value)}
+                            placeholder="Escribe una ubicación..."
+                            aria-label={t('tenantDashboard.filters.location')}
                             className={styles.select}
-                        >
-                            {areas.map((area) => (
-                                <option key={area.value} value={area.value}>
-                                    {t(area.labelKey)}
-                                </option>
-                            ))}
-                        </select>
+                        />
                     </div>
 
                     <div className={styles.field}>

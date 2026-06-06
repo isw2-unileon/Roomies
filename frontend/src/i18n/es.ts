@@ -387,6 +387,11 @@ const es = {
         address: 'C/ Azabachería 4',
       },
     },
+    mapFilter: {
+      title: 'Búsqueda por mapa',
+      radius: 'Radio de búsqueda',
+      searchHere: 'Buscar aquí',
+    },
     empty: {
       title: 'No se encontraron pisos',
       subtitle: 'Prueba a cambiar los filtros o busca en otra zona.',

@@ -39,6 +39,8 @@ export interface TenantProperty {
     status: PropertyAvailability
     images: string[]
     createdAt: string
+    latitude: number
+    longitude: number
     bathrooms: number
     surfaceM2: number
     floor: number
