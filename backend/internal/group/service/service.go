@@ -34,6 +34,7 @@ type repository interface {
 	AcceptInvitation(ctx context.Context, invitationID, userID string) error
 	RejectInvitation(ctx context.Context, invitationID, userID string) error
 	AddGroupMember(ctx context.Context, groupID, userID, role string) error
+	LeaveGroup(ctx context.Context, groupID, userID string) error
 	CanUserAcceptGroup(ctx context.Context, groupID, userID string) (bool, error)
 	AcceptGroupForUser(ctx context.Context, groupID, userID string) error
 	HasPendingJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
@@ -394,6 +395,31 @@ func (s *Service) DeleteGroup(ctx context.Context, groupID, userID, role string)
 	}
 
 	return s.repo.DeleteGroup(ctx, groupID)
+}
+
+// LeaveGroup removes an accepted non-owner member from a tenant group.
+func (s *Service) LeaveGroup(ctx context.Context, groupID, userID, role string) error {
+	if err := validateTenant(userID, role); err != nil {
+		return err
+	}
+	groupID = strings.TrimSpace(groupID)
+	userID = strings.TrimSpace(userID)
+	if groupID == "" {
+		return errors.New("group id is required")
+	}
+
+	groupDetail, err := s.repo.GetTenantGroupByID(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+	if groupDetail == nil {
+		return ErrGroupNotFound
+	}
+	if groupDetail.UserRelation != group.UserRelationMember {
+		return ErrForbidden
+	}
+
+	return s.repo.LeaveGroup(ctx, groupID, userID)
 }
 
 // CreateJoinRequest creates a join request from a viewer to a group.
