@@ -859,6 +859,27 @@ export async function listInterestedTenants(apartmentID: string): Promise<Intere
   return (data.tenants ?? []).map(interestedTenantFromDto)
 }
 
+interface ApartmentResidentDto {
+  user_id: string
+  name: string
+  avatar_url: string
+  joined_at: string
+}
+
+export async function listApartmentResidents(apartmentID: string): Promise<import('@/types/tenant').ApartmentResident[]> {
+  const response = await apiFetch(`/api/apartments/${encodeURIComponent(apartmentID)}/tenants`)
+  const data = (await response.json()) as { tenants?: ApartmentResidentDto[]; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudieron cargar los residentes.')
+  }
+  return (data.tenants ?? []).map((t) => ({
+    userId: t.user_id,
+    name: t.name,
+    avatarUrl: t.avatar_url,
+    joinedAt: t.joined_at,
+  }))
+}
+
 interface TenantProfileByUserIdResponseDto {
   budget_max?: number
   preferred_area?: string

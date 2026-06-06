@@ -156,6 +156,13 @@ export interface InterestedTenant {
     compatibility: number
 }
 
+export interface ApartmentResident {
+    userId: string
+    name: string
+    avatarUrl: string
+    joinedAt: string
+}
+
 export type TenantGroupApiStatus =
     | 'FORMING'
     | 'READY'
