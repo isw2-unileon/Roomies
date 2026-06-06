@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     sender_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     receiver_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    apartment_id UUID NOT NULL REFERENCES apartments (id) ON DELETE CASCADE,
+    apartment_id UUID REFERENCES apartments (id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     read_at TIMESTAMPTZ

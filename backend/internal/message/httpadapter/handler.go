@@ -2,6 +2,7 @@ package httpadapter
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -166,6 +167,7 @@ func (h *handler) handleServiceError(c *gin.Context, err error) {
 	case errors.Is(err, messageservice.ErrInvalidMessage):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid message payload"})
 	default:
+		slog.Error("message service error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not process message request"})
 	}
 }
