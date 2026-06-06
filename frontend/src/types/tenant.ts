@@ -244,6 +244,10 @@ export interface TenantGroupProfile {
     nightlifeLevel: string
 }
 
+export interface TenantRoommateProfile extends TenantGroupProfile {
+    compatibility: number
+}
+
 export interface TenantGroupAcceptedMember extends TenantGroupProfile {
     role: TenantGroupMemberRole
     status: TenantGroupMemberStatus

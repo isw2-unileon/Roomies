@@ -15,6 +15,7 @@ import type {
   TenantGroupJoinVote,
   TenantGroupListItem,
   TenantGroupProfile,
+  TenantRoommateProfile,
   TenantProperty,
   TenantPropertyDetail,
   TenantPropertyRules,
@@ -258,6 +259,10 @@ interface TenantGroupProfileDto {
   nightlife_level: string
 }
 
+interface TenantRoommateProfileDto extends TenantGroupProfileDto {
+  compatibility: number
+}
+
 interface TenantGroupMemberDto extends TenantGroupProfileDto {
   role: 'owner' | 'member'
   status: 'ACCEPTED' | 'LEFT'
@@ -290,6 +295,11 @@ interface TenantGroupResponseDto {
 
 interface TenantGroupCandidatesResponseDto {
   candidates?: TenantGroupCandidateDto[]
+  error?: string
+}
+
+interface TenantRoommateProfilesResponseDto {
+  profiles?: TenantRoommateProfileDto[]
   error?: string
 }
 
@@ -434,6 +444,13 @@ function interestedTenantFromDto(dto: InterestedTenantDto): InterestedTenant {
     age: dto.age,
     studies: dto.studies,
     avatarUrl: dto.avatar_url,
+    compatibility: dto.compatibility,
+  }
+}
+
+function tenantRoommateProfileFromDto(dto: TenantRoommateProfileDto): TenantRoommateProfile {
+  return {
+    ...tenantGroupProfileFromDto(dto),
     compatibility: dto.compatibility,
   }
 }
@@ -784,6 +801,15 @@ export async function listTenantApartments(filters?: TenantApartmentListFilters)
     throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los pisos disponibles.', data.error))
   }
   return (data.apartments ?? []).map(tenantApartmentFromDto)
+}
+
+export async function listTenantProfiles(): Promise<TenantRoommateProfile[]> {
+  const response = await apiFetch('/api/tenant/profiles')
+  const data = (await response.json()) as TenantRoommateProfilesResponseDto
+  if (!response.ok) {
+    throw new Error(resolveTenantErrorMessage(response, 'No se pudieron cargar los perfiles de inquilinos.', data.error))
+  }
+  return (data.profiles ?? []).map(tenantRoommateProfileFromDto)
 }
 
 export async function getTenantApartmentDetail(apartmentID: string): Promise<TenantPropertyDetail> {

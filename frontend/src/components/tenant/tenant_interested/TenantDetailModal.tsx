@@ -10,12 +10,12 @@ import type { InterestedTenant, TenantGroupDetailItem } from '@/types/tenant'
 
 interface TenantDetailModalProps {
   tenant: InterestedTenant
-  propertyId: string
-  myGroup: TenantGroupDetailItem | null
+  propertyId?: string
+  myGroup?: TenantGroupDetailItem | null
   onClose: () => void
 }
 
-export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose }: TenantDetailModalProps) {
+export default function TenantDetailModal({ tenant, propertyId = '', myGroup = null, onClose }: TenantDetailModalProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<TenantPublicProfile | null>(null)
@@ -38,9 +38,13 @@ export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose
   function handleInviteToGroup() {
     if (myGroup) {
       navigate(paths.tenantGroups)
-    } else {
+    } else if (propertyId) {
       navigate(paths.tenantCreateGroup, {
         state: { preselectedUserId: tenant.userId, preselectedApartmentId: propertyId },
+      })
+    } else {
+      navigate(paths.tenantCreateGroup, {
+        state: { preselectedUserId: tenant.userId },
       })
     }
   }
@@ -65,31 +69,43 @@ export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose
         <button className={styles.modalClose} onClick={onClose} aria-label="close">✕</button>
 
         <div className={styles.modalHeader}>
-          <img
-            src={avatarSrc}
-            alt={tenant.name}
-            className={styles.modalAvatar}
-            onError={() => setAvatarFailed(true)}
-          />
-          <div>
-            <p className={styles.modalName}>{tenant.name}</p>
-            <p className={styles.modalMeta}>
-              {t('tenantDashboard.detail.interested.meta', { age: tenant.age, studies: tenant.studies })}
-            </p>
-            <div className={styles.modalRing} style={{ '--compatibility': tenant.compatibility } as React.CSSProperties}>
-              <span className={styles.ringValue}>{tenant.compatibility}%</span>
+          <div className={styles.modalAvatarWrap}>
+            <img
+              src={avatarSrc}
+              alt={tenant.name}
+              className={styles.modalAvatar}
+              onError={() => setAvatarFailed(true)}
+            />
+          </div>
+          <div className={styles.modalHeaderBody}>
+            <div className={styles.modalTitleRow}>
+              <div>
+                <p className={styles.modalName}>{tenant.name}</p>
+                <p className={styles.modalMeta}>
+                  {t('tenantDashboard.detail.interested.meta', { age: tenant.age, studies: tenant.studies })}
+                </p>
+              </div>
+              <div className={styles.modalRing} style={{ '--compatibility': tenant.compatibility } as React.CSSProperties}>
+                <span className={styles.ringValue}>{tenant.compatibility}%</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {myGroup && (
+        {myGroup && propertyId ? (
           <p className={styles.modalGroupHint}>
             {t('tenantDashboard.detail.interested.myGroup.alreadyHasGroup')}
           </p>
-        )}
+        ) : null}
+
+        {!propertyId ? (
+          <p className={styles.modalGroupHint}>
+            {t('tenantDashboard.detail.interested.myGroup.generalInviteHint')}
+          </p>
+        ) : null}
 
         <button className={styles.inviteButton} onClick={handleInviteToGroup}>
-          {myGroup
+          {myGroup || !propertyId
             ? t('tenantDashboard.detail.interested.myGroup.inviteFromModal')
             : t('tenantDashboard.detail.interested.inviteToGroup')}
         </button>
@@ -111,18 +127,10 @@ export default function TenantDetailModal({ tenant, propertyId, myGroup, onClose
               <dt>{t('tenantDashboard.detail.interested.modal.situation')}</dt>
               <dd>{situationLabel(profile.situation)}</dd>
             </div>
-            {profile.situation === 'student' && profile.degree && (
-              <div className={styles.modalField}>
-                <dt>{t('tenantDashboard.detail.interested.modal.degree')}</dt>
-                <dd>{profile.degree}</dd>
-              </div>
-            )}
-            {profile.situation === 'worker' && profile.profession && (
-              <div className={styles.modalField}>
-                <dt>{t('tenantDashboard.detail.interested.modal.profession')}</dt>
-                <dd>{profile.profession}</dd>
-              </div>
-            )}
+            <div className={styles.modalField}>
+              <dt>{profile.situation === 'worker' ? t('tenantDashboard.detail.interested.modal.profession') : t('tenantDashboard.detail.interested.modal.degree')}</dt>
+              <dd>{profile.situation === 'worker' ? profile.profession || '-' : profile.degree || profile.profession || '-'}</dd>
+            </div>
             <div className={styles.modalField}>
               <dt>{t('tenantDashboard.detail.interested.modal.socialization')}</dt>
               <dd>{levelLabel(profile.socializationLevel)}</dd>
