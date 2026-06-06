@@ -73,6 +73,7 @@ export interface OwnerDashboardRequest {
     createdAt: string
     tenant?: OwnerApplicationApplicant
     group?: OwnerApplicationGroup
+    compatibilityScore?: number
 }
 
 export interface OwnerApplicationApplicant {
@@ -87,6 +88,7 @@ export interface OwnerApplicationGroupMember {
 	name: string
 	email: string
 	avatarUrl: string
+	compatibilityScore?: number
 }
 
 export interface OwnerApplicationGroup {

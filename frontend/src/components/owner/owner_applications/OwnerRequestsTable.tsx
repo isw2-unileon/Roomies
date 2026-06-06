@@ -1,4 +1,3 @@
-import { EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 import { useTranslation } from 'react-i18next'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardRequest } from '@/types/owner'
@@ -46,13 +45,14 @@ export default function OwnerRequestsTable({ requests, onViewDetail, onApprove, 
             <th>{t('ownerDashboard.requests.property')}</th>
             <th>Tipo</th>
             <th>{t('ownerDashboard.requests.status')}</th>
+            <th>Compatibilidad</th>
             <th>{t('ownerDashboard.requests.actions')}</th>
           </tr>
         </thead>
         <tbody>
           {requests.length === 0 ? (
             <tr>
-              <td colSpan={5}>No hay solicitudes recibidas para tus pisos.</td>
+              <td colSpan={6}>No hay solicitudes recibidas para tus pisos.</td>
             </tr>
           ) : requests.map((request) => {
             const isPending = request.status === 'PENDING_OWNER'
@@ -84,6 +84,13 @@ export default function OwnerRequestsTable({ requests, onViewDetail, onApprove, 
                   {t('ownerDashboard.requests.requested', { date: request.createdAt })}
                 </td>
                 <td>
+                  {request.compatibilityScore != null && request.compatibilityScore > 0 ? (
+                    <span className={styles.ownerCompatBadge}>{request.compatibilityScore}%</span>
+                  ) : (
+                    <span className={styles.ownerCompatEmpty}>—</span>
+                  )}
+                </td>
+                <td>
                   <div className={styles.ownerActionGroup}>
                     <button
                       type="button"
@@ -92,25 +99,26 @@ export default function OwnerRequestsTable({ requests, onViewDetail, onApprove, 
                     >
                       Ver detalle
                     </button>
-                    <button
-                      type="button"
-                      className={`${styles.ownerActionButton} ${styles.ownerActionAccept}`}
-                      onClick={() => onApprove?.(request.id)}
-                      disabled={!isPending || actingApplicationKey === approveKey}
-                    >
-                      {actingApplicationKey === approveKey ? 'Aprobando...' : t('ownerDashboard.requests.accept')}
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.ownerActionButton} ${styles.ownerActionReject}`}
-                      onClick={() => onReject?.(request.id)}
-                      disabled={!isPending || actingApplicationKey === rejectKey}
-                    >
-                      {actingApplicationKey === rejectKey ? 'Rechazando...' : t('ownerDashboard.requests.reject')}
-                    </button>
-                    <button type="button" className={styles.ownerIconButton} aria-label={t('ownerDashboard.requests.moreActions')}>
-                      <EllipsisVerticalIcon className={styles.ownerIconSmall} aria-hidden="true" />
-                    </button>
+                    {isPending && (
+                      <>
+                        <button
+                          type="button"
+                          className={`${styles.ownerActionButton} ${styles.ownerActionAccept}`}
+                          onClick={() => onApprove?.(request.id)}
+                          disabled={actingApplicationKey === approveKey}
+                        >
+                          {actingApplicationKey === approveKey ? 'Aprobando...' : t('ownerDashboard.requests.accept')}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.ownerActionButton} ${styles.ownerActionReject}`}
+                          onClick={() => onReject?.(request.id)}
+                          disabled={actingApplicationKey === rejectKey}
+                        >
+                          {actingApplicationKey === rejectKey ? 'Rechazando...' : t('ownerDashboard.requests.reject')}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

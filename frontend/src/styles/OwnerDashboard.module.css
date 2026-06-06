@@ -998,6 +998,147 @@
   border-radius: 0.65rem;
 }
 
+.ownerCompatBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #14804d;
+  background: #e8f7ef;
+  border: 1px solid #c6e9d6;
+  border-radius: 999px;
+}
+
+.ownerCompatEmpty {
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ownerFiltersBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.ownerFilterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ownerFilterLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--tenant-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ownerFilterSelect {
+  padding: 0.4rem 0.65rem;
+  color: var(--tenant-text);
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 0.55rem;
+  outline: none;
+  cursor: pointer;
+  min-width: 9rem;
+}
+
+.ownerFilterSelect:focus {
+  border-color: var(--tenant-primary, #149f60);
+  box-shadow: 0 0 0 2px rgba(20, 159, 96, 0.15);
+}
+
+.ownerFiltersCount {
+  padding: 0.5rem 1rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.ownerModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.ownerModalCard {
+  position: relative;
+  background: var(--tenant-surface, #fff);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 2rem 1.75rem 1.75rem;
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.ownerModalClose {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--tenant-text-soft);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+}
+
+.ownerModalBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  margin-bottom: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--tenant-primary, #149f60);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ownerModalBack:hover {
+  text-decoration: underline;
+}
+
+.ownerProfileViewButton {
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
+  background: none;
+  border: 1.5px solid var(--tenant-primary, #149f60);
+  border-radius: 0.55rem;
+  color: var(--tenant-primary, #149f60);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ownerProfileViewButton:hover {
+  background: var(--tenant-primary, #149f60);
+  color: #fff;
+}
+
 .ownerIconSmall {
   width: 1.1rem;
   height: 1.1rem;
