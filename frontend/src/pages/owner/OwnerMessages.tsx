@@ -60,20 +60,21 @@ export default function OwnerMessages() {
       setMessages([])
       return
     }
+    const thread = activeThread
     let ignoreResult = false
     async function loadThread() {
       setIsLoadingThread(true)
       setThreadError('')
       try {
         const [msgs] = await Promise.all([
-          listConversationMessages(activeThread.apartmentId, activeThread.otherUserId),
-          markConversationRead(activeThread.apartmentId, activeThread.otherUserId),
+          listConversationMessages(thread.apartmentId, thread.otherUserId),
+          markConversationRead(thread.apartmentId, thread.otherUserId),
         ])
         if (!ignoreResult) {
           setMessages(msgs)
           setConversations((prev) =>
             prev.map((c) =>
-              c.apartmentId === activeThread.apartmentId && c.otherUserId === activeThread.otherUserId
+              c.apartmentId === thread.apartmentId && c.otherUserId === thread.otherUserId
                 ? { ...c, unreadCount: 0 }
                 : c
             )
