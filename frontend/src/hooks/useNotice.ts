@@ -1,9 +1,7 @@
 import { useCallback, useState } from 'react'
 
-export type NoticeKind = 'idle' | 'error' | 'success'
-
 export interface Notice {
-  kind: NoticeKind
+  kind: 'idle' | 'error' | 'success'
   message: string
 }
 
