@@ -63,7 +63,7 @@ describe('AppRouter', () => {
   test('renders tenant explore from the tenant explore route', async () => {
     renderAppAt(paths.tenantExplore)
 
-    expect(await screen.findByRole('heading', { name: /explora pisos/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^explorar$/i })).toBeInTheDocument()
     expect(await screen.findByLabelText(/buscar viviendas/i)).toBeInTheDocument()
     const sidebar = await screen.findByRole('complementary', { name: /panel de inquilino/i })
     expect(within(sidebar).getByRole('navigation', { name: /navegación de inquilino/i })).toBeInTheDocument()
