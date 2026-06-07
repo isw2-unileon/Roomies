@@ -1,40 +1,22 @@
 # Getting Started
 
-How to use this template to start a new project.
+Guide to set up and run the Roomies project locally.
 
-## 1. Create Your Repository
+## Prerequisites
 
-Click **Use this template** on GitHub (or clone and re-init):
+- [Go](https://go.dev/dl/) `1.24+`
+- [Node.js](https://nodejs.org/) `22+`
+- [Git](https://git-scm.com/)
+- A [Supabase](https://supabase.com/) project (free tier works)
 
-```bash
-git clone https://github.com/isw2-unileon/proyect-scaffolding.git my-project
-cd my-project
-rm -rf .git
-git init
-```
-
-## 2. Rename the Go Module
-
-Update the module path in `go.mod` to match your new repository:
+## 1. Clone the Repository
 
 ```bash
-# Replace with your actual module path
-go mod edit -module github.com/your-org/my-project
+git clone https://github.com/isw2-unileon/Roomies.git
+cd Roomies
 ```
 
-Then update all import paths in Go files:
-
-```bash
-grep -rl "isw2-unileon/proyect-scaffolding" backend/ | xargs sed -i '' 's|isw2-unileon/proyect-scaffolding|your-org/my-project|g'
-```
-
-Run `go mod tidy` to verify.
-
-## 3. Update the Auto-Assign Workflow
-
-Edit `.github/workflows/auto-assign.yml` and replace `jferrl` with your GitHub username.
-
-## 4. Install Dependencies
+## 2. Install Dependencies
 
 ```bash
 make install
@@ -42,54 +24,85 @@ make install
 
 This runs `go mod download`, `npm ci` in `frontend/`, and `npm ci` in `e2e/`.
 
+## 3. Configure Environment Variables
+
+Create `backend/.env` in the project root:
+
+```env
+PORT=8080
+GIN_MODE=debug
+CORS_ALLOW_ORIGIN=http://localhost:5173
+DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
+SUPABASE_SECRET_KEY=<your-service-role-key>
+FRONTEND_URL=http://localhost:5173
+```
+
+### Getting Supabase Credentials
+
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard) → Project Settings → API
+2. Copy **Project URL** → `SUPABASE_URL`
+3. Copy **anon public** key → `SUPABASE_PUBLISHABLE_KEY`
+4. Copy **service_role** key → `SUPABASE_SECRET_KEY`
+5. In **Database** settings, find your connection string → `DATABASE_URL`
+
+> `SUPABASE_URL` and `DATABASE_URL` must target the same project. The backend starts only if the DB connection succeeds.
+
+## 4. Supabase Email Redirect Setup
+
+For registration confirmation and password recovery to work correctly:
+
+1. **Authentication → URL Configuration**
+   - `Site URL`: `http://localhost:5173`
+   - Redirect URLs:
+     - `http://localhost:5173/`
+     - `http://localhost:5173/auth/callback`
+     - `http://localhost:5173/reset-password`
+
+2. **Email templates**
+   - Use `{{ .ConfirmationURL }}` in both templates:
+     - Confirm signup
+     - Reset password
+
+Do not hardcode links without the Supabase token payload.
+
 ## 5. Run Locally
 
 Open two terminals:
 
 ```bash
-# Terminal 1 - Backend on :8080
+# Terminal 1 — Backend on :8080
 make run-backend
 
-# Terminal 2 - Frontend on :5173
+# Terminal 2 — Frontend on :5173
 make run-frontend
 ```
 
 Open http://localhost:5173 to see the app. The Vite dev server proxies `/api` and `/health` requests to the Go backend.
 
-## 6. Build Your Application
+### Without `make` (common on Windows)
 
-### Backend
+```bash
+# from repo root
+go mod download
+cd frontend && npm ci
+cd ../e2e && npm ci
 
-Add your Go code following the existing layout:
+# start backend
+cd ..
+go run ./backend/cmd/server
 
-```text
-backend/
-├── cmd/server/main.go          # Entry point - add routes here
-└── internal/
-    ├── config/config.go        # Add env vars here
-    ├── domain/                 # Create: domain models
-    ├── service/                # Create: business logic
-    ├── repository/             # Create: data access
-    └── api/                    # Create: HTTP handlers
+# in another terminal, start frontend
+cd frontend
+npm run dev
 ```
 
-The sample `/api/hello` endpoint in `main.go` shows where to start. As the app grows, extract handlers into `internal/api/` and business logic into `internal/service/`.
+## 6. Verify It Works
 
-### Frontend
-
-The frontend is a standard Vite + React + TypeScript + Tailwind project:
-
-```text
-frontend/src/
-├── App.tsx                     # Root component - start here
-├── main.tsx                    # Entry point
-├── index.css                   # Tailwind imports
-├── components/                 # Create: React components
-├── services/                   # Create: API client functions
-└── types/                      # Create: TypeScript types
-```
-
-Path aliases are configured -- use `@/components/Foo` instead of relative imports.
+- Frontend: http://localhost:5173
+- Backend health: http://localhost:8080/health
+- API test: http://localhost:8080/api/hello
 
 ## 7. Available Make Commands
 
@@ -104,29 +117,22 @@ make lint            # Run all linters
 make e2e             # Run Playwright E2E tests
 ```
 
-## 8. CI/CD
+## 8. Project Structure Overview
 
-The template includes four GitHub Actions workflows:
-
-| Workflow | Trigger | What it does |
-|----------|---------|--------------|
-| `backend.yml` | Push/PR changing `backend/` or `go.mod` | `go vet` + `go test -race` + `go build` |
-| `frontend.yml` | Push/PR changing `frontend/` | ESLint + TypeScript check + Vite build |
-| `e2e.yml` | Manual dispatch | Playwright tests across browsers |
-| `codeql.yml` | Weekly + push/PR | Security analysis for Go and JS/TS |
-
-## 9. Record Decisions
-
-Use Architecture Decision Records to document important choices:
-
-```bash
-cp docs/adr/000-template.md docs/adr/002-your-decision.md
+```text
+.
+├── backend/       # Go API (Gin framework)
+├── frontend/      # React 19 + TypeScript + Vite
+├── e2e/           # Playwright E2E tests
+├── supabase/      # Database schema + config
+├── docs/          # Documentation + ADRs
+└── .github/       # CI/CD workflows
 ```
-
-See [docs/adr/](adr/) for the template and existing records.
 
 ## Related Docs
 
-- [Why a monorepo](monorepo.md)
-- [Go best practices](golang.md)
-- [ADR template](adr/000-template.md)
+- [Architecture overview](architecture.md)
+- [API reference](api-reference.md)
+- [Frontend guide](frontend.md)
+- [Deployment guide](deployment.md)
+- [Testing guide](testing.md)

@@ -27,7 +27,9 @@ Each directory is self-contained. The root `Makefile` provides unified commands 
 
 ## Further Reading
 
+- [Architecture overview](architecture.md)
+- [Design decisions](design-decisions.md)
+- [ADR-001: Monorepo structure](adr/001-monorepo-structure.md)
 - [Monorepo vs Polyrepo](https://monorepo.tools/) -- comparison of tools and strategies
 - [Google's Monorepo](https://research.google/pubs/pub45424/) -- why Google uses a single repository
 - [Monorepos: Please do!](https://medium.com/@adamhjk/monorepo-please-do-3657e08a4b70) -- practical argument for monorepos
-- [ADR-001](adr/001-monorepo-structure.md) -- our architectural decision record

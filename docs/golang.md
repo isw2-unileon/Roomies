@@ -1,50 +1,120 @@
-# Go Best Practices
+# Go Backend Conventions
 
-Guidelines and conventions we follow in the backend codebase.
+Guidelines and conventions used in the Roomies Go backend.
 
-## Project Layout
+## Domain Package Pattern
 
-- `cmd/` -- Entry points (one `main.go` per binary)
-- `internal/` -- Private application code, not importable by other modules
-- `pkg/` -- (if needed) Library code safe for external use
+Every domain (`apartment`, `application`, `auth`, `group`, `message`, `matching`, `profile`, `geocode`) follows the same layered structure:
 
-Reference: [Standard Go Project Layout](https://github.com/golang-standards/project-layout)
+```text
+internal/<domain>/
+├── <domain>.go            # Domain models, interfaces (repository, service)
+├── service/
+│   └── <domain>.go        # Business logic
+├── postgres/
+│   └── <domain>.go        # PostgreSQL repository implementation
+└── httpadapter/
+    └── <domain>.go        # HTTP handlers (Gin)
+```
 
-## Style Guides
+### Example: `internal/apartment/`
 
-- [Effective Go](https://go.dev/doc/effective_go) -- Official guide from the Go team
-- [Google Go Style Guide](https://google.github.io/styleguide/go/) -- Google's internal conventions, covering style decisions, best practices, and readability
-- [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md) -- Practical patterns from Uber's large-scale Go codebase
+```
+internal/apartment/
+├── apartment.go           # Apartment struct, Repository interface, Service interface
+├── service/
+│   └── apartment.go       # ServiceImpl — business logic
+├── postgres/
+│   └── apartment.go       # RepositoryImpl — SQL queries via pgx
+└── httpadapter/
+    └── apartment.go       # HTTP handlers — bindings, responses
+```
 
-## Key Principles
+## Dependency Injection
 
-- **Keep it simple** -- Prefer clear, boring code over clever abstractions.
-- **Handle errors explicitly** -- Always check and return errors. Wrap with context using `fmt.Errorf("doing X: %w", err)`.
-- **Use interfaces at the consumer** -- Define small interfaces where they are used, not where they are implemented.
-- **Avoid globals** -- Pass dependencies explicitly through constructors.
-- **Use `context.Context`** -- Thread it through for cancellation, timeouts, and request-scoped values.
-- **Structured logging** -- Use `log/slog` for key-value structured logs.
+All services are wired in `cmd/server/main.go`. Dependencies are passed explicitly through constructors:
+
+```go
+// Typical constructor
+func NewService(repo Repository, matchingSvc matching.Service) Service {
+    return &serviceImpl{repo: repo, matchingSvc: matchingSvc}
+}
+```
+
+## Interfaces at the Consumer
+
+Interfaces are defined in the domain package where they are consumed, not where they are implemented:
+
+```go
+// apartment/apartment.go
+type Repository interface {
+    FindByID(ctx context.Context, id uuid.UUID) (*Apartment, error)
+    Search(ctx context.Context, filter SearchFilter) ([]Apartment, error)
+}
+
+type Service interface {
+    GetByID(ctx context.Context, id uuid.UUID) (*ApartmentDetail, error)
+    Search(ctx context.Context, filter SearchFilter) ([]Apartment, error)
+}
+```
+
+The `postgres/` and `service/` packages implement these interfaces implicitly.
+
+## Error Handling
+
+- Wrap errors with context using `%w`:
+  ```go
+  return nil, fmt.Errorf("finding apartment %s: %w", id, err)
+  ```
+- Define domain-specific sentinel errors in the domain package:
+  ```go
+  var ErrNotFound = errors.New("apartment not found")
+  ```
+- HTTP adapters map domain errors to HTTP status codes:
+  ```go
+  if errors.Is(err, ErrNotFound) {
+      c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+      return
+  }
+  ```
+
+## Context Propagation
+
+- `context.Context` is threaded through all layers: handler → service → repository
+- Used for request cancellation, timeouts, and scoped values (e.g., authenticated user ID)
+
+```go
+// Getting the authenticated user ID from context
+userID := c.GetString("user_id")
+```
+
+## Models and Validation
+
+- Domain models are plain structs with `json` and optionally `db` tags
+- No ORM — raw SQL via `pgx`
+- Input validation happens in the HTTP adapter layer before calling the service
 
 ## Testing
 
-- Use table-driven tests with `t.Run` for subtests.
-- Run tests with `-race` to detect data races.
-- Keep tests in the same package for white-box testing, or `_test` package for black-box.
+- Table-driven tests with `t.Run` for subtests
+- Mock repositories via the `Repository` interface
+- Run with `-race` to detect data races:
+  ```bash
+  go test -v -race ./...
+  ```
 
-Reference: [Go Testing](https://go.dev/doc/tutorial/add-a-test)
+## Key Dependencies
 
-## Concurrency
-
-- Prefer channels for communication, mutexes for state protection.
-- Never start a goroutine without knowing how it will stop.
-- Use `errgroup` for managing groups of goroutines.
-
-Reference: [Go Concurrency Patterns](https://go.dev/blog/pipelines)
+| Library       | Purpose                    |
+|---------------|----------------------------|
+| `gin`         | HTTP framework             |
+| `pgx`         | PostgreSQL driver/pool     |
+| `google/uuid` | UUID generation            |
+| `slog`        | Structured logging (std)   |
+| `golang-jwt`  | JWT token parsing          |
 
 ## Further Reading
 
-- [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments) -- Common review feedback from the Go team
-- [Go Proverbs](https://go-proverbs.github.io/) -- Rob Pike's design philosophy
-- [Go Blog](https://go.dev/blog/) -- Official articles on language features and patterns
-- [Practical Go (Dave Cheney)](https://dave.cheney.net/practical-go/presentations/qcon-china.html) -- Real-world advice on writing Go
-- [100 Go Mistakes](https://100go.co/) -- Common pitfalls and how to avoid them
+- [Effective Go](https://go.dev/doc/effective_go)
+- [Google Go Style Guide](https://google.github.io/styleguide/go/)
+- [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
