@@ -419,14 +419,14 @@ describe('tenantService', () => {
 	  await listTenantGroups({
 		scope: 'my',
 		search: 'centro',
-		status: 'request_sent',
+		status: 'pending',
 		hasApartment: 'false',
-		members: 3,
+		members: '5+',
 		sort: 'members',
 	  })
 
 	  expect(fetch).toHaveBeenCalledWith(
-		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members&scope=my',
+		'/api/tenant/groups?search=centro&status=pending&has_apartment=false&members=5%2B&sort=members&scope=my',
 		{ credentials: 'include' },
 	  )
 	})

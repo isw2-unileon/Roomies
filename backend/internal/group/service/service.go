@@ -112,6 +112,7 @@ func (s *Service) ListTenantGroups(ctx context.Context, userID, role string, fil
 	filters.Search = strings.TrimSpace(filters.Search)
 	filters.Status = normalizeTenantGroupStatusFilter(filters.Status)
 	filters.HasApartment = strings.ToLower(strings.TrimSpace(filters.HasApartment))
+	filters.Members = normalizeTenantGroupMembersFilter(filters.Members)
 	filters.SortBy = strings.ToLower(strings.TrimSpace(filters.SortBy))
 	filters.Scope = strings.ToLower(strings.TrimSpace(filters.Scope))
 
@@ -697,16 +698,27 @@ func validateTenant(userID, role string) error {
 
 func normalizeTenantGroupStatusFilter(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "request_sent":
-		return "REQUEST_SENT"
+	case "full":
+		return "FULL"
+	case "pending", "request_sent":
+		return "PENDING"
 	case "accepted":
 		return "ACCEPTED"
 	case "rejected":
 		return "REJECTED"
-	case "closed":
-		return "CLOSED"
 	case "all", "":
 		return ""
+	default:
+		return ""
+	}
+}
+
+func normalizeTenantGroupMembersFilter(members string) string {
+	switch strings.ToLower(strings.TrimSpace(members)) {
+	case "2", "3", "4":
+		return strings.TrimSpace(members)
+	case "5+", "5_plus", "5-or-more":
+		return "5+"
 	default:
 		return ""
 	}

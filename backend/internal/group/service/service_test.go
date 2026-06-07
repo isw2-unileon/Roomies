@@ -236,6 +236,45 @@ func TestListTenantGroupsKeepsDiscoverableScope(t *testing.T) {
 	}
 }
 
+func TestNormalizeTenantGroupStatusFilterUsesVisibleValues(t *testing.T) {
+	tests := map[string]string{
+		"all":          "",
+		"":             "",
+		"full":         "FULL",
+		"accepted":     "ACCEPTED",
+		"pending":      "PENDING",
+		"request_sent": "PENDING",
+		"rejected":     "REJECTED",
+		"closed":       "",
+	}
+
+	for input, want := range tests {
+		if got := normalizeTenantGroupStatusFilter(input); got != want {
+			t.Fatalf("normalizeTenantGroupStatusFilter(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestNormalizeTenantGroupMembersFilter(t *testing.T) {
+	tests := map[string]string{
+		"all":       "",
+		"":          "",
+		"2":         "2",
+		"3":         "3",
+		"4":         "4",
+		"5+":        "5+",
+		"5_plus":    "5+",
+		"5-or-more": "5+",
+		"1":         "",
+	}
+
+	for input, want := range tests {
+		if got := normalizeTenantGroupMembersFilter(input); got != want {
+			t.Fatalf("normalizeTenantGroupMembersFilter(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 func TestCreateGroupAutoAcceptsOwner(t *testing.T) {
 	repo := &fakeGroupRepository{createdGroupID: "group-42"}
 	svc := NewService(repo, nil)

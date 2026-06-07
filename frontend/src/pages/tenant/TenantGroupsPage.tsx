@@ -9,7 +9,7 @@ import {
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantGroupCard from '@/components/tenant/tenant_groups/TenantGroupCard'
 import TenantGroupFilters from '@/components/tenant/tenant_groups/TenantGroupFilters'
-import type { TenantGroupDisplayStatus } from '@/components/tenant/tenant_groups/groupDisplayStatus'
+import type { TenantGroupDisplayStatus, TenantGroupMemberCountFilter } from '@/components/tenant/tenant_groups/groupDisplayStatus'
 import {
     acceptTenantGroupInvitation,
     listTenantGroups,
@@ -25,15 +25,11 @@ const SORT_OPTIONS: Array<{ value: string; labelKey: string }> = [
     { value: 'name', labelKey: 'tenantGroups.page.sortOptions.name' },
 ]
 
-function memberFilterToNumber(value: string) {
+function memberFilterToQuery(value: TenantGroupMemberCountFilter) {
     if (value === 'all') {
         return undefined
     }
-    if (value === '4+') {
-        return 4
-    }
-    const parsedValue = Number(value)
-    return Number.isNaN(parsedValue) ? undefined : parsedValue
+    return value
 }
 
 export default function TenantGroupsPage() {
@@ -43,7 +39,7 @@ export default function TenantGroupsPage() {
     const [search, setSearch] = useState('')
     const [status, setStatus] = useState<TenantGroupDisplayStatus>('all')
     const [hasApartment, setHasApartment] = useState('all')
-    const [selectedMembers, setSelectedMembers] = useState('all')
+    const [selectedMembers, setSelectedMembers] = useState<TenantGroupMemberCountFilter>('all')
     const [sort, setSort] = useState('recent')
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -59,7 +55,7 @@ export default function TenantGroupsPage() {
                 search,
                 status,
                 hasApartment,
-                members: memberFilterToNumber(selectedMembers),
+                members: memberFilterToQuery(selectedMembers),
                 sort,
             })
             setGroups(loadedGroups)

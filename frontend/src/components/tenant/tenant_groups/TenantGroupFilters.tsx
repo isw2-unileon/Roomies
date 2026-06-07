@@ -2,19 +2,16 @@ import { CalendarDaysIcon, ShieldCheckIcon, UserGroupIcon } from '@heroicons/rea
 import { useTranslation } from 'react-i18next'
 
 import styles from '@/styles/TenantGroups.module.css'
-import { tenantGroupStatusFilterOptions, type TenantGroupDisplayStatus } from './groupDisplayStatus'
-
-const memberOptions: Array<{ value: string; labelKey: string }> = [
-    { value: 'all', labelKey: 'tenantGroups.filters.all' },
-    { value: '1', labelKey: 'tenantGroups.filters.members' },
-    { value: '2', labelKey: 'tenantGroups.filters.twoOrMore' },
-    { value: '3', labelKey: 'tenantGroups.filters.threeOrMore' },
-    { value: '4+', labelKey: 'tenantGroups.filters.fourOrMore' },
-]
+import {
+    GROUP_MEMBER_COUNT_FILTER_OPTIONS,
+    GROUP_STATUS_FILTER_OPTIONS,
+    type TenantGroupDisplayStatus,
+    type TenantGroupMemberCountFilter,
+} from './groupDisplayStatus'
 
 interface TenantGroupFiltersProps {
-    selectedMembers: string
-    onSelectedMembersChange: (value: string) => void
+    selectedMembers: TenantGroupMemberCountFilter
+    onSelectedMembersChange: (value: TenantGroupMemberCountFilter) => void
     status: TenantGroupDisplayStatus
     onStatusChange: (value: TenantGroupDisplayStatus) => void
     hasApartment: string
@@ -51,7 +48,7 @@ export default function TenantGroupFilters({
                         value={status}
                         onChange={(event) => onStatusChange(event.target.value as TenantGroupDisplayStatus)}
                     >
-                        {tenantGroupStatusFilterOptions.map((option) => (
+                        {GROUP_STATUS_FILTER_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>{t(option.labelKey)}</option>
                         ))}
                     </select>
@@ -77,9 +74,9 @@ export default function TenantGroupFilters({
                         id="members-filter"
                         className={styles.filterSelect}
                         value={selectedMembers}
-                        onChange={(event) => onSelectedMembersChange(event.target.value)}
+                        onChange={(event) => onSelectedMembersChange(event.target.value as TenantGroupMemberCountFilter)}
                     >
-                        {memberOptions.map((option) => (
+                        {GROUP_MEMBER_COUNT_FILTER_OPTIONS.map((option) => (
                             <option
                                 key={option.value}
                                 value={option.value}
