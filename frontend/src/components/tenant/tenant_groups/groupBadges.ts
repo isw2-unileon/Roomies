@@ -2,18 +2,12 @@ import type { TenantGroupListItem } from '@/types/tenant'
 
 export type TenantGroupBadgeTone = 'positive' | 'info' | 'warning' | 'negative' | 'neutral'
 
-export interface TenantGroupBadge {
-    key: string
-    labelKey: string
-    tone: TenantGroupBadgeTone
-}
-
 function isGroupFull(group: TenantGroupListItem) {
     const totalSpots = group.apartment?.totalSpots ?? 0
     return totalSpots > 0 && group.acceptedMembersCount >= totalSpots
 }
 
-export function getGroupBadges(group: TenantGroupListItem): TenantGroupBadge[] {
+export function getGroupBadges(group: TenantGroupListItem): { key: string; labelKey: string; tone: TenantGroupBadgeTone }[] {
     if (isGroupFull(group)) {
         return [{ key: 'full', labelKey: 'tenantGroups.card.statusFull', tone: 'neutral' }]
     }

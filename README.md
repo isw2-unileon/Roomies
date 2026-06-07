@@ -453,10 +453,5 @@ make build
 3. Run lint + tests before pushing
 4. Open a Pull Request
 
-Project coding rules are documented in [`AGENTS.md`](./AGENTS.md).
 
 ---
-
-## License
-
-MIT - see [`LICENSE`](LICENSE).
