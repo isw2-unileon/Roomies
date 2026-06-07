@@ -192,26 +192,32 @@ type Candidate struct {
 
 // JoinRequest represents a request from a viewer to join a group.
 type JoinRequest struct {
-	ID              string
-	GroupID         string
-	RequesterUserID string
-	Source          string
-	Status          string
-	CreatedAt       string
-	UpdatedAt       string
-	Requester       Candidate
-	Votes           []JoinRequestVote
+	ID                     string
+	GroupID                string
+	RequesterUserID        string
+	Source                 string
+	Status                 string
+	CreatedAt              string
+	UpdatedAt              string
+	Requester              Candidate
+	Votes                  []JoinRequestVote
+	ApprovalCount          int
+	RequiredApprovals      int
+	HasCurrentUserApproved bool
+	HasCurrentUserRejected bool
 }
 
 // UserJoinRequest contains the latest join request created by the current user for a group.
 type UserJoinRequest struct {
-	ID              string
-	GroupID         string
-	RequesterUserID string
-	Source          string
-	Status          string
-	CreatedAt       string
-	UpdatedAt       string
+	ID                string
+	GroupID           string
+	RequesterUserID   string
+	Source            string
+	Status            string
+	CreatedAt         string
+	UpdatedAt         string
+	ApprovalCount     int
+	RequiredApprovals int
 }
 
 // JoinRequestVote represents a member's vote on a join request.

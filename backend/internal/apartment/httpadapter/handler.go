@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -153,6 +154,7 @@ func (h *handler) listTenantExploreApartments(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "apartments are only available for tenant users"})
 			return
 		}
+		slog.Error("could not load tenant explore apartments", "error", err, "tenant_id", tenantID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load apartments"})
 		return
 	}

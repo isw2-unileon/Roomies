@@ -60,4 +60,7 @@ func TestAvailableApartmentsQueryKeepsFullOpenApartmentsAndExcludesClosed(t *tes
 	if !strings.Contains(query.query, "a.status <> 'CLOSED'") {
 		t.Fatalf("query does not exclude closed apartments: %s", query.query)
 	}
+	if strings.Contains(query.query, "'OCCUPIED'") {
+		t.Fatalf("query references unsupported OCCUPIED status: %s", query.query)
+	}
 }

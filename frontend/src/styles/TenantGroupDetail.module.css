@@ -748,6 +748,20 @@
   background: var(--tenant-primary-strong);
 }
 
+.approvedByYouBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0 0.85rem;
+  color: #067647;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  border-radius: 0.7rem;
+}
+
 .detailSidebar {
   display: grid;
   gap: 1rem;

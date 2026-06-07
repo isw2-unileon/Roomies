@@ -212,6 +212,8 @@ export interface TenantGroupCurrentJoinRequest {
 	status: TenantGroupJoinRequestStatus
 	createdAt: string
 	updatedAt: string
+	approvalCount: number
+	requiredApprovals: number
 }
 
 export interface TenantGroupListItem {
@@ -295,6 +297,10 @@ export interface TenantGroupJoinRequest {
     updatedAt: string
     requester: TenantGroupCandidate
     votes: TenantGroupJoinVote[]
+    approvalCount: number
+    requiredApprovals: number
+    hasCurrentUserApproved: boolean
+    hasCurrentUserRejected: boolean
 }
 
 export interface TenantGroupDetailItem extends TenantGroupListItem {
