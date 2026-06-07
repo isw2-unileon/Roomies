@@ -55,6 +55,7 @@ export default function TenantGroupsPage() {
         setError('')
         try {
             const loadedGroups = await listTenantGroups({
+                scope: 'my',
                 search,
                 status,
                 hasApartment,

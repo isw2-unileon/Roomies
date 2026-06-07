@@ -82,6 +82,7 @@ type ListGroupsFilters struct {
 	HasApartment string
 	Members      int
 	SortBy       string
+	Scope        string
 }
 
 // CandidateFilters contains the filters used to search tenant candidates.

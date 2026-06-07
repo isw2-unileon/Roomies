@@ -1585,6 +1585,7 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 
 	args := []interface{}{userID}
 	whereClauses := make([]string, 0)
+	whereClauses = append(whereClauses, buildTenantGroupsScopeClause(filters.Scope))
 
 	if filters.Search != "" {
 		args = append(args, "%"+filters.Search+"%")
@@ -1666,6 +1667,67 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 	query += buildTenantGroupsOrderBy(filters.SortBy)
 
 	return query, args
+}
+
+func buildTenantGroupsScopeClause(scope string) string {
+	if strings.EqualFold(strings.TrimSpace(scope), "discoverable") {
+		return `g.status <> 'CLOSED'
+			AND (
+				a.id IS NULL
+				OR COALESCE(a.total_spots, 0) <= 0
+				OR COALESCE((
+					SELECT COUNT(*)
+					FROM public.group_members gm
+					WHERE gm.group_id = g.id
+						AND gm.status = 'ACCEPTED'
+				), 0) < COALESCE(a.total_spots, 0)
+			)
+			AND g.created_by <> $1
+			AND NOT EXISTS (
+				SELECT 1
+				FROM public.group_members gm
+				WHERE gm.group_id = g.id
+					AND gm.user_id = $1
+					AND gm.status = 'ACCEPTED'
+			)
+			AND NOT EXISTS (
+				SELECT 1
+				FROM public.group_invitations gi
+				WHERE gi.group_id = g.id
+					AND gi.invited_user_id = $1
+					AND gi.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
+			)
+			AND NOT EXISTS (
+				SELECT 1
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $1
+					AND gjr.status <> 'CANCELLED'
+			)`
+	}
+
+	return `(g.created_by = $1
+		OR EXISTS (
+			SELECT 1
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.user_id = $1
+				AND gm.status = 'ACCEPTED'
+		)
+		OR EXISTS (
+			SELECT 1
+			FROM public.group_invitations gi
+			WHERE gi.group_id = g.id
+				AND gi.invited_user_id = $1
+				AND gi.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
+		)
+		OR EXISTS (
+			SELECT 1
+			FROM public.group_join_requests gjr
+			WHERE gjr.group_id = g.id
+				AND gjr.requester_user_id = $1
+				AND gjr.status <> 'CANCELLED'
+		))`
 }
 
 func buildTenantGroupsOrderBy(sortBy string) string {

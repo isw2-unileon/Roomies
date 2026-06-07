@@ -416,6 +416,7 @@ describe('tenantService', () => {
 	  } as Response)
 
 	  await listTenantGroups({
+		scope: 'my',
 		search: 'centro',
 		status: 'request_sent',
 		hasApartment: 'false',
@@ -424,7 +425,21 @@ describe('tenantService', () => {
 	  })
 
 	  expect(fetch).toHaveBeenCalledWith(
-		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members',
+		'/api/tenant/groups?search=centro&status=request_sent&has_apartment=false&members=3&sort=members&scope=my',
+		{ credentials: 'include' },
+	  )
+	})
+
+	test('sends discoverable tenant group scope', async () => {
+	  vi.spyOn(global, 'fetch').mockResolvedValue({
+		ok: true,
+		json: async () => ({ groups: [] }),
+	  } as Response)
+
+	  await listTenantGroups({ scope: 'discoverable', sort: 'recent' })
+
+	  expect(fetch).toHaveBeenCalledWith(
+		'/api/tenant/groups?sort=recent&scope=discoverable',
 		{ credentials: 'include' },
 	  )
 	})

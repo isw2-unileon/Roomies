@@ -38,6 +38,7 @@ interface TenantGroupCardProps {
     isRespondingInvitation?: boolean
     onMutated?: () => void
     onNotice?: (message: string) => void
+    mode?: 'management' | 'discovery'
 }
 
 const FULL_GROUP_ERROR = 'group exceeds apartment available spots'
@@ -80,6 +81,7 @@ export default function TenantGroupCard({
     isRespondingInvitation = false,
     onMutated,
     onNotice,
+    mode = 'management',
 }: TenantGroupCardProps) {
     const { t } = useTranslation()
     const cardRef = useRef<HTMLElement | null>(null)
@@ -98,6 +100,7 @@ export default function TenantGroupCard({
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
 
     const hasPendingInvitation = group.userRelation === 'pending_invitation'
+    const isDiscoveryMode = mode === 'discovery'
     const badges = getGroupBadges(group)
 
     const hasBudget = group.averageBudgetMax > 0
@@ -366,7 +369,7 @@ export default function TenantGroupCard({
                         />
                     </button>
 
-                    {hasPendingInvitation ? (
+                    {hasPendingInvitation && !isDiscoveryMode ? (
                         <div className={styles.invitationActions}>
                             <button
                                 type="button"

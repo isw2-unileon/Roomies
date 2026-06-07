@@ -113,9 +113,13 @@ func (s *Service) ListTenantGroups(ctx context.Context, userID, role string, fil
 	filters.Status = normalizeTenantGroupStatusFilter(filters.Status)
 	filters.HasApartment = strings.ToLower(strings.TrimSpace(filters.HasApartment))
 	filters.SortBy = strings.ToLower(strings.TrimSpace(filters.SortBy))
+	filters.Scope = strings.ToLower(strings.TrimSpace(filters.Scope))
 
 	if filters.SortBy == "" {
 		filters.SortBy = "recent"
+	}
+	if filters.Scope != "discoverable" {
+		filters.Scope = "my"
 	}
 
 	groups, err := s.repo.ListTenantGroups(ctx, strings.TrimSpace(userID), filters)
