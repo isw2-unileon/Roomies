@@ -133,7 +133,7 @@ const es = {
       closeMenu: 'Cerrar menú',
     },
     header: {
-      title: 'Explora pisos',
+      title: 'Explorar',
       subtitle: 'Encuentra el piso y las personas adecuadas para ti.',
       preferredArea: 'Zona preferida',
     },
