@@ -5,7 +5,6 @@ import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import TenantProfileView from '@/components/owner/TenantProfileView'
 import { listApartmentTenants, removeApartmentTenant, getOrCreateApartmentChat } from '@/services/ownerService'
 import type { ApartmentTenant } from '@/services/ownerService'
-import { sendMessage } from '@/services/messageService'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardProperty } from '@/types/owner'
 
