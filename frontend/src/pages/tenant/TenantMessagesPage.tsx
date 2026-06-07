@@ -65,7 +65,7 @@ export default function TenantMessagesPage() {
       setIsLoadingThread(true)
       setThreadError('')
       try {
-        const [msgs, _updated] = await Promise.all([
+        const [msgs] = await Promise.all([
           listConversationMessages(activeThread.apartmentId, activeThread.otherUserId),
           markConversationRead(activeThread.apartmentId, activeThread.otherUserId),
         ])
@@ -91,7 +91,7 @@ export default function TenantMessagesPage() {
     }
     void loadThread()
     return () => { ignoreResult = true }
-  }, [activeThread])
+  }, [activeThread, t])
 
   async function handleSendReply() {
     const trimmed = replyText.trim()
