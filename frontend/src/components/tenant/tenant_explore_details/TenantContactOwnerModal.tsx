@@ -63,7 +63,7 @@ export default function TenantContactModal({ apartmentId, recipientId, recipient
 
   async function handleSend() {
     const trimmed = content.trim()
-    if (!trimmed || !recipientId || !apartmentId) {
+    if (!trimmed || !recipientId) {
       setError(t('tenantDashboard.detail.messageSendError'))
       return
     }

@@ -67,6 +67,8 @@ func NewRouter(cfg *config.Config, authService *authservice.Service, profileServ
 	}
 	if messageService != nil {
 		messagehttp.RegisterRoutes(authenticated, messageService)
+		messagehttp.RegisterGroupRoutes(tenant, messageService)
+		messagehttp.RegisterOwnerGroupRoutes(owner, messageService)
 	}
 	geocodehttp.RegisterRoutes(api, geocodeService)
 	return r

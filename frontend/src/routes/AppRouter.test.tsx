@@ -38,6 +38,7 @@ vi.mock('@/services/ownerService', () => ({
 
 vi.mock('@/services/messageService', () => ({
   listConversations: vi.fn(async () => []),
+  listGroupConversations: vi.fn(async () => []),
   listConversationMessages: vi.fn(async () => []),
   markConversationRead: vi.fn(async () => 0),
   sendMessage: vi.fn(async () => ({})),

@@ -542,6 +542,8 @@ const fr = {
       tenantsRemoveConfirm: 'Expulser',
       tenantsRemoving: 'Expulsion...',
       tenantsRemoveError: 'Impossible d\'expulser le résident.',
+      groupChat: 'Chat de l\'appartement',
+      tenantMessage: 'Message',
     },
     summary: {
       title: 'Résumé d\'occupation',
@@ -635,6 +637,7 @@ const fr = {
       subtitle: 'Consulte tes conversations avec locataires et propriétaires.',
       loading: 'Chargement des conversations...',
       loadError: 'Impossible de charger les conversations.',
+      groupChat: 'Chat de l\'appartement',
       empty: {
         title: 'Aucune conversation',
         subtitle: 'Quand un locataire te contactera, tes messages apparaîtront ici.',
@@ -974,6 +977,16 @@ const fr = {
       pendingConfirmedTenants: 'En attente de confirmation',
       fullyConfirmed: 'Demande acceptée par le propriétaire',
       rejectedByOwner: 'Refusée par le propriétaire',
+    },
+    chat: {
+      title: 'Chat du groupe',
+      loading: 'Chargement des messages…',
+      empty: 'Aucun message pour le moment. Écrivez le premier !',
+      placeholder: 'Écrire un message…',
+      send: 'Envoyer',
+      sending: 'Envoi en cours…',
+      loadError: 'Impossible de charger les messages.',
+      sendError: "Impossible d'envoyer le message.",
     },
   },
 } as const

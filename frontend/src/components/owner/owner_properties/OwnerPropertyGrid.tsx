@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import placeholderAvatar from '@/assets/placeholder-avatar.png'
 import TenantProfileView from '@/components/owner/TenantProfileView'
-import { listApartmentTenants, removeApartmentTenant } from '@/services/ownerService'
+import { listApartmentTenants, removeApartmentTenant, getOrCreateApartmentChat } from '@/services/ownerService'
 import type { ApartmentTenant } from '@/services/ownerService'
 import styles from '@/styles/OwnerDashboard.module.css'
 import type { OwnerDashboardProperty } from '@/types/owner'
@@ -19,6 +20,7 @@ interface OwnerPropertyGridProps {
 
 export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReopen, closingPropertyId, reopeningPropertyId, onTenantRemoved }: OwnerPropertyGridProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [confirmCloseId, setConfirmCloseId] = useState<string | null>(null)
   const [tenantsModalProperty, setTenantsModalProperty] = useState<OwnerDashboardProperty | null>(null)
   const [tenants, setTenants] = useState<ApartmentTenant[]>([])
@@ -213,6 +215,22 @@ export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReope
                   {t('ownerDashboard.propertyCard.tenantsFreeSpots', { count: Math.max(tenantsModalProperty.totalSpots - tenantsModalProperty.occupiedSpots, 0) })}
                 </p>
 
+                {!loadingTenants && tenants.length > 0 && (
+                  <button
+                    type="button"
+                    className={styles.ownerPropertyGroupChatButton}
+                    onClick={async () => {
+                      try {
+                        const chat = await getOrCreateApartmentChat(tenantsModalProperty.id)
+                        closeTenantsModal()
+                        navigate(`/owner/messages?group=${chat.groupId}`)
+                      } catch { /* ignore */ }
+                    }}
+                  >
+                    {t('ownerDashboard.propertyCard.groupChat')}
+                  </button>
+                )}
+
                 {loadingTenants ? (
                   <p className={styles.ownerPropertyTenantsLoading}>...</p>
                 ) : tenantsError ? (
@@ -244,6 +262,16 @@ export default function OwnerPropertyGrid({ properties, onEdit, onClose, onReope
                           onClick={() => setViewingTenantProfile(tenant)}
                         >
                           {t('ownerDashboard.propertyCard.tenantsViewProfile')}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.ownerProfileViewButton}
+                          onClick={() => {
+                            closeTenantsModal()
+                            navigate(`/owner/messages?tenant=${tenant.userId}&apartment=${tenantsModalProperty!.id}`)
+                          }}
+                        >
+                          {t('ownerDashboard.propertyCard.tenantMessage')}
                         </button>
                         <button
                           type="button"

@@ -542,6 +542,8 @@ const es = {
       tenantsRemoveConfirm: 'Expulsar',
       tenantsRemoving: 'Expulsando...',
       tenantsRemoveError: 'No se pudo expulsar al integrante.',
+      groupChat: 'Chat del piso',
+      tenantMessage: 'Mensaje',
     },
     summary: {
       title: 'Resumen de ocupación',
@@ -635,6 +637,7 @@ const es = {
       subtitle: 'Consulta tus conversaciones con inquilinos y propietarios.',
       loading: 'Cargando conversaciones...',
       loadError: 'No se pudieron cargar las conversaciones.',
+      groupChat: 'Chat del piso',
       empty: {
         title: 'No tienes conversaciones',
         subtitle: 'Cuando un inquilino te contacte, aparecerán aquí tus mensajes.',
@@ -974,6 +977,16 @@ const es = {
       pendingConfirmedTenants: 'Pendiente de confirmación',
       fullyConfirmed: 'Solicitud aceptada por el propietario del piso',
       rejectedByOwner: 'Rechazada por el propietario',
+    },
+    chat: {
+      title: 'Chat del grupo',
+      loading: 'Cargando mensajes…',
+      empty: 'No hay mensajes todavía. ¡Escribe el primero!',
+      placeholder: 'Escribe un mensaje…',
+      send: 'Enviar',
+      sending: 'Enviando…',
+      loadError: 'No se pudieron cargar los mensajes.',
+      sendError: 'No se pudo enviar el mensaje.',
     },
   },
 } as const

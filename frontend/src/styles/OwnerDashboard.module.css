@@ -793,7 +793,8 @@
 .ownerPropertyTenantItem {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
   padding: 0.7rem;
   border: 1px solid var(--tenant-border-light);
   border-radius: 0.75rem;
@@ -1314,7 +1315,7 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   padding: 2rem 1.75rem 1.75rem;
   width: 100%;
-  max-width: 32rem;
+  max-width: 42rem;
   max-height: 90vh;
   overflow-y: auto;
   display: grid;
@@ -1366,6 +1367,23 @@
 }
 
 .ownerProfileViewButton:hover {
+  background: var(--tenant-primary, #149f60);
+  color: #fff;
+}
+
+.ownerPropertyGroupChatButton {
+  padding: 0.35rem 0.7rem;
+  background: none;
+  border: 1.5px solid var(--tenant-primary, #149f60);
+  border-radius: 0.55rem;
+  color: var(--tenant-primary, #149f60);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ownerPropertyGroupChatButton:hover {
   background: var(--tenant-primary, #149f60);
   color: #fff;
 }

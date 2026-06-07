@@ -483,3 +483,21 @@ export async function uploadApartmentPhotos(files: File[], apartmentId?: string,
   return data.photos ?? []
 }
 
+export interface ApartmentChatResult {
+  groupId: string
+  groupName: string
+}
+
+export async function getOrCreateApartmentChat(apartmentId: string): Promise<ApartmentChatResult> {
+  const response = await apiFetch(`/api/owner/apartments/${encodeURIComponent(apartmentId)}/apartment-chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const data = (await response.json()) as { group_id?: string; group_name?: string; error?: string }
+  if (!response.ok || !data.group_id) {
+    throw new Error(data.error ?? 'No se pudo crear el chat del piso.')
+  }
+  return { groupId: data.group_id, groupName: data.group_name ?? '' }
+}
+

@@ -19,13 +19,9 @@ import { paths } from '@/routes/paths'
 import TenantGroupMembers from './TenantGroupMembers'
 import TenantGroupApartmentSelector from './TenantGroupApartmentSelector'
 import TenantGroupCandidateSelector from './TenantGroupCandidateSelector'
-import {
-  canCreateNewJoinRequest,
-  canCurrentUserApproveJoinRequest,
-  getCurrentJoinRequestLabel,
-  getJoinRequestApprovalProgress,
-  isRejectedJoinRequest,
-} from './joinRequestStatus'
+import TenantGroupChat from './TenantGroupChat'
+import { canCreateNewJoinRequest, getCurrentJoinRequestLabel, isRejectedJoinRequest , canCurrentUserApproveJoinRequest, getJoinRequestApprovalProgress,} from './joinRequestStatus'
+
 import type {
     TenantGroupCandidate,
     TenantGroupDetailItem,
@@ -129,6 +125,7 @@ export default function TenantGroupDetailPanel({
   )
   const apartmentCapacity = group.apartment?.totalSpots ?? 0
   const isGroupFull = apartmentCapacity > 0 && acceptedMembers.length >= apartmentCapacity
+  const currentMember = group.members.find((member) => member.isCurrentUser)
   const ownerName = group.members.find((member) => member.role === 'owner')?.name ?? ''
   const locale = i18n.language ?? 'es'
   const formattedDate = group.createdAt ? formatDate(group.createdAt, locale) : ''
@@ -478,6 +475,10 @@ export default function TenantGroupDetailPanel({
       ) : null}
 
 
+
+      {(group.userRelation === 'creator' || group.userRelation === 'member') && currentMember ? (
+        <TenantGroupChat groupId={group.id} currentUserId={currentMember.userId} />
+      ) : null}
 
       {(group.userRelation === 'creator' || group.userRelation === 'member') && group.joinRequests.length > 0 ? (
         <section className={styles.invitationsSection}>
