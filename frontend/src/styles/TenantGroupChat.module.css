@@ -1,0 +1,136 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+  min-height: 20rem;
+  max-height: 32rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.error {
+  margin: 0;
+  color: var(--tenant-danger, #e53e3e);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.bubble {
+  max-width: 80%;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+}
+
+.bubbleSent {
+  align-self: flex-end;
+  color: #fff;
+  background: var(--tenant-primary);
+}
+
+.bubbleReceived {
+  align-self: flex-start;
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+}
+
+.senderName {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--tenant-primary);
+  margin-bottom: 0.15rem;
+}
+
+.content {
+  margin: 0;
+}
+
+.time {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+  margin-top: 0.15rem;
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--tenant-border-light);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
+  font-family: inherit;
+  resize: none;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--tenant-primary);
+}
+
+.input::placeholder {
+  color: var(--tenant-text-muted);
+}
+
+.sendButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.65rem 1rem;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--tenant-primary);
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

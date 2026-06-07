@@ -520,6 +520,8 @@ const en = {
       tenantsRemoveConfirm: 'Remove',
       tenantsRemoving: 'Removing...',
       tenantsRemoveError: 'Could not remove the tenant.',
+      groupChat: 'Flat group chat',
+      tenantMessage: 'Message',
     },
     summary: {
       title: 'Occupancy summary',
@@ -613,6 +615,7 @@ const en = {
       subtitle: 'View your conversations with tenants and owners.',
       loading: 'Loading conversations...',
       loadError: 'Could not load conversations.',
+      groupChat: 'Flat group chat',
       empty: {
         title: 'No conversations',
         subtitle: 'When a tenant contacts you, your messages will appear here.',
@@ -949,6 +952,16 @@ const en = {
       pendingConfirmedTenants: 'Pending confirmation',
       fullyConfirmed: 'Request accepted by the flat owner',
       rejectedByOwner: 'Rejected by the owner',
+    },
+    chat: {
+      title: 'Group chat',
+      loading: 'Loading messages…',
+      empty: 'No messages yet. Write the first one!',
+      placeholder: 'Write a message…',
+      send: 'Send',
+      sending: 'Sending…',
+      loadError: 'Could not load messages.',
+      sendError: 'Could not send the message.',
     },
   },
 } as const

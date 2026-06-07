@@ -520,6 +520,8 @@ const de = {
       tenantsRemoveConfirm: 'Entfernen',
       tenantsRemoving: 'Wird entfernt...',
       tenantsRemoveError: 'Der Bewohner konnte nicht entfernt werden.',
+      groupChat: 'Wohnungs-Gruppenchat',
+      tenantMessage: 'Nachricht',
     },
     summary: {
       title: 'Belegungsübersicht',
@@ -613,6 +615,7 @@ const de = {
       subtitle: 'Sieh dir deine Unterhaltungen mit Mietern und Eigentümern an.',
       loading: 'Unterhaltungen werden geladen...',
       loadError: 'Die Unterhaltungen konnten nicht geladen werden.',
+      groupChat: 'Wohnungs-Gruppenchat',
       empty: {
         title: 'Keine Unterhaltungen',
         subtitle: 'Wenn ein Mieter dich kontaktiert, erscheinen hier deine Nachrichten.',
@@ -949,6 +952,16 @@ const de = {
       pendingConfirmedTenants: 'Bestätigung ausstehend',
       fullyConfirmed: 'Vom Eigentümer akzeptiert',
       rejectedByOwner: 'Vom Eigentümer abgelehnt',
+    },
+    chat: {
+      title: 'Gruppenchat',
+      loading: 'Nachrichten werden geladen…',
+      empty: 'Noch keine Nachrichten. Schreibe die erste!',
+      placeholder: 'Nachricht schreiben…',
+      send: 'Senden',
+      sending: 'Wird gesendet…',
+      loadError: 'Nachrichten konnten nicht geladen werden.',
+      sendError: 'Nachricht konnte nicht gesendet werden.',
     },
   },
 } as const
