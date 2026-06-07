@@ -9,9 +9,9 @@ Roomies is a web platform that helps people find compatible roommates and housin
 
 Key features: property exploration with map view and compatibility scoring, tenant groups with invitations and join requests, direct messaging between tenants and owners, full application lifecycle management, and role-based dashboards for both tenants and owners.
 
----
-
 Try it now!! --> https://roomies-1-fegt.onrender.com/
+
+---
 
 ## Why Roomies
 
