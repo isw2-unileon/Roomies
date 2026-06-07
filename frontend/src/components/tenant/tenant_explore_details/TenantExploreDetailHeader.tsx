@@ -1,6 +1,6 @@
 import {
   ArrowLeftIcon,
-  ArrowUpTrayIcon,
+  ChatBubbleLeftIcon,
   MapPinIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
@@ -23,6 +23,7 @@ interface TenantExploreDetailHeaderProps {
   isApplying: boolean
   onApply: () => void
   onCancel: () => void
+  onContact: () => void
   onLeave: () => void
 }
 
@@ -35,6 +36,7 @@ export default function TenantExploreDetailHeader({
   isApplying,
   onApply,
   onCancel,
+  onContact,
   onLeave,
 }: TenantExploreDetailHeaderProps) {
   const { t } = useTranslation()
@@ -74,9 +76,9 @@ export default function TenantExploreDetailHeader({
         </div>
 
         <div className={styles.actionRow}>
-          <button type="button" className={styles.shareButton}>
-            <ArrowUpTrayIcon className={styles.iconTiny} aria-hidden="true" />
-            {t('tenantDashboard.detail.share')}
+          <button type="button" className={styles.shareButton} onClick={onContact}>
+            <ChatBubbleLeftIcon className={styles.iconTiny} aria-hidden="true" />
+            {t('tenantDashboard.detail.contact')}
           </button>
 
           {canLeave ? (

@@ -1,0 +1,311 @@
+.content {
+  width: 100%;
+}
+
+.content > * + * {
+  margin-top: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.title {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.layout {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.conversationList {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.conversationCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  text-align: left;
+}
+
+.conversationCard:hover {
+  border-color: var(--tenant-primary);
+}
+
+.conversationCardActive {
+  border-color: var(--tenant-primary);
+  background: var(--tenant-primary-soft);
+}
+
+.conversationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.conversationName {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.conversationApartment {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.conversationMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.conversationLastMessage {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.conversationDate {
+  margin: 0;
+  color: var(--tenant-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.unreadBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: var(--tenant-primary);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.threadPanel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border);
+  border-radius: 1rem;
+  box-shadow: var(--tenant-shadow-soft);
+  height: 100%;
+  min-height: 24rem;
+}
+
+.threadHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--tenant-border-light);
+}
+
+.threadBackButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.threadTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.threadSubtitle {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.messageBubble {
+  max-width: 80%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.messageBubbleSent {
+  align-self: flex-end;
+  color: #fff;
+  background: var(--tenant-primary);
+}
+
+.messageBubbleReceived {
+  align-self: flex-start;
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+}
+
+.messageTime {
+  margin: 0.15rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.threadInputRow {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--tenant-border-light);
+}
+
+.threadInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--tenant-text);
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
+  font-family: inherit;
+  resize: none;
+}
+
+.threadInput:focus {
+  outline: none;
+  border-color: var(--tenant-primary);
+}
+
+.threadInput::placeholder {
+  color: var(--tenant-text-muted);
+}
+
+.threadSendButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.65rem 1rem;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--tenant-primary);
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.threadSendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.statusText {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--tenant-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.emptySubtitle {
+  margin: 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  max-width: 24rem;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .threadPanel {
+    min-height: auto;
+  }
+}

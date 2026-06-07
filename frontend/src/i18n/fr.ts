@@ -189,6 +189,26 @@ const fr = {
       kicker: 'Base prête',
       subtitle: 'Cette section sera complétée plus tard. Pour l\'instant, elle utilise déjà le layout commun des locataires.',
     },
+    messages: {
+      title: 'Messages',
+      subtitle: 'Consulte tes conversations avec propriétaires et locataires.',
+      loading: 'Chargement des conversations...',
+      loadError: 'Impossible de charger les conversations.',
+      empty: {
+        title: 'Aucune conversation',
+        subtitle: 'Quand tu contacteras un propriétaire ou un locataire, tes messages apparaîtront ici.',
+      },
+      conversation: {
+        lastMessage: 'Dernier message',
+        unread: 'Non lu',
+      },
+      thread: {
+        back: 'Retour aux conversations',
+        send: 'Envoyer',
+        placeholder: 'Écris un message...',
+        sending: 'Envoi...',
+      },
+    },
     topBar: {
       area: 'Zone :',
       messages: 'Messages',
@@ -243,8 +263,8 @@ const fr = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-      property: {
-        currentHome: 'TON LOGEMENT',
+    property: {
+      currentHome: 'TON LOGEMENT',
       status: {
         available: 'Disponible',
         occupied: 'Occupé',
@@ -276,6 +296,13 @@ const fr = {
       cancelling: 'Annulation...',
       cancelSuccess: 'Demande annulée correctement.',
       cancelError: 'Impossible d\'annuler la demande.',
+      contact: 'Contacter',
+      contactOwner: 'Contacter le propriétaire',
+      messagePlaceholder: 'Écris ton message...',
+      sendMessage: 'Envoyer le message',
+      sendingMessage: 'Envoi...',
+      messageSent: 'Message envoyé correctement.',
+      messageSendError: 'Impossible d\'envoyer le message.',
       leaveApartment: 'Quitter le logement',
       leaving: 'Sortie...',
       leaveSuccess: 'Vous avez quitté le logement correctement.',
@@ -580,6 +607,26 @@ const fr = {
     placeholder: {
       kicker: 'Base prête',
       subtitle: 'Cette section sera complétée plus tard. Pour l\'instant, elle utilise déjà le layout commun des propriétaires.',
+    },
+    messages: {
+      title: 'Messages',
+      subtitle: 'Consulte tes conversations avec locataires et propriétaires.',
+      loading: 'Chargement des conversations...',
+      loadError: 'Impossible de charger les conversations.',
+      empty: {
+        title: 'Aucune conversation',
+        subtitle: 'Quand un locataire te contactera, tes messages apparaîtront ici.',
+      },
+      conversation: {
+        lastMessage: 'Dernier message',
+        unread: 'Non lu',
+      },
+      thread: {
+        back: 'Retour aux conversations',
+        send: 'Envoyer',
+        placeholder: 'Écris un message...',
+        sending: 'Envoi...',
+      },
     },
   },
   ownerProfile: {

@@ -75,6 +75,7 @@ interface TenantApartmentDto {
   image_urls?: string[] | null
   image_paths?: string[] | null
   description?: string
+  owner_id?: string
   owner_name?: string
   compatibility_score?: number
   latitude: number
@@ -413,6 +414,7 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     id: dto.id,
     titleKey: dto.title,
     description: dto.description ?? '',
+    ownerId: dto.owner_id ?? '',
     ownerName: dto.owner_name ?? '',
     addressKey: dto.address,
     areaKey: dto.area,

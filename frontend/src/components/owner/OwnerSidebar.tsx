@@ -21,8 +21,7 @@ interface OwnerSidebarProps {
   onToggleCollapsed?: () => void
   onNavigate?: () => void
   onLogout?: () => void
-  unreadMessages: number
-  showCollapseToggle?: boolean
+    showCollapseToggle?: boolean
 }
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>
@@ -38,9 +37,8 @@ export default function OwnerSidebar({
   isCollapsed,
   onToggleCollapsed,
   onNavigate,
-  onLogout,
-  unreadMessages,
-  showCollapseToggle = true,
+    onLogout,
+    showCollapseToggle = true,
 }: OwnerSidebarProps) {
   const { t } = useTranslation()
   const ToggleIcon = isCollapsed ? ChevronDoubleRightIcon : ChevronDoubleLeftIcon
@@ -89,9 +87,6 @@ export default function OwnerSidebar({
           >
             <Icon className={styles.ownerIconSmall} aria-hidden="true" />
             <span className={styles.ownerNavLabel}>{t(labelKey)}</span>
-            {id === 'messages' && unreadMessages > 0 && (
-              <span className={styles.ownerNavBadge}>{unreadMessages}</span>
-            )}
           </NavLink>
         ))}
       </nav>

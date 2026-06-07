@@ -1,6 +1,7 @@
 import { ChevronDownIcon, FunnelIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { DEFAULT_FILTER_VALUES } from './TenantFilters.constants'
 import styles from '@/styles/TenantFilters.module.css'
 
 export interface FilterValues {
@@ -31,18 +32,6 @@ const sortOptions = [
     { value: 'rooms', labelKey: 'tenantDashboard.filters.sort.rooms' },
     { value: 'newest', labelKey: 'tenantDashboard.filters.sort.newest' },
 ]
-
-export const DEFAULT_FILTER_VALUES: FilterValues = {
-    area: '',
-    priceMin: 0,
-    priceMax: 1000,
-    totalRoomsMin: 0,
-    totalRoomsMax: 10,
-    availableRoomsMin: 0,
-    availableRoomsMax: 10,
-    availability: 'available',
-    sortBy: 'relevance',
-}
 
 export default function TenantFilters({ onFilterChange = () => {} }: TenantFiltersProps) {
     const { t } = useTranslation()

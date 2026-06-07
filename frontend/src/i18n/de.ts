@@ -189,6 +189,26 @@ const de = {
       kicker: 'Basis bereit',
       subtitle: 'Dieser Bereich wird später fertiggestellt. Im Moment nutzt er bereits das gemeinsame Mieter-Layout.',
     },
+    messages: {
+      title: 'Nachrichten',
+      subtitle: 'Sieh dir deine Unterhaltungen mit Eigentümern und Mietern an.',
+      loading: 'Unterhaltungen werden geladen...',
+      loadError: 'Die Unterhaltungen konnten nicht geladen werden.',
+      empty: {
+        title: 'Keine Unterhaltungen',
+        subtitle: 'Wenn du einen Eigentümer oder Mieter kontaktierst, erscheinen hier deine Nachrichten.',
+      },
+      conversation: {
+        lastMessage: 'Letzte Nachricht',
+        unread: 'Ungelesen',
+      },
+      thread: {
+        back: 'Zurück zu Unterhaltungen',
+        send: 'Senden',
+        placeholder: 'Schreibe eine Nachricht...',
+        sending: 'Wird gesendet...',
+      },
+    },
     topBar: {
       area: 'Gegend:',
       messages: 'Nachrichten',
@@ -243,8 +263,8 @@ const de = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-      property: {
-        currentHome: 'DEINE WOHNUNG',
+    property: {
+      currentHome: 'DEINE WOHNUNG',
       status: {
         available: 'Verfügbar',
         occupied: 'Belegt',
@@ -276,6 +296,13 @@ const de = {
       cancelling: 'Wird storniert...',
       cancelSuccess: 'Anfrage erfolgreich storniert.',
       cancelError: 'Die Anfrage konnte nicht storniert werden.',
+      contact: 'Kontaktieren',
+      contactOwner: 'Eigentümer kontaktieren',
+      messagePlaceholder: 'Schreibe deine Nachricht...',
+      sendMessage: 'Nachricht senden',
+      sendingMessage: 'Wird gesendet...',
+      messageSent: 'Nachricht erfolgreich gesendet.',
+      messageSendError: 'Die Nachricht konnte nicht gesendet werden.',
       leaveApartment: 'Wohnung verlassen',
       leaving: 'Wird verlassen...',
       leaveSuccess: 'Du hast die Wohnung erfolgreich verlassen.',
@@ -580,6 +607,26 @@ const de = {
     placeholder: {
       kicker: 'Basis bereit',
       subtitle: 'Dieser Bereich wird später fertiggestellt. Im Moment nutzt er bereits das gemeinsame Eigentümer-Layout.',
+    },
+    messages: {
+      title: 'Nachrichten',
+      subtitle: 'Sieh dir deine Unterhaltungen mit Mietern und Eigentümern an.',
+      loading: 'Unterhaltungen werden geladen...',
+      loadError: 'Die Unterhaltungen konnten nicht geladen werden.',
+      empty: {
+        title: 'Keine Unterhaltungen',
+        subtitle: 'Wenn ein Mieter dich kontaktiert, erscheinen hier deine Nachrichten.',
+      },
+      conversation: {
+        lastMessage: 'Letzte Nachricht',
+        unread: 'Ungelesen',
+      },
+      thread: {
+        back: 'Zurück zu Unterhaltungen',
+        send: 'Senden',
+        placeholder: 'Schreibe eine Nachricht...',
+        sending: 'Wird gesendet...',
+      },
     },
   },
   ownerProfile: {
