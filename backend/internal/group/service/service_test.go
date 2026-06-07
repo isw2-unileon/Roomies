@@ -40,9 +40,11 @@ type fakeGroupRepository struct {
 	votedRequestID             string
 	votedUserID                string
 	votedDecision              string
+	listFilters                group.ListGroupsFilters
 }
 
 func (f *fakeGroupRepository) ListTenantGroups(ctx context.Context, userID string, filters group.ListGroupsFilters) ([]group.Group, error) {
+	f.listFilters = filters
 	return nil, nil
 }
 
@@ -205,6 +207,32 @@ func TestCreateJoinRequestRejectsPreviouslyRejectedRequest(t *testing.T) {
 	}
 	if repo.createdJoinRequest {
 		t.Fatalf("CreateJoinRequest should not be called when a rejected request already exists")
+	}
+}
+
+func TestListTenantGroupsDefaultsToMyScope(t *testing.T) {
+	repo := &fakeGroupRepository{}
+	svc := NewService(repo, nil)
+
+	_, err := svc.ListTenantGroups(context.Background(), "tenant-1", "tenant", group.ListGroupsFilters{})
+	if err != nil {
+		t.Fatalf("ListTenantGroups returned error: %v", err)
+	}
+	if repo.listFilters.Scope != "my" {
+		t.Fatalf("scope = %q, want my", repo.listFilters.Scope)
+	}
+}
+
+func TestListTenantGroupsKeepsDiscoverableScope(t *testing.T) {
+	repo := &fakeGroupRepository{}
+	svc := NewService(repo, nil)
+
+	_, err := svc.ListTenantGroups(context.Background(), "tenant-1", "tenant", group.ListGroupsFilters{Scope: "discoverable"})
+	if err != nil {
+		t.Fatalf("ListTenantGroups returned error: %v", err)
+	}
+	if repo.listFilters.Scope != "discoverable" {
+		t.Fatalf("scope = %q, want discoverable", repo.listFilters.Scope)
 	}
 }
 
