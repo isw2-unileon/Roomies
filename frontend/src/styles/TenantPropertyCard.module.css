@@ -43,28 +43,6 @@
   font-weight: 600;
 }
 
-.saveButton {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  color: #2b2730;
-  background: rgba(255, 255, 255, 0.9);
-  border: 0;
-  border-radius: 999px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.saveButton:hover {
-  background: #fff;
-}
-
 .body {
   padding: 1rem;
 }
@@ -224,11 +202,6 @@
 .iconSmall {
   width: 1rem;
   height: 1rem;
-}
-
-.iconMedium {
-  width: 1.25rem;
-  height: 1.25rem;
 }
 
 .iconTiny {

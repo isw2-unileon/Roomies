@@ -1,4 +1,4 @@
-import { HeartIcon, HomeIcon, MapPinIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { HomeIcon, MapPinIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { CheckIcon } from '@heroicons/react/20/solid'
 import { useTranslation } from 'react-i18next'
 import type { TenantProperty } from '@/types/tenant'
@@ -38,14 +38,6 @@ export default function TenantPropertyCard({ property, onDetails = () => {} }: T
                         {t('tenantDashboard.property.noImage')}
                     </div>
                 )}
-                <button
-                    type="button"
-                    className={styles.saveButton}
-                    aria-label={t('tenantDashboard.property.save')}
-                    onClick={(event) => event.stopPropagation()}
-                >
-                    <HeartIcon className={styles.iconMedium} aria-hidden="true" />
-                </button>
             </div>
 
             <div className={styles.body}>
