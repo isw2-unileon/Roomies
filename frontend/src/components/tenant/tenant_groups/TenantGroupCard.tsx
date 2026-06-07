@@ -11,7 +11,7 @@ import {
 
 import TenantGroupDetailPanel from './TenantGroupDetailPanel'
 import TenantGroupDetailSkeleton from './TenantGroupDetailSkeleton'
-import { getGroupBadges, type TenantGroupBadgeTone } from './groupBadges'
+import { getGroupBadges, getGroupRequestApprovalProgress, type TenantGroupBadgeTone } from './groupBadges'
 import {
     acceptTenantGroup,
     createTenantGroupApartmentApplication,
@@ -102,6 +102,7 @@ export default function TenantGroupCard({
     const hasPendingInvitation = group.userRelation === 'pending_invitation'
     const isDiscoveryMode = mode === 'discovery'
     const badges = getGroupBadges(group)
+    const approvalProgress = getGroupRequestApprovalProgress(group)
 
     const hasBudget = group.averageBudgetMax > 0
     const hasImage = Boolean(group.apartment?.imageUrl)
@@ -298,6 +299,11 @@ export default function TenantGroupCard({
                             {t(badge.labelKey)}
                         </span>
                     ))}
+                    {approvalProgress ? (
+                        <span className={`${styles.statusBadge} ${styles.badgeInfo}`}>
+                            {t('tenantGroups.card.approvalProgress', approvalProgress)}
+                        </span>
+                    ) : null}
                 </div>
 
                 {group.apartment ? (

@@ -19,7 +19,13 @@ import { paths } from '@/routes/paths'
 import TenantGroupMembers from './TenantGroupMembers'
 import TenantGroupApartmentSelector from './TenantGroupApartmentSelector'
 import TenantGroupCandidateSelector from './TenantGroupCandidateSelector'
-import { canCreateNewJoinRequest, getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
+import {
+  canCreateNewJoinRequest,
+  canCurrentUserApproveJoinRequest,
+  getCurrentJoinRequestLabel,
+  getJoinRequestApprovalProgress,
+  isRejectedJoinRequest,
+} from './joinRequestStatus'
 import type {
     TenantGroupCandidate,
     TenantGroupDetailItem,
@@ -478,8 +484,8 @@ export default function TenantGroupDetailPanel({
           <h3 className={styles.sectionTitle}>{t('tenantGroups.detail.requests.title')}</h3>
           <div className={styles.invitationsList}>
             {group.joinRequests.map((request) => {
-              const approvals = request.votes.filter((vote) => vote.decision === 'APPROVE').length
-              const total = Math.max(group.members.length, 1)
+              const approvalProgress = getJoinRequestApprovalProgress(request)
+              const canApproveRequest = canCurrentUserApproveJoinRequest(request)
               return (
                 <div key={request.id} className={styles.invitationCard}>
                   <div className={styles.invitationInfo}>
@@ -498,20 +504,26 @@ export default function TenantGroupDetailPanel({
                       </span>
                     )}
                     <p className={styles.approvalsCount}>
-                      {t('tenantGroups.detail.requests.approvals', { approved: approvals, total })}
+                      {t('tenantGroups.detail.requests.approvalProgress', approvalProgress)}
                     </p>
                   </div>
                   <div className={styles.invitationActions}>
-                    <button
-                      type="button"
-                      disabled={votingJoinRequestKey === `${request.id}:APPROVE`}
-                      onClick={() => onVoteJoinRequest?.(group.id, request, 'APPROVE')}
-                      className={styles.acceptButton}
-                    >
-                      {votingJoinRequestKey === `${request.id}:APPROVE`
-                        ? t('tenantGroups.detail.requests.approving')
-                        : t('tenantGroups.detail.requests.approve')}
-                    </button>
+                    {canApproveRequest ? (
+                      <button
+                        type="button"
+                        disabled={votingJoinRequestKey === `${request.id}:APPROVE`}
+                        onClick={() => onVoteJoinRequest?.(group.id, request, 'APPROVE')}
+                        className={styles.acceptButton}
+                      >
+                        {votingJoinRequestKey === `${request.id}:APPROVE`
+                          ? t('tenantGroups.detail.requests.approving')
+                          : t('tenantGroups.detail.requests.approve')}
+                      </button>
+                    ) : (
+                      <span className={styles.approvedByYouBadge}>
+                        {t('tenantGroups.detail.requests.approvedByYou')}
+                      </span>
+                    )}
                     <button
                       type="button"
                       disabled={votingJoinRequestKey === `${request.id}:REJECT`}

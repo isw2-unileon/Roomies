@@ -146,7 +146,7 @@ func (f *fakeGroupRepository) CreateJoinRequest(ctx context.Context, groupID, re
 	return f.createdJoinRequestID, nil
 }
 
-func (f *fakeGroupRepository) ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error) {
+func (f *fakeGroupRepository) ListJoinRequests(ctx context.Context, groupID, currentUserID string) ([]group.JoinRequest, error) {
 	return nil, nil
 }
 

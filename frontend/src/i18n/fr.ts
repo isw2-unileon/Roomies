@@ -843,6 +843,7 @@ const fr = {
       statusFull: 'Complet',
       requestSent: 'Demande envoyée',
       requestRejected: 'Demande refusée',
+      approvalProgress: '{{approved}}/{{total}} approbations',
     },
     detail: {
       backToList: 'Retour à la liste',
@@ -888,6 +889,8 @@ const fr = {
         empty: 'Aucune demande en attente.',
         approvals_one: '{{approved}} de {{total}} approbations',
         approvals_other: '{{approved}} de {{total}} approbations',
+        approvalProgress: '{{approved}}/{{total}} approbations',
+        approvedByYou: 'Approuvé par vous',
         approve: 'Approuver',
         reject: 'Refuser',
         approving: 'Approbation...',

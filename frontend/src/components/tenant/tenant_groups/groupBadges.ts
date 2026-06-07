@@ -34,3 +34,15 @@ export function getGroupBadges(group: TenantGroupListItem): { key: string; label
 
     return []
 }
+
+export function getGroupRequestApprovalProgress(group: TenantGroupListItem) {
+    const request = group.currentJoinRequest
+    if (request?.status !== 'PENDING' || request.requiredApprovals <= 0) {
+        return null
+    }
+
+    return {
+        approved: Math.min(request.approvalCount, request.requiredApprovals),
+        total: request.requiredApprovals,
+    }
+}

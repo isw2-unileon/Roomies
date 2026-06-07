@@ -843,6 +843,7 @@ const en = {
       statusFull: 'Full',
       requestSent: 'Request sent',
       requestRejected: 'Request rejected',
+      approvalProgress: '{{approved}}/{{total}} approvals',
     },
     detail: {
       backToList: 'Back to list',
@@ -888,6 +889,8 @@ const en = {
         empty: 'No pending requests.',
         approvals_one: '{{approved}} of {{total}} approvals',
         approvals_other: '{{approved}} of {{total}} approvals',
+        approvalProgress: '{{approved}}/{{total}} approvals',
+        approvedByYou: 'Approved by you',
         approve: 'Approve',
         reject: 'Reject',
         approving: 'Approving...',

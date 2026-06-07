@@ -329,7 +329,7 @@ func appendAvailabilityFilters(whereClauses []string, availability string) []str
 
 	switch availability {
 	case "available":
-		whereClauses = append(whereClauses, "a.status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED', 'FULL', 'OCCUPIED')")
+		whereClauses = append(whereClauses, "a.status IN ('AVAILABLE', 'PARTIALLY_OCCUPIED', 'FULL')")
 	case "soon":
 		whereClauses = append(whereClauses, "((a.total_spots - a.occupied_spots) <= 0 OR a.status IN ('FULL', 'OCCUPIED'))")
 	case "all":
