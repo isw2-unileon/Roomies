@@ -11,7 +11,7 @@ import {
 
 import TenantGroupDetailPanel from './TenantGroupDetailPanel'
 import TenantGroupDetailSkeleton from './TenantGroupDetailSkeleton'
-import { getCurrentJoinRequestLabel, isRejectedJoinRequest } from './joinRequestStatus'
+import { getGroupBadges, type TenantGroupBadgeTone } from './groupBadges'
 import {
     acceptTenantGroup,
     createTenantGroupApartmentApplication,
@@ -28,7 +28,6 @@ import styles from '@/styles/TenantGroups.module.css'
 import type {
     TenantGroupDetailItem,
     TenantGroupListItem,
-    TenantGroupUserRelation,
     TenantProperty,
 } from '@/types/tenant'
 
@@ -43,31 +42,20 @@ interface TenantGroupCardProps {
 
 const FULL_GROUP_ERROR = 'group exceeds apartment available spots'
 
-function getRelationClassName(relation: TenantGroupUserRelation) {
-    if (relation === 'creator') return styles.relationCreator
-    if (relation === 'member') return styles.relationMember
-    if (relation === 'viewer') return styles.relationViewer
-    return styles.relationPending
-}
-
-function relationLabelKey(relation: TenantGroupUserRelation): string {
-    switch (relation) {
-        case 'creator':
-            return 'tenantGroups.card.relationCreator'
-        case 'member':
-            return 'tenantGroups.card.relationMember'
-        case 'pending_invitation':
-            return 'tenantGroups.card.relationPendingInvitation'
-        case 'viewer':
+function badgeClassName(tone: TenantGroupBadgeTone) {
+    switch (tone) {
+        case 'positive':
+            return `${styles.statusBadge} ${styles.badgePositive}`
+        case 'info':
+            return `${styles.statusBadge} ${styles.badgeInfo}`
+        case 'warning':
+            return `${styles.statusBadge} ${styles.badgeWarning}`
+        case 'negative':
+            return `${styles.statusBadge} ${styles.badgeNegative}`
+        case 'neutral':
         default:
-            return 'tenantGroups.card.relationViewer'
+            return `${styles.statusBadge} ${styles.badgeNeutral}`
     }
-}
-
-function statusLabelKey(isFullyAccepted: boolean): string {
-    return isFullyAccepted
-        ? 'tenantGroups.card.statusFullyAccepted'
-        : 'tenantGroups.card.statusPendingAcceptance'
 }
 
 function apartmentRequestStatusLabelKey(status: string): string {
@@ -110,11 +98,7 @@ export default function TenantGroupCard({
     const [votingJoinRequestKey, setVotingJoinRequestKey] = useState<string | null>(null)
 
     const hasPendingInvitation = group.userRelation === 'pending_invitation'
-    const relationClassName = `${styles.relationBadge} ${getRelationClassName(group.userRelation)}`
-    const currentJoinRequestLabel = getCurrentJoinRequestLabel(group.currentJoinRequest, t)
-    const currentJoinRequestClassName = isRejectedJoinRequest(group.currentJoinRequest)
-        ? styles.rejectedBadge
-        : styles.pendingBadge
+    const badges = getGroupBadges(group)
 
     const hasBudget = group.averageBudgetMax > 0
     const hasImage = Boolean(group.apartment?.imageUrl)
@@ -306,17 +290,11 @@ export default function TenantGroupCard({
             <div className={styles.groupInfo}>
                 <div className={styles.groupTitleRow}>
                     <h2 className={styles.groupTitle}>{group.name}</h2>
-                    <span className={relationClassName}>
-                        {t(relationLabelKey(group.userRelation))}
-                    </span>
-                    <span className={group.isFullyAccepted ? styles.acceptedBadge : styles.pendingBadge}>
-                        {t(statusLabelKey(group.isFullyAccepted))}
-                    </span>
-                    {currentJoinRequestLabel ? (
-                        <span className={currentJoinRequestClassName}>
-                            {currentJoinRequestLabel}
+                    {badges.map((badge) => (
+                        <span key={badge.key} className={badgeClassName(badge.tone)}>
+                            {t(badge.labelKey)}
                         </span>
-                    ) : null}
+                    ))}
                 </div>
 
                 {group.apartment ? (
@@ -362,12 +340,7 @@ export default function TenantGroupCard({
                         <HomeIcon className={styles.iconSmall} aria-hidden="true" />
                         {group.apartment.title} · {group.apartment.baseRent}€/mes
                     </span>
-                ) : (
-                    <span className={`${styles.metaItem} ${styles.apartmentStatus}`}>
-                        <HomeIcon className={styles.iconSmall} aria-hidden="true" />
-                        {t('tenantGroups.card.noApartment')}
-                    </span>
-                )}
+                ) : null}
 
                 {group.currentApartmentRequest ? (
                     <span className={styles.metaItem}>

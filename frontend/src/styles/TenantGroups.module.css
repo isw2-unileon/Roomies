@@ -307,6 +307,38 @@
   background: #fff1f0;
 }
 
+.statusBadge {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 900;
+  border-radius: 999px;
+}
+
+.badgePositive {
+  color: #067647;
+  background: #ecfdf3;
+}
+
+.badgeInfo {
+  color: #0c4a6e;
+  background: #e0f2fe;
+}
+
+.badgeWarning {
+  color: #b54708;
+  background: #fffaeb;
+}
+
+.badgeNegative {
+  color: #b42318;
+  background: #fff1f0;
+}
+
+.badgeNeutral {
+  color: var(--tenant-text-soft);
+  background: var(--tenant-bg-soft);
+}
+
 .location,
 .apartmentEmpty {
   display: flex;
