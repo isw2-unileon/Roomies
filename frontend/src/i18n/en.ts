@@ -189,6 +189,26 @@ const en = {
       kicker: 'Base ready',
       subtitle: 'This section will be completed later. For now, it already uses the shared tenant layout.',
     },
+    messages: {
+      title: 'Messages',
+      subtitle: 'View your conversations with owners and tenants.',
+      loading: 'Loading conversations...',
+      loadError: 'Could not load conversations.',
+      empty: {
+        title: 'No conversations',
+        subtitle: 'When you contact an owner or tenant, your messages will appear here.',
+      },
+      conversation: {
+        lastMessage: 'Last message',
+        unread: 'Unread',
+      },
+      thread: {
+        back: 'Back to conversations',
+        send: 'Send',
+        placeholder: 'Write a message...',
+        sending: 'Sending...',
+      },
+    },
     topBar: {
       area: 'Area:',
       messages: 'Messages',
@@ -243,8 +263,8 @@ const en = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-      property: {
-        currentHome: 'YOUR FLAT',
+    property: {
+      currentHome: 'YOUR FLAT',
       status: {
         available: 'Available',
         occupied: 'Occupied',
@@ -276,6 +296,13 @@ const en = {
       cancelling: 'Cancelling...',
       cancelSuccess: 'Application cancelled successfully.',
       cancelError: 'Could not cancel the application.',
+      contact: 'Contact',
+      contactOwner: 'Contact owner',
+      messagePlaceholder: 'Write your message...',
+      sendMessage: 'Send message',
+      sendingMessage: 'Sending...',
+      messageSent: 'Message sent successfully.',
+      messageSendError: 'Could not send the message.',
       leaveApartment: 'Leave flat',
       leaving: 'Leaving...',
       leaveSuccess: 'You left the flat successfully.',
@@ -580,6 +607,26 @@ const en = {
     placeholder: {
       kicker: 'Base ready',
       subtitle: 'This section will be completed later. For now, it already uses the shared owner layout.',
+    },
+    messages: {
+      title: 'Messages',
+      subtitle: 'View your conversations with tenants and owners.',
+      loading: 'Loading conversations...',
+      loadError: 'Could not load conversations.',
+      empty: {
+        title: 'No conversations',
+        subtitle: 'When a tenant contacts you, your messages will appear here.',
+      },
+      conversation: {
+        lastMessage: 'Last message',
+        unread: 'Unread',
+      },
+      thread: {
+        back: 'Back to conversations',
+        send: 'Send',
+        placeholder: 'Write a message...',
+        sending: 'Sending...',
+      },
     },
   },
   ownerProfile: {

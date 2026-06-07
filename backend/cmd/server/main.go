@@ -20,6 +20,8 @@ import (
 	groupservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/group/service"
 
 	geocodenominatim "github.com/isw2-unileon/proyect-scaffolding/backend/internal/geocode/nominatim"
+	messagepostgres "github.com/isw2-unileon/proyect-scaffolding/backend/internal/message/postgres"
+	messageservice "github.com/isw2-unileon/proyect-scaffolding/backend/internal/message/service"
 
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/httpserver"
 
@@ -47,6 +49,7 @@ func main() {
 	apartmentRepo := apartmentpostgres.NewRepository(database.DB)
 	applicationRepo := applicationpostgres.NewRepository(database.DB)
 	groupRepo := grouppostgres.NewRepository(database.DB)
+	messageRepo := messagepostgres.NewRepository(database.DB)
 	var storageClient *authsupabase.Client
 	var authService *authservice.Service
 	supabaseClient, err := authsupabase.NewClient(cfg.SupabaseURL, cfg.SupabaseAPIKey)
@@ -70,9 +73,10 @@ func main() {
 
 	applicationService := applicationservice.NewService(applicationRepo, apartmentRepo, profileRepo, storageClient)
 	groupService := groupservice.NewService(groupRepo, storageClient)
+	messageService := messageservice.NewService(messageRepo)
 	apartmentService := apartmentservice.NewService(apartmentRepo, apartmentImageSigner, profileRepo, applicationService)
 	geocodeService := geocodenominatim.NewService()
-	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, groupService, geocodeService)
+	r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, applicationService, groupService, geocodeService, messageService)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

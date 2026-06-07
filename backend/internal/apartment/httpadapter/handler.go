@@ -63,30 +63,30 @@ type ownerApartmentResponse struct {
 }
 
 type tenantApartmentResponse struct {
-	ID                  string   `json:"id"`
-	Title               string   `json:"title"`
-	Description         string   `json:"description"`
-	Address             string   `json:"address"`
-	Area                string   `json:"area"`
-	TotalSpots          int      `json:"total_spots"`
-	AvailableSpots      int      `json:"available_spots"`
-	BaseRent            int      `json:"base_rent"`
-	Status              string   `json:"status"`
-	IsCurrentTenantHome bool     `json:"is_current_tenant_home"`
-	CreatedAt           string   `json:"created_at"`
-	ImageURL            string   `json:"image_url"`
-	ImageURLs           []string `json:"image_urls"`
-	ImagePaths          []string `json:"image_paths"`
-	Compatibility       int      `json:"compatibility_score"`
-	Latitude            float64  `json:"latitude"`
-	Longitude           float64  `json:"longitude"`
-	Bathrooms           int      `json:"bathrooms"`
-	SurfaceM2           int      `json:"surface_m2"`
-	Floor               int      `json:"floor"`
-	SmokingAllowed      *bool    `json:"smoking_allowed"`
-	PetsAllowed         *bool    `json:"pets_allowed"`
-	StudentsAllowed     *bool    `json:"students_allowed"`
-	Notes               string   `json:"notes"`
+	ID              string   `json:"id"`
+	OwnerID         string   `json:"owner_id"`
+	Title           string   `json:"title"`
+	Description     string   `json:"description"`
+	Address         string   `json:"address"`
+	Area            string   `json:"area"`
+	TotalSpots      int      `json:"total_spots"`
+	AvailableSpots  int      `json:"available_spots"`
+	BaseRent        int      `json:"base_rent"`
+	Status          string   `json:"status"`
+	CreatedAt       string   `json:"created_at"`
+	ImageURL        string   `json:"image_url"`
+	ImageURLs       []string `json:"image_urls"`
+	ImagePaths      []string `json:"image_paths"`
+	Compatibility   int      `json:"compatibility_score"`
+	Latitude        float64  `json:"latitude"`
+	Longitude       float64  `json:"longitude"`
+	Bathrooms       int      `json:"bathrooms"`
+	SurfaceM2       int      `json:"surface_m2"`
+	Floor           int      `json:"floor"`
+	SmokingAllowed  *bool    `json:"smoking_allowed"`
+	PetsAllowed     *bool    `json:"pets_allowed"`
+	StudentsAllowed *bool    `json:"students_allowed"`
+	Notes           string   `json:"notes"`
 }
 
 type tenantApartmentDetailResponse struct {
@@ -558,30 +558,30 @@ func (h *handler) getApartmentDetail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, tenantApartmentDetailResponse{
 		Apartment: tenantApartmentResponse{
-			ID:                  detail.Apartment.ID,
-			Title:               detail.Apartment.Title,
-			Description:         detail.Apartment.Description,
-			Address:             detail.Apartment.Address,
-			Area:                detail.Apartment.Area,
-			TotalSpots:          detail.Apartment.TotalSpots,
-			AvailableSpots:      detail.Apartment.TotalSpots - detail.Apartment.OccupiedSpots,
-			BaseRent:            detail.Apartment.BaseRent,
-			Status:              detail.Apartment.Status,
-			IsCurrentTenantHome: detail.Apartment.IsCurrentTenantHome,
-			CreatedAt:           detail.Apartment.CreatedAt,
-			ImageURL:            firstImageURL(detail.Apartment.ImageURLs),
-			ImageURLs:           nonNilStrings(detail.Apartment.ImageURLs),
-			ImagePaths:          nonNilStrings(detail.Apartment.ImagePaths),
-			Compatibility:       detail.CompatibilityScore,
-			Latitude:            detail.Apartment.Latitude,
-			Longitude:           detail.Apartment.Longitude,
-			Bathrooms:           detail.Apartment.Bathrooms,
-			SurfaceM2:           detail.Apartment.SurfaceM2,
-			Floor:               detail.Apartment.Floor,
-			SmokingAllowed:      detail.Apartment.SmokingAllowed,
-			PetsAllowed:         detail.Apartment.PetsAllowed,
-			StudentsAllowed:     detail.Apartment.StudentsAllowed,
-			Notes:               detail.Apartment.Notes,
+			ID:              detail.Apartment.ID,
+			OwnerID:         detail.Apartment.OwnerID,
+			Title:           detail.Apartment.Title,
+			Description:     detail.Apartment.Description,
+			Address:         detail.Apartment.Address,
+			Area:            detail.Apartment.Area,
+			TotalSpots:      detail.Apartment.TotalSpots,
+			AvailableSpots:  detail.Apartment.TotalSpots - detail.Apartment.OccupiedSpots,
+			BaseRent:        detail.Apartment.BaseRent,
+			Status:          detail.Apartment.Status,
+			CreatedAt:       detail.Apartment.CreatedAt,
+			ImageURL:        firstImageURL(detail.Apartment.ImageURLs),
+			ImageURLs:       nonNilStrings(detail.Apartment.ImageURLs),
+			ImagePaths:      nonNilStrings(detail.Apartment.ImagePaths),
+			Compatibility:   detail.CompatibilityScore,
+			Latitude:        detail.Apartment.Latitude,
+			Longitude:       detail.Apartment.Longitude,
+			Bathrooms:       detail.Apartment.Bathrooms,
+			SurfaceM2:       detail.Apartment.SurfaceM2,
+			Floor:           detail.Apartment.Floor,
+			SmokingAllowed:  detail.Apartment.SmokingAllowed,
+			PetsAllowed:     detail.Apartment.PetsAllowed,
+			StudentsAllowed: detail.Apartment.StudentsAllowed,
+			Notes:           detail.Apartment.Notes,
 		},
 		CompatibilityReasons:     detail.CompatibilityReason,
 		CurrentApplicationID:     detail.CurrentApplicationID,
@@ -731,30 +731,30 @@ func tenantApartmentResponses(apartments []apartment.Apartment) []tenantApartmen
 	for _, item := range apartments {
 		imageURLs := nonNilStrings(item.ImageURLs)
 		responses = append(responses, tenantApartmentResponse{
-			ID:                  item.ID,
-			Title:               item.Title,
-			Description:         item.Description,
-			Address:             item.Address,
-			Area:                item.Area,
-			TotalSpots:          item.TotalSpots,
-			AvailableSpots:      item.TotalSpots - item.OccupiedSpots,
-			BaseRent:            item.BaseRent,
-			Status:              item.Status,
-			IsCurrentTenantHome: item.IsCurrentTenantHome,
-			CreatedAt:           item.CreatedAt,
-			ImageURL:            firstImageURL(imageURLs),
-			ImageURLs:           imageURLs,
-			ImagePaths:          nonNilStrings(item.ImagePaths),
-			Compatibility:       0,
-			Latitude:            item.Latitude,
-			Longitude:           item.Longitude,
-			Bathrooms:           item.Bathrooms,
-			SurfaceM2:           item.SurfaceM2,
-			Floor:               item.Floor,
-			SmokingAllowed:      item.SmokingAllowed,
-			PetsAllowed:         item.PetsAllowed,
-			StudentsAllowed:     item.StudentsAllowed,
-			Notes:               item.Notes,
+			ID:              item.ID,
+			OwnerID:         item.OwnerID,
+			Title:           item.Title,
+			Description:     item.Description,
+			Address:         item.Address,
+			Area:            item.Area,
+			TotalSpots:      item.TotalSpots,
+			AvailableSpots:  item.TotalSpots - item.OccupiedSpots,
+			BaseRent:        item.BaseRent,
+			Status:          item.Status,
+			CreatedAt:       item.CreatedAt,
+			ImageURL:        firstImageURL(imageURLs),
+			ImageURLs:       imageURLs,
+			ImagePaths:      nonNilStrings(item.ImagePaths),
+			Compatibility:   0,
+			Latitude:        item.Latitude,
+			Longitude:       item.Longitude,
+			Bathrooms:       item.Bathrooms,
+			SurfaceM2:       item.SurfaceM2,
+			Floor:           item.Floor,
+			SmokingAllowed:  item.SmokingAllowed,
+			PetsAllowed:     item.PetsAllowed,
+			StudentsAllowed: item.StudentsAllowed,
+			Notes:           item.Notes,
 		})
 	}
 	return responses

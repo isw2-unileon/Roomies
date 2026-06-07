@@ -189,6 +189,26 @@ const es = {
       kicker: 'Base preparada',
       subtitle: 'Esta sección se completará más adelante. De momento ya usa el layout común de tenant.',
     },
+    messages: {
+      title: 'Mensajes',
+      subtitle: 'Consulta tus conversaciones con propietarios e inquilinos.',
+      loading: 'Cargando conversaciones...',
+      loadError: 'No se pudieron cargar las conversaciones.',
+      empty: {
+        title: 'No tienes conversaciones',
+        subtitle: 'Cuando contactes a un propietario o inquilino, aparecerán aquí tus mensajes.',
+      },
+      conversation: {
+        lastMessage: 'Último mensaje',
+        unread: 'Sin leer',
+      },
+      thread: {
+        back: 'Volver a conversaciones',
+        send: 'Enviar',
+        placeholder: 'Escribe un mensaje...',
+        sending: 'Enviando...',
+      },
+    },
     topBar: {
       area: 'Área:',
       messages: 'Mensajes',
@@ -243,8 +263,8 @@ const es = {
       eras: 'Eras de Renueva',
       campus: 'Campus',
     },
-      property: {
-        currentHome: 'TU PISO',
+    property: {
+      currentHome: 'TU PISO',
       status: {
         available: 'Disponible',
         occupied: 'Ocupado',
@@ -276,6 +296,13 @@ const es = {
       cancelling: 'Anulando...',
       cancelSuccess: 'Solicitud anulada correctamente.',
       cancelError: 'No se pudo anular la solicitud.',
+      contact: 'Contactar',
+      contactOwner: 'Contactar con propietario',
+      messagePlaceholder: 'Escribe tu mensaje...',
+      sendMessage: 'Enviar mensaje',
+      sendingMessage: 'Enviando...',
+      messageSent: 'Mensaje enviado correctamente.',
+      messageSendError: 'No se pudo enviar el mensaje.',
       leaveApartment: 'Salir del piso',
       leaving: 'Saliendo...',
       leaveSuccess: 'Has salido del piso correctamente.',
@@ -580,6 +607,26 @@ const es = {
     placeholder: {
       kicker: 'Base preparada',
       subtitle: 'Esta sección se completará más adelante. De momento ya usa el layout común de propietario.',
+    },
+    messages: {
+      title: 'Mensajes',
+      subtitle: 'Consulta tus conversaciones con inquilinos y propietarios.',
+      loading: 'Cargando conversaciones...',
+      loadError: 'No se pudieron cargar las conversaciones.',
+      empty: {
+        title: 'No tienes conversaciones',
+        subtitle: 'Cuando un inquilino te contacte, aparecerán aquí tus mensajes.',
+      },
+      conversation: {
+        lastMessage: 'Último mensaje',
+        unread: 'Sin leer',
+      },
+      thread: {
+        back: 'Volver a conversaciones',
+        send: 'Enviar',
+        placeholder: 'Escribe un mensaje...',
+        sending: 'Enviando...',
+      },
     },
   },
   ownerProfile: {

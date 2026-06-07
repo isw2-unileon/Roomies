@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 
 import TenantLayout from '@/components/tenant/TenantLayout'
 import TenantCompatibilityCard from '@/components/tenant/tenant_explore_details/TenantCompatibilityCard'
+import TenantContactModal from '@/components/tenant/tenant_explore_details/TenantContactOwnerModal'
 import TenantExploreDetailHeader from '@/components/tenant/tenant_explore_details/TenantExploreDetailHeader'
 import TenantCurrentResidentsCard from '@/components/tenant/tenant_explore_details/TenantCurrentResidentsCard'
 import TenantInterestedTenantsCard from '@/components/tenant/tenant_explore_details/TenantInterestedTenantsCard'
@@ -40,6 +41,7 @@ export default function TenantExploreDetailPage() {
   const [error, setError] = useState('')
   const [applyStatus, setApplyStatus] = useState('')
   const [isApplying, setIsApplying] = useState(false)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
 
   useEffect(() => {
     let ignoreResult = false
@@ -179,6 +181,7 @@ export default function TenantExploreDetailPage() {
           isApplying={isApplying}
           onApply={handleApplyToApartment}
           onCancel={handleCancelApplication}
+          onContact={() => setIsContactModalOpen(true)}
           onLeave={handleLeaveApartment}
         />
         {applyStatus ? <p className={styles.statusText}>{applyStatus}</p> : null}
@@ -192,6 +195,16 @@ export default function TenantExploreDetailPage() {
           <TenantInterestedTenantsCard tenants={interestedTenants} propertyId={propertyId} />
         </div>
       </div>
+
+      {isContactModalOpen && property.ownerId ? (
+        <TenantContactModal
+          apartmentId={property.id}
+          recipientId={property.ownerId}
+          recipientName={property.ownerName}
+          titleKey="tenantDashboard.detail.contactOwner"
+          onClose={() => setIsContactModalOpen(false)}
+        />
+      ) : null}
     </TenantLayout>
   )
 }
