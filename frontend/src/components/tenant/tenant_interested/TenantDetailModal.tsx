@@ -160,7 +160,7 @@ export default function TenantDetailModal({ tenant, propertyId = '', myGroup = n
         </div>
       </div>
 
-      {showContactModal && propertyId && (
+      {showContactModal && (
         <TenantContactModal
           apartmentId={propertyId}
           recipientId={tenant.userId}
