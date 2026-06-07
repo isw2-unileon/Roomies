@@ -64,7 +64,7 @@ export default function TenantRoommateDiscoveryPanel() {
     setLoadingGroups(true)
     setGroupsError('')
     try {
-      const loadedGroups = await listTenantGroups({ status: 'all', sort: 'recent' })
+      const loadedGroups = await listTenantGroups({ scope: 'discoverable', status: 'all', sort: 'recent' })
       setGroups(loadedGroups)
     } catch (error) {
       setGroups([])
@@ -174,6 +174,7 @@ export default function TenantRoommateDiscoveryPanel() {
               <TenantGroupCard
                 key={group.id}
                 group={group}
+                mode="discovery"
                 onAcceptInvitation={() => undefined}
                 onRejectInvitation={() => undefined}
                 onMutated={loadGroups}

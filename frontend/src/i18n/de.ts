@@ -817,7 +817,10 @@ const de = {
       relationViewer: 'Verfügbar',
       statusFullyAccepted: 'Vollständig akzeptiert',
       statusPendingAcceptance: 'Akzeptanz ausstehend',
+      statusAccepted: 'Akzeptiert',
       statusFull: 'Voll',
+      requestSent: 'Anfrage gesendet',
+      requestRejected: 'Anfrage abgelehnt',
     },
     detail: {
       backToList: 'Zurück zur Liste',

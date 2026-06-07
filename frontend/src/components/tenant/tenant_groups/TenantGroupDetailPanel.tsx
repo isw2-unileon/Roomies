@@ -127,11 +127,6 @@ export default function TenantGroupDetailPanel({
   const locale = i18n.language ?? 'es'
   const formattedDate = group.createdAt ? formatDate(group.createdAt, locale) : ''
   const hasImage = Boolean(group.apartment?.imageUrl)
-  const statusKey = isGroupFull
-    ? 'tenantGroups.detail.statusFull'
-    : group.isFullyAccepted
-      ? 'tenantGroups.detail.statusAccepted'
-      : 'tenantGroups.detail.statusPending'
 
   async function handleInviteMembers() {
     if (!onInviteMembers || selectedCandidates.length === 0) {
@@ -165,9 +160,6 @@ export default function TenantGroupDetailPanel({
         <div className={styles.detailTitleWrap}>
           <div className={styles.detailTitleRow}>
             <h2 className={styles.detailTitle}>{group.name}</h2>
-            <span className={group.isFullyAccepted ? styles.acceptedBadge : styles.pendingBadge}>
-              {t(statusKey)}
-            </span>
             <span style={{ flex: 1 }} />
             {onClose ? (
               <button

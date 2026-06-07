@@ -193,6 +193,7 @@ func (h *handler) listTenantGroups(c *gin.Context) {
 		HasApartment: strings.TrimSpace(c.Query("has_apartment")),
 		Members:      parseIntQuery(c.Query("members")),
 		SortBy:       strings.TrimSpace(c.Query("sort")),
+		Scope:        strings.TrimSpace(c.Query("scope")),
 	}
 
 	groups, err := h.groupService.ListTenantGroups(c.Request.Context(), userID, role, filters)

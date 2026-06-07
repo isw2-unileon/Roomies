@@ -348,6 +348,7 @@ export interface TenantGroupListFilters {
   hasApartment?: string
   members?: number
   sort?: string
+  scope?: 'my' | 'discoverable'
 }
 
 export interface TenantGroupCandidateFilters {
@@ -772,6 +773,9 @@ function buildTenantGroupsQuery(filters?: TenantGroupListFilters) {
   }
   if (filters.sort?.trim()) {
     params.set('sort', filters.sort.trim())
+  }
+  if (filters.scope?.trim()) {
+    params.set('scope', filters.scope.trim())
   }
 
   const query = params.toString()

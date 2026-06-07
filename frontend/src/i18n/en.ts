@@ -817,7 +817,10 @@ const en = {
       relationViewer: 'Available',
       statusFullyAccepted: 'Fully accepted',
       statusPendingAcceptance: 'Pending acceptance',
+      statusAccepted: 'Accepted',
       statusFull: 'Full',
+      requestSent: 'Request sent',
+      requestRejected: 'Request rejected',
     },
     detail: {
       backToList: 'Back to list',
