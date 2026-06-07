@@ -1663,29 +1663,53 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 
 	if filters.Status != "" {
 		switch filters.Status {
-		case group.StatusClosed:
-			args = append(args, group.StatusClosed)
-			whereClauses = append(whereClauses, fmt.Sprintf("g.status = $%d", len(args)))
-		case "REQUEST_SENT":
+		case "FULL":
+			whereClauses = append(whereClauses, `a.id IS NOT NULL
+				AND COALESCE(a.total_spots, 0) > 0
+				AND COALESCE((
+					SELECT COUNT(*)
+					FROM public.group_members gm
+					WHERE gm.group_id = g.id
+						AND gm.status = 'ACCEPTED'
+				), 0) >= COALESCE(a.total_spots, 0)`)
+		case "PENDING":
 			args = append(args, group.JoinRequestStatusPending)
-			whereClauses = append(whereClauses, fmt.Sprintf(`COALESCE((
-				SELECT gjr.status
-				FROM public.group_join_requests gjr
-				WHERE gjr.group_id = g.id
-					AND gjr.requester_user_id = $1
-				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
-				LIMIT 1
-			), '') = $%d`, len(args)))
+			whereClauses = append(whereClauses, fmt.Sprintf(`(
+				EXISTS (
+					SELECT 1
+					FROM public.group_invitations gi
+					WHERE gi.group_id = g.id
+						AND gi.invited_user_id = $1
+						AND gi.status = 'PENDING'
+				)
+				OR COALESCE((
+					SELECT gjr.status
+					FROM public.group_join_requests gjr
+					WHERE gjr.group_id = g.id
+						AND gjr.requester_user_id = $1
+					ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+					LIMIT 1
+				), '') = $%d
+			)`, len(args)))
 		case "REJECTED":
 			args = append(args, group.JoinRequestStatusRejected)
-			whereClauses = append(whereClauses, fmt.Sprintf(`COALESCE((
-				SELECT gjr.status
-				FROM public.group_join_requests gjr
-				WHERE gjr.group_id = g.id
-					AND gjr.requester_user_id = $1
-				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
-				LIMIT 1
-			), '') = $%d`, len(args)))
+			whereClauses = append(whereClauses, fmt.Sprintf(`(
+				EXISTS (
+					SELECT 1
+					FROM public.group_invitations gi
+					WHERE gi.group_id = g.id
+						AND gi.invited_user_id = $1
+						AND gi.status = 'REJECTED'
+				)
+				OR COALESCE((
+					SELECT gjr.status
+					FROM public.group_join_requests gjr
+					WHERE gjr.group_id = g.id
+						AND gjr.requester_user_id = $1
+					ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+					LIMIT 1
+				), '') = $%d
+			)`, len(args)))
 		case "ACCEPTED":
 			args = append(args, group.JoinRequestStatusApproved)
 			whereClauses = append(whereClauses, fmt.Sprintf(`(
@@ -1717,14 +1741,20 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 		whereClauses = append(whereClauses, "g.apartment_id IS NULL")
 	}
 
-	if filters.Members > 0 {
-		args = append(args, filters.Members)
+	if filters.Members != "" {
+		operator := "="
+		members := filters.Members
+		if filters.Members == "5+" {
+			operator = ">="
+			members = "5"
+		}
+		args = append(args, members)
 		whereClauses = append(whereClauses, fmt.Sprintf(`(
 			SELECT COUNT(*)
 			FROM public.group_members gm
 			WHERE gm.group_id = g.id
 				AND gm.status = 'ACCEPTED'
-		) = $%d`, len(args)))
+		) %s $%d::int`, operator, len(args)))
 	}
 
 	query := baseQuery

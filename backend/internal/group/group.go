@@ -80,7 +80,7 @@ type ListGroupsFilters struct {
 	Search       string
 	Status       string
 	HasApartment string
-	Members      int
+	Members      string
 	SortBy       string
 	Scope        string
 }

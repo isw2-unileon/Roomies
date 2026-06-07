@@ -350,9 +350,9 @@ export interface TenantApartmentListFilters {
 
 export interface TenantGroupListFilters {
   search?: string
-  status?: 'all' | 'request_sent' | 'accepted' | 'rejected' | 'closed'
+  status?: 'all' | 'full' | 'accepted' | 'pending' | 'rejected'
   hasApartment?: string
-  members?: number
+  members?: 'all' | '2' | '3' | '4' | '5+'
   sort?: string
   scope?: 'my' | 'discoverable'
 }
@@ -780,8 +780,8 @@ function buildTenantGroupsQuery(filters?: TenantGroupListFilters) {
   if (filters.hasApartment?.trim() && filters.hasApartment !== 'all') {
     params.set('has_apartment', filters.hasApartment.trim())
   }
-  if (filters.members !== undefined && filters.members > 0) {
-    params.set('members', String(filters.members))
+  if (filters.members?.trim() && filters.members !== 'all') {
+    params.set('members', filters.members.trim())
   }
   if (filters.sort?.trim()) {
     params.set('sort', filters.sort.trim())

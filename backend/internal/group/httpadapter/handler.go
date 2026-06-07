@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -197,7 +196,7 @@ func (h *handler) listTenantGroups(c *gin.Context) {
 		Search:       strings.TrimSpace(c.Query("search")),
 		Status:       strings.TrimSpace(c.Query("status")),
 		HasApartment: strings.TrimSpace(c.Query("has_apartment")),
-		Members:      parseIntQuery(c.Query("members")),
+		Members:      strings.TrimSpace(c.Query("members")),
 		SortBy:       strings.TrimSpace(c.Query("sort")),
 		Scope:        strings.TrimSpace(c.Query("scope")),
 	}
@@ -763,18 +762,4 @@ func candidateResponseFromDomain(item group.Candidate) candidateResponse {
 		SocializationLevel: item.SocializationLevel,
 		NightlifeLevel:     item.NightlifeLevel,
 	}
-}
-
-func parseIntQuery(raw string) int {
-	value := strings.TrimSpace(raw)
-	if value == "" {
-		return 0
-	}
-
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return 0
-	}
-
-	return parsed
 }
