@@ -121,8 +121,6 @@ export interface TenantGroup {
     membersData: TenantGroupMember[]
 }
 
-export type GroupStatus = 'active' | 'inactive' | 'pending'
-
 export interface TenantMessage {
     id: string
     senderId: string
