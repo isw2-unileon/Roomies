@@ -83,29 +83,30 @@ export default function TenantMessagesPage() {
       setGroupMessages([])
       return
     }
+    const thread = activeThread
     let ignore = false
     async function loadThread() {
       setIsLoadingThread(true)
       setThreadError('')
       try {
-        if (activeThread.kind === 'dm') {
+        if (thread.kind === 'dm') {
           const [msgs] = await Promise.all([
-            listConversationMessages(activeThread.apartmentId, activeThread.otherUserId),
-            markConversationRead(activeThread.apartmentId, activeThread.otherUserId),
+            listConversationMessages(thread.apartmentId, thread.otherUserId),
+            markConversationRead(thread.apartmentId, thread.otherUserId),
           ])
           if (!ignore) {
             setMessages(msgs)
             setGroupMessages([])
             setConversations((prev) =>
               prev.map((c) =>
-                c.apartmentId === activeThread.apartmentId && c.otherUserId === activeThread.otherUserId
+                c.apartmentId === thread.apartmentId && c.otherUserId === thread.otherUserId
                   ? { ...c, unreadCount: 0 }
                   : c
               )
             )
           }
         } else {
-          const msgs = await listGroupMessages(activeThread.groupId)
+          const msgs = await listGroupMessages(thread.groupId)
           if (!ignore) {
             setGroupMessages(msgs)
             setMessages([])
