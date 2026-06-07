@@ -45,6 +45,26 @@ func (f *fakeMessageRepository) MarkConversationRead(ctx context.Context, userID
 	return f.marked, nil
 }
 
+func (f *fakeMessageRepository) ListGroupConversations(_ context.Context, _ string) ([]message.GroupConversation, error) {
+	return nil, nil
+}
+
+func (f *fakeMessageRepository) IsGroupMember(_ context.Context, _, _ string) (bool, error) {
+	return true, nil
+}
+
+func (f *fakeMessageRepository) CreateGroupMessage(_ context.Context, senderID, groupID, content string) (*message.GroupMessage, error) {
+	return &message.GroupMessage{ID: "gm1", GroupID: groupID, SenderID: senderID, Content: content}, nil
+}
+
+func (f *fakeMessageRepository) ListGroupMessages(_ context.Context, _ string) ([]message.GroupMessage, error) {
+	return nil, nil
+}
+
+func (f *fakeMessageRepository) GetOrCreateApartmentChat(_ context.Context, apartmentID, _ string) (*message.ApartmentChat, error) {
+	return &message.ApartmentChat{GroupID: "g1", GroupName: "Apartment Chat"}, nil
+}
+
 func TestSendMessageCreatesRecord(t *testing.T) {
 	repo := &fakeMessageRepository{}
 	svc := NewService(repo)
