@@ -45,6 +45,7 @@ export interface TenantProperty {
     bathrooms: number
     surfaceM2: number
     floor: number
+    isCurrentTenantHome?: boolean
 }
 
 export type PropertyAvailability = 'available' | 'occupied' | 'full'
@@ -146,6 +147,7 @@ export interface TenantPropertyDetail {
     currentApplicationStatus: string
     canApply: boolean
     canCancel: boolean
+    canLeave: boolean
 }
 
 export interface InterestedTenant {
@@ -155,6 +157,13 @@ export interface InterestedTenant {
     studies: string
     avatarUrl: string
     compatibility: number
+}
+
+export interface ApartmentResident {
+    userId: string
+    name: string
+    avatarUrl: string
+    joinedAt: string
 }
 
 export type TenantGroupApiStatus =

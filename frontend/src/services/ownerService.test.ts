@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { createApartment, getOwnerApartment, listOwnerApartments, updateOwnerApartment } from './ownerService'
+import { createApartment, getOwnerApartment, listOwnerApartments, removeApartmentTenant, updateOwnerApartment } from './ownerService'
 
 describe('ownerService', () => {
   beforeEach(() => {
@@ -185,6 +185,22 @@ describe('ownerService', () => {
         students_allowed: null,
         notes: '',
       }),
+    })
+  })
+
+  test('posts accepted tenant removal request', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'tenant removed' }),
+    } as Response)
+
+    await expect(removeApartmentTenant('apt-1', 'tenant-1')).resolves.toBe('tenant removed')
+
+    expect(fetch).toHaveBeenCalledWith('/api/owner/apartments/apt-1/tenants/tenant-1/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({}),
     })
   })
 })

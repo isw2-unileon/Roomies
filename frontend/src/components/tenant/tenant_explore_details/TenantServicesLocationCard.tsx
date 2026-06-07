@@ -20,15 +20,11 @@ export default function TenantServicesLocationCard({ rules }: TenantServicesLoca
   const definedRules = ruleItems.filter((r) => r.allowed !== null)
   const hasContent = definedRules.length > 0 || rules?.notes
 
-  if (!hasContent) {
-    return null
-  }
-
   return (
     <section className={styles.servicesCard}>
       <h2 className={styles.cardTitle}>{t('tenantDashboard.detail.services.title')}</h2>
 
-      {definedRules.length > 0 && (
+      {definedRules.length > 0 ? (
         <div className={styles.rulesGrid}>
           {definedRules.map((rule) => (
             <span
@@ -44,14 +40,18 @@ export default function TenantServicesLocationCard({ rules }: TenantServicesLoca
             </span>
           ))}
         </div>
-      )}
+      ) : null}
 
-      {rules?.notes && (
+      {rules?.notes ? (
         <div className={styles.notesBlock}>
           <p className={styles.label}>{t('tenantDashboard.detail.services.notes')}</p>
           <p className={styles.notesText}>{rules.notes}</p>
         </div>
-      )}
+      ) : null}
+
+      {!hasContent ? (
+        <p className={styles.emptyText}>{t('tenantDashboard.detail.services.noRules')}</p>
+      ) : null}
     </section>
   )
 }

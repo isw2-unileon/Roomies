@@ -23,7 +23,12 @@ type repository interface {
 	UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error)
 	ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error)
 	ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error)
+	GetTenantClosedApartment(ctx context.Context, tenantID string) (*apartment.Apartment, error)
 	GetApartmentByID(ctx context.Context, apartmentID string) (*apartment.Apartment, error)
+	CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error)
+	ReopenApartment(ctx context.Context, ownerID, apartmentID string) (bool, error)
+	ListApartmentTenants(ctx context.Context, ownerID, apartmentID string) ([]apartment.Tenant, error)
+	ListApartmentResidents(ctx context.Context, apartmentID string) ([]apartment.Tenant, error)
 }
 
 type profileReader interface {
@@ -32,6 +37,7 @@ type profileReader interface {
 
 type applicationReader interface {
 	GetTenantApplicationForApartment(ctx context.Context, apartmentID, tenantID string) (string, string, error)
+	IsTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error)
 }
 
 type imageStorage interface {
@@ -54,6 +60,7 @@ type UploadResult struct {
 
 const (
 	apartmentPhotosBucket    = "Apartment_photos"
+	profileAvatarsBucket     = "profile-avatars"
 	signedImageURLTTLSeconds = 3600
 )
 
@@ -74,6 +81,12 @@ var ErrApplicationAlreadyExists = errors.New("active application already exists"
 
 // ErrApplicationNotCancelable is returned when application cannot be cancelled.
 var ErrApplicationNotCancelable = errors.New("application is not cancelable")
+
+// ErrApartmentAlreadyClosed is returned when trying to close an already closed apartment.
+var ErrApartmentAlreadyClosed = errors.New("apartment is already closed")
+
+// ErrApartmentNotClosed is returned when trying to reopen an apartment that is not closed.
+var ErrApartmentNotClosed = errors.New("apartment is not closed")
 
 // ErrInvalidMapParams is returned when map search params are out of range.
 var ErrInvalidMapParams = errors.New("invalid map search parameters: lat must be in [-90,90], lng in [-180,180], radius > 0")
@@ -230,6 +243,102 @@ func (s *Service) UpdateOwnerApartment(ctx context.Context, ownerID, role, apart
 	return &signed[0], nil
 }
 
+// CloseOwnerApartment marks an owner apartment as closed and cancels pending applications.
+func (s *Service) CloseOwnerApartment(ctx context.Context, ownerID, role, apartmentID string) error {
+	if strings.TrimSpace(ownerID) == "" {
+		return errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return errors.New("apartment id is required")
+	}
+
+	updated, err := s.repo.CloseApartment(ctx, ownerID, apartmentID)
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrApartmentAlreadyClosed
+	}
+	return nil
+}
+
+// ListApartmentTenants returns confirmed tenants living in an owner's apartment.
+func (s *Service) ListApartmentTenants(ctx context.Context, ownerID, role, apartmentID string) ([]apartment.Tenant, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return nil, ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+
+	tenants, err := s.repo.ListApartmentTenants(ctx, ownerID, apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	for idx := range tenants {
+		if tenants[idx].AvatarURL != "" {
+			signed, err := s.signedAvatarURL(ctx, tenants[idx].AvatarURL)
+			if err == nil && signed != "" {
+				tenants[idx].AvatarURL = signed
+			}
+		}
+	}
+	return tenants, nil
+}
+
+// ListApartmentResidents returns confirmed tenants for any authenticated user.
+func (s *Service) ListApartmentResidents(ctx context.Context, apartmentID string) ([]apartment.Tenant, error) {
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return nil, errors.New("apartment id is required")
+	}
+
+	tenants, err := s.repo.ListApartmentResidents(ctx, apartmentID)
+	if err != nil {
+		return nil, err
+	}
+	for idx := range tenants {
+		if tenants[idx].AvatarURL != "" {
+			signed, signErr := s.signedAvatarURL(ctx, tenants[idx].AvatarURL)
+			if signErr == nil && signed != "" {
+				tenants[idx].AvatarURL = signed
+			}
+		}
+	}
+	return tenants, nil
+}
+
+// ReopenOwnerApartment marks a closed apartment as available again.
+func (s *Service) ReopenOwnerApartment(ctx context.Context, ownerID, role, apartmentID string) error {
+	if strings.TrimSpace(ownerID) == "" {
+		return errors.New("owner id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "owner" {
+		return ErrOwnerRequired
+	}
+	apartmentID = strings.TrimSpace(apartmentID)
+	if apartmentID == "" {
+		return errors.New("apartment id is required")
+	}
+
+	updated, err := s.repo.ReopenApartment(ctx, ownerID, apartmentID)
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ErrApartmentNotClosed
+	}
+	return nil
+}
+
 // ListAvailableApartments returns tenant-visible apartment listings.
 func (s *Service) ListAvailableApartments(ctx context.Context) ([]apartment.Apartment, error) {
 	return s.ListAvailableApartmentsFiltered(ctx, apartment.ListApartmentsFilters{})
@@ -243,6 +352,60 @@ func (s *Service) ListAvailableApartmentsFiltered(ctx context.Context, filters a
 		return nil, err
 	}
 	return s.signApartmentImages(ctx, apartments)
+}
+
+// ListTenantExploreApartments returns tenant-visible listings plus the tenant's closed home when applicable.
+func (s *Service) ListTenantExploreApartments(ctx context.Context, tenantID, role string, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return nil, ErrTenantRequired
+	}
+
+	apartments, err := s.ListAvailableApartmentsFiltered(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+	return s.appendTenantClosedHome(ctx, apartments, tenantID)
+}
+
+// ListTenantExploreApartmentsInRadius returns map-filtered listings plus the tenant's closed home when applicable.
+func (s *Service) ListTenantExploreApartmentsInRadius(ctx context.Context, tenantID, role string, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
+	if strings.TrimSpace(tenantID) == "" {
+		return nil, errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return nil, ErrTenantRequired
+	}
+
+	apartments, err := s.ListApartmentsInRadius(ctx, lat, lng, radiusKm)
+	if err != nil {
+		return nil, err
+	}
+	return s.appendTenantClosedHome(ctx, apartments, tenantID)
+}
+
+func (s *Service) appendTenantClosedHome(ctx context.Context, apartments []apartment.Apartment, tenantID string) ([]apartment.Apartment, error) {
+	home, err := s.repo.GetTenantClosedApartment(ctx, strings.TrimSpace(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	if home == nil {
+		return apartments, nil
+	}
+	for idx := range apartments {
+		if apartments[idx].ID == home.ID {
+			apartments[idx].IsCurrentTenantHome = true
+			return apartments, nil
+		}
+	}
+	home.IsCurrentTenantHome = true
+	signed, err := s.signApartmentImages(ctx, []apartment.Apartment{*home})
+	if err != nil {
+		return nil, err
+	}
+	return append(apartments, signed[0]), nil
 }
 
 // ListApartmentsInRadius returns apartments within a radius (km) from a point.
@@ -308,14 +471,8 @@ func normalizeListApartmentsFilters(filters apartment.ListApartmentsFilters) apa
 
 // GetApartmentDetailForTenant returns apartment detail and compatibility data for a tenant.
 func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, tenantID, role string) (*apartment.Detail, error) {
-	if strings.TrimSpace(apartmentID) == "" {
-		return nil, errors.New("apartment id is required")
-	}
-	if strings.TrimSpace(tenantID) == "" {
-		return nil, errors.New("tenant id is required")
-	}
-	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
-		return nil, ErrTenantRequired
+	if err := validateGetApartmentDetailInputs(apartmentID, tenantID, role); err != nil {
+		return nil, err
 	}
 
 	apartmentRow, err := s.repo.GetApartmentByID(ctx, apartmentID)
@@ -341,9 +498,13 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 	if err != nil {
 		return nil, err
 	}
+	tenantInClosedApartment, err := s.checkTenantInClosedApartment(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	canApply, canCancel, canLeave := computeApplicationPermissions(apartmentRow.Status, applicationID, applicationStatus, tenantInClosedApartment)
 	mappedStatus := application.MapStatus(applicationStatus)
-	canApply := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
-	canCancel := mappedStatus == "pending"
 
 	return &apartment.Detail{
 		Apartment:                apartmentsWithImage[0],
@@ -353,7 +514,38 @@ func (s *Service) GetApartmentDetailForTenant(ctx context.Context, apartmentID, 
 		CurrentApplicationStatus: mappedStatus,
 		CanApply:                 canApply,
 		CanCancel:                canCancel,
+		CanLeave:                 canLeave,
 	}, nil
+}
+
+func validateGetApartmentDetailInputs(apartmentID, tenantID, role string) error {
+	if strings.TrimSpace(apartmentID) == "" {
+		return errors.New("apartment id is required")
+	}
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant id is required")
+	}
+	if strings.ToLower(strings.TrimSpace(role)) != "tenant" {
+		return ErrTenantRequired
+	}
+	return nil
+}
+
+func (s *Service) checkTenantInClosedApartment(ctx context.Context, tenantID string) (bool, error) {
+	if s.applicationReader == nil {
+		return false, nil
+	}
+	return s.applicationReader.IsTenantInClosedApartment(ctx, tenantID)
+}
+
+func computeApplicationPermissions(status, applicationID, applicationStatus string, tenantInClosedApartment bool) (canApply, canCancel, canLeave bool) {
+	mappedStatus := application.MapStatus(applicationStatus)
+	isClosed := strings.ToUpper(strings.TrimSpace(status)) == "CLOSED"
+	noActiveApplication := strings.TrimSpace(applicationID) == "" || mappedStatus == "cancelled" || mappedStatus == "rejected"
+	canApply = !isClosed && !tenantInClosedApartment && noActiveApplication
+	canCancel = mappedStatus == "pending"
+	canLeave = !isClosed && mappedStatus == "approved"
+	return canApply, canCancel, canLeave
 }
 
 func (s *Service) signApartmentImages(ctx context.Context, apartments []apartment.Apartment) ([]apartment.Apartment, error) {
@@ -381,6 +573,24 @@ func (s *Service) signApartmentImages(ctx context.Context, apartments []apartmen
 		apartments[idx].ImageURLs = imageURLs
 	}
 	return apartments, nil
+}
+
+func (s *Service) signedAvatarURL(ctx context.Context, avatarPath string) (string, error) {
+	avatarPath = strings.TrimSpace(avatarPath)
+	if avatarPath == "" {
+		return "", nil
+	}
+	if isAbsoluteHTTPURL(avatarPath) {
+		return avatarPath, nil
+	}
+	if s.imageStorage == nil {
+		return "", nil
+	}
+	signedURL, err := s.imageStorage.CreateSignedURL(ctx, profileAvatarsBucket, avatarPath, signedImageURLTTLSeconds)
+	if err != nil {
+		return "", fmt.Errorf("sign avatar image: %w", err)
+	}
+	return signedURL, nil
 }
 
 func (s *Service) signedImageURL(ctx context.Context, imagePath string) (string, error) {

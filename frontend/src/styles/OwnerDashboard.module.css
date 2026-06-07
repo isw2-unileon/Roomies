@@ -1,12 +1,12 @@
 .page {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   background: var(--tenant-bg);
 }
 
 .layout {
   display: flex;
-  height: 100vh;
-  overflow: hidden;
+  height: 100%;
 }
 
 .desktopSidebar {
@@ -605,6 +605,262 @@
 .ownerPropertyEditButton:hover {
   color: #fff;
   background: var(--tenant-primary);
+}
+
+.ownerPropertyCardClosed {
+  opacity: 0.6;
+  position: relative;
+}
+
+.ownerPropertyClosedBadge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 1;
+  padding: 0.25rem 0.65rem;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #c0392b;
+  border-radius: 0.45rem;
+}
+
+.ownerPropertyCloseButton {
+  padding: 0.5rem 0.85rem;
+  color: #c0392b;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: #fdecea;
+  border: 1px solid rgba(192, 57, 43, 0.18);
+  border-radius: 0.65rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.ownerPropertyCloseButton:hover {
+  color: #fff;
+  background: #c0392b;
+}
+
+.ownerPropertyCloseButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ownerPropertyReopenButton {
+  padding: 0.5rem 0.85rem;
+  color: #14955f;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: #e8f5e9;
+  border: 1px solid rgba(20, 149, 95, 0.18);
+  border-radius: 0.65rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.ownerPropertyReopenButton:hover {
+  color: #fff;
+  background: #14955f;
+}
+
+.ownerPropertyReopenButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ownerPropertyCloseOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.ownerPropertyCloseModal {
+  width: 90%;
+  max-width: 400px;
+  padding: 1.5rem;
+  background: var(--tenant-surface);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.ownerPropertyCloseModalTitle {
+  margin: 0 0 0.6rem;
+  color: var(--tenant-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.ownerPropertyCloseModalText {
+  margin: 0 0 1.2rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.ownerPropertyCloseModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.ownerPropertyCloseModalCancel {
+  padding: 0.5rem 1rem;
+  color: var(--tenant-text-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--tenant-bg-soft);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.ownerPropertyCloseModalCancel:hover {
+  background: var(--tenant-border-light);
+}
+
+.ownerPropertyCloseModalConfirm {
+  padding: 0.5rem 1rem;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: #c0392b;
+  border: none;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.ownerPropertyCloseModalConfirm:hover {
+  background: #a93226;
+}
+
+.ownerPropertyViewTenantsButton {
+  padding: 0.5rem 0.85rem;
+  color: #1a6fb5;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: #e8f0fe;
+  border: 1px solid rgba(26, 111, 181, 0.18);
+  border-radius: 0.65rem;
+  cursor: pointer;
+  margin-right: auto;
+}
+
+.ownerPropertyViewTenantsButton:hover {
+  color: #fff;
+  background: #1a6fb5;
+}
+
+.ownerPropertyTenantsFree {
+  margin: 0 0 1rem;
+  color: #14955f;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.ownerPropertyTenantsLoading,
+.ownerPropertyTenantsEmpty {
+  margin: 0;
+  padding: 1rem 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ownerPropertyTenantsError {
+  margin: 0;
+  padding: 1rem 0;
+  color: #c0392b;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ownerPropertyTenantsList {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.ownerPropertyTenantItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.ownerPropertyTenantAvatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.ownerPropertyTenantInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ownerPropertyTenantName {
+  color: var(--tenant-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownerPropertyTenantEmail {
+  color: var(--tenant-text-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownerPropertyTenantDate {
+  color: var(--tenant-text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.ownerPropertyTenantRemoveButton {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-left: 0.25rem;
+  font-size: 1rem;
+  background: #fdecea;
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.ownerPropertyTenantRemoveButton:hover {
+  background: #f8d7da;
+}
+
+.ownerPropertyTenantRemoveButton:disabled,
+.ownerPropertyCloseModalCancel:disabled,
+.ownerPropertyCloseModalConfirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .ownerPropertyEmpty {

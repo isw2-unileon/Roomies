@@ -115,6 +115,7 @@
 }
 
 .shareButton,
+.leaveButton,
 .applyButton {
   min-height: 3rem;
   padding: 0 1rem;
@@ -138,6 +139,23 @@
   color: #fff;
   background: var(--tenant-primary);
   border: 1px solid var(--tenant-primary);
+}
+
+.leaveButton {
+  color: #b42318;
+  background: #fff5f4;
+  border: 1px solid rgba(180, 35, 24, 0.22);
+}
+
+.leaveButton:hover {
+  color: #fff;
+  background: #b42318;
+}
+
+.leaveButton:disabled,
+.applyButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .mainGrid {
@@ -508,6 +526,13 @@
   line-height: 1.45;
 }
 
+.emptyText {
+  margin: 0.75rem 0 0;
+  color: var(--tenant-text-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
 .interestedList {
   display: grid;
   gap: 0.8rem;
@@ -544,6 +569,38 @@
   font-weight: 800;
 }
 
+.residentRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.residentAvatar {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.residentProfileButton {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #6c63ff);
+  background: transparent;
+  border: 1.5px solid var(--tenant-primary, #6c63ff);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.residentProfileButton:hover {
+  background: var(--tenant-primary, #6c63ff);
+  color: #fff;
+}
+
 .statusText {
   margin: 0;
   color: var(--tenant-text-soft);
@@ -566,20 +623,82 @@
   height: 1.15rem;
 }
 
+.mapOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.mapModal {
+  position: relative;
+  width: 90%;
+  max-width: 56rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.mapCloseButton {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--tenant-text-soft);
+  background: var(--tenant-surface);
+  border: 1px solid var(--tenant-border-light);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.mapCloseButton:hover {
+  background: var(--tenant-bg, #f9f7f4);
+}
+
+.modalMap {
+  width: 100%;
+  height: 400px;
+}
+
 @media (min-width: 980px) {
   .mainGrid {
     grid-template-columns: minmax(0, 1fr) 27rem;
+    grid-auto-flow: dense;
   }
 
-  .galleryCard,
-  .detailsCard,
+  .galleryCard {
+    grid-column: 1;
+    order: 1;
+  }
+
+  .compatibilityCard {
+    grid-column: 2;
+    order: 2;
+  }
+
+  .detailsCard {
+    grid-column: 1;
+    order: 3;
+  }
+
   .servicesCard {
     grid-column: 1;
+    order: 4;
   }
 
-  .compatibilityCard,
   .peopleCard {
     grid-column: 2;
+    order: 4;
   }
 
   .galleryCard {
@@ -602,6 +721,7 @@
   }
 
   .shareButton,
+  .leaveButton,
   .applyButton {
     flex: 1;
   }

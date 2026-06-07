@@ -87,6 +87,7 @@ interface TenantApartmentDto {
   pets_allowed?: boolean | null
   students_allowed?: boolean | null
   notes?: string
+  is_current_tenant_home?: boolean | null
 }
 
 interface TenantApartmentDetailResponseDto {
@@ -96,6 +97,7 @@ interface TenantApartmentDetailResponseDto {
   current_application_status?: string
   can_apply?: boolean | string | number | null
   can_cancel?: boolean | string | number | null
+  can_leave?: boolean | string | number | null
   error?: string
 }
 
@@ -427,6 +429,7 @@ function tenantApartmentFromDto(dto: TenantApartmentDto): TenantProperty {
     bathrooms: dto.bathrooms ?? 0,
     surfaceM2: dto.surface_m2 ?? 0,
     floor: dto.floor ?? 0,
+    isCurrentTenantHome: dto.is_current_tenant_home === true,
   }
 }
 
@@ -795,7 +798,7 @@ function buildTenantGroupCandidatesQuery(filters?: TenantGroupCandidateFilters) 
 
 export async function listTenantApartments(filters?: TenantApartmentListFilters) {
   const hasMapParams = filters?.lat !== undefined && filters?.lng !== undefined && filters?.radius !== undefined
-  const endpoint = hasMapParams ? '/api/apartments/map' : '/api/apartments'
+  const endpoint = hasMapParams ? '/api/tenant/apartments/map' : '/api/tenant/apartments'
   const query = buildApartmentsQuery(filters)
   const response = await apiFetch(`${endpoint}${query}`)
   const data = (await response.json()) as TenantApartmentsResponseDto
@@ -833,6 +836,7 @@ export async function getTenantApartmentDetail(apartmentID: string): Promise<Ten
     currentApplicationStatus: data.current_application_status ?? '',
     canApply: toBoolean(data.can_apply, true),
     canCancel: toBoolean(data.can_cancel, false),
+    canLeave: toBoolean(data.can_leave, false),
   }
 }
 
@@ -859,6 +863,27 @@ export async function listInterestedTenants(apartmentID: string): Promise<Intere
     throw new Error(data.error ?? 'No se pudieron cargar los interesados.')
   }
   return (data.tenants ?? []).map(interestedTenantFromDto)
+}
+
+interface ApartmentResidentDto {
+  user_id: string
+  name: string
+  avatar_url: string
+  joined_at: string
+}
+
+export async function listApartmentResidents(apartmentID: string): Promise<import('@/types/tenant').ApartmentResident[]> {
+  const response = await apiFetch(`/api/apartments/${encodeURIComponent(apartmentID)}/tenants`)
+  const data = (await response.json()) as { tenants?: ApartmentResidentDto[]; error?: string }
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudieron cargar los residentes.')
+  }
+  return (data.tenants ?? []).map((t) => ({
+    userId: t.user_id,
+    name: t.name,
+    avatarUrl: t.avatar_url,
+    joinedAt: t.joined_at,
+  }))
 }
 
 interface TenantProfileByUserIdResponseDto {
@@ -973,6 +998,19 @@ export async function cancelTenantApplication(applicationID: string) {
     throw new Error(data.error ?? 'No se pudo cancelar la solicitud.')
   }
   return data.message ?? 'application cancelled'
+}
+
+export async function leaveAcceptedApartment(applicationID: string) {
+  const response = await apiFetch(`/api/applications/${encodeURIComponent(applicationID)}/leave`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const data = (await response.json()) as CancelApplicationResponseDto
+  if (!response.ok) {
+    throw new Error(data.error ?? 'No se pudo salir del piso.')
+  }
+  return data.message ?? 'apartment left'
 }
 
 export async function listTenantApplications() {

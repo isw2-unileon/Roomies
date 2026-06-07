@@ -97,6 +97,7 @@ func RegisterTenantRoutes(api *gin.RouterGroup, applicationService *applications
 	api.POST("/apartments/:id/applications", h.applyToApartment)
 	api.POST("/tenant/groups/:id/applications", h.applyGroupToAssignedApartment)
 	api.POST("/applications/:id/cancel", h.cancelTenantApplication)
+	api.POST("/applications/:id/leave", h.leaveAcceptedApartment)
 	api.GET("/tenant/applications", h.listTenantApplications)
 }
 
@@ -107,6 +108,7 @@ func RegisterOwnerRoutes(api *gin.RouterGroup, applicationService *applicationse
 	api.GET("/owner/applications/:id", h.getOwnerApplication)
 	api.POST("/owner/applications/:id/approve", h.approveOwnerApplication)
 	api.POST("/owner/applications/:id/reject", h.rejectOwnerApplication)
+	api.POST("/owner/apartments/:id/tenants/:tenantID/remove", h.removeAcceptedTenant)
 }
 
 // RegisterSharedRoutes wires authenticated application endpoints available to multiple roles.
@@ -137,6 +139,14 @@ func (h *handler) applyToApartment(c *gin.Context) {
 		}
 		if errors.Is(err, applicationservice.ErrApartmentFull) {
 			c.JSON(http.StatusConflict, gin.H{"error": "apartment is full"})
+			return
+		}
+		if errors.Is(err, applicationservice.ErrApartmentClosed) {
+			c.JSON(http.StatusConflict, gin.H{"error": "apartment is closed"})
+			return
+		}
+		if errors.Is(err, applicationservice.ErrTenantInClosedApartment) {
+			c.JSON(http.StatusConflict, gin.H{"error": "No puedes solicitar plaza en otros pisos porque ya perteneces a un piso cerrado."})
 			return
 		}
 		if errors.Is(err, applicationservice.ErrApplicationAlreadyExists) {
@@ -241,6 +251,23 @@ func (h *handler) cancelTenantApplication(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "application cancelled"})
 }
 
+func (h *handler) leaveAcceptedApartment(c *gin.Context) {
+	tenantID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	applicationID := strings.TrimSpace(c.Param("id"))
+	if applicationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "application id is required"})
+		return
+	}
+	if err := h.applicationService.LeaveAcceptedApartment(c.Request.Context(), applicationID, tenantID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "apartment left"})
+}
+
 func (h *handler) listTenantApplications(c *gin.Context) {
 	tenantID, role, ok := h.resolveUserAndRole(c)
 	if !ok {
@@ -343,6 +370,28 @@ func (h *handler) rejectOwnerApplication(c *gin.Context) {
 	h.respondOwnerApplicationDecision(c, h.applicationService.RejectOwnerApplication, "application rejected")
 }
 
+func (h *handler) removeAcceptedTenant(c *gin.Context) {
+	ownerID, role, ok := h.resolveUserAndRole(c)
+	if !ok {
+		return
+	}
+	apartmentID := strings.TrimSpace(c.Param("id"))
+	tenantID := strings.TrimSpace(c.Param("tenantID"))
+	if apartmentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "apartment id is required"})
+		return
+	}
+	if tenantID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tenant id is required"})
+		return
+	}
+	if err := h.applicationService.RemoveAcceptedTenant(c.Request.Context(), apartmentID, tenantID, ownerID, role); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "tenant removed"})
+}
+
 func (h *handler) respondOwnerApplicationDecision(
 	c *gin.Context,
 	action func(ctx context.Context, applicationID, ownerID, role string) error,
@@ -367,39 +416,39 @@ func (h *handler) respondOwnerApplicationDecision(
 	c.JSON(http.StatusOK, gin.H{"message": successMessage})
 }
 
+type serviceErrorMapping struct {
+	target  error
+	status  int
+	message string
+}
+
+var serviceErrorMappings = []serviceErrorMapping{
+	{applicationservice.ErrTenantRequired, http.StatusForbidden, "applications are only available for tenant users"},
+	{applicationservice.ErrOwnerRequired, http.StatusForbidden, "applications are only available for owner users"},
+	{applicationservice.ErrApartmentNotFound, http.StatusNotFound, "apartment not found"},
+	{applicationservice.ErrApartmentFull, http.StatusConflict, "apartment is full"},
+	{applicationservice.ErrApplicationAlreadyExists, http.StatusConflict, "application already exists"},
+	{applicationservice.ErrApartmentClosed, http.StatusConflict, "apartment is closed"},
+	{applicationservice.ErrTenantInClosedApartment, http.StatusConflict, "tenant belongs to a closed apartment"},
+	{applicationservice.ErrApplicationNotCancelable, http.StatusConflict, "application is not cancelable"},
+	{applicationservice.ErrInterestedTenantsForbidden, http.StatusForbidden, "interested tenants are not available for this user"},
+	{applicationservice.ErrGroupNotFound, http.StatusNotFound, "group not found"},
+	{applicationservice.ErrGroupApplicationForbidden, http.StatusForbidden, "only the group creator can submit this request"},
+	{applicationservice.ErrGroupNotReady, http.StatusConflict, "group is not fully accepted"},
+	{applicationservice.ErrGroupApartmentRequired, http.StatusConflict, "group has no assigned apartment"},
+	{applicationservice.ErrOwnerApplicationNotFound, http.StatusNotFound, "application not found"},
+	{applicationservice.ErrOwnerApplicationAlreadyHandled, http.StatusConflict, "application is not pending owner review"},
+	{applicationservice.ErrOwnerApplicationConflict, http.StatusConflict, "another group has already been accepted for this apartment"},
+}
+
 func (h *handler) handleServiceError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, applicationservice.ErrTenantRequired):
-		c.JSON(http.StatusForbidden, gin.H{"error": "applications are only available for tenant users"})
-	case errors.Is(err, applicationservice.ErrOwnerRequired):
-		c.JSON(http.StatusForbidden, gin.H{"error": "applications are only available for owner users"})
-	case errors.Is(err, applicationservice.ErrApartmentNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
-	case errors.Is(err, applicationservice.ErrApartmentFull):
-		c.JSON(http.StatusConflict, gin.H{"error": "apartment is full"})
-	case errors.Is(err, applicationservice.ErrApplicationAlreadyExists):
-		c.JSON(http.StatusConflict, gin.H{"error": "application already exists"})
-	case errors.Is(err, applicationservice.ErrApplicationNotCancelable):
-		c.JSON(http.StatusConflict, gin.H{"error": "application is not cancelable"})
-	case errors.Is(err, applicationservice.ErrInterestedTenantsForbidden):
-		c.JSON(http.StatusForbidden, gin.H{"error": "interested tenants are not available for this user"})
-	case errors.Is(err, applicationservice.ErrGroupNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
-	case errors.Is(err, applicationservice.ErrGroupApplicationForbidden):
-		c.JSON(http.StatusForbidden, gin.H{"error": "only the group creator can submit this request"})
-	case errors.Is(err, applicationservice.ErrGroupNotReady):
-		c.JSON(http.StatusConflict, gin.H{"error": "group is not fully accepted"})
-	case errors.Is(err, applicationservice.ErrGroupApartmentRequired):
-		c.JSON(http.StatusConflict, gin.H{"error": "group has no assigned apartment"})
-	case errors.Is(err, applicationservice.ErrOwnerApplicationNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
-	case errors.Is(err, applicationservice.ErrOwnerApplicationAlreadyHandled):
-		c.JSON(http.StatusConflict, gin.H{"error": "application is not pending owner review"})
-	case errors.Is(err, applicationservice.ErrOwnerApplicationConflict):
-		c.JSON(http.StatusConflict, gin.H{"error": "another group has already been accepted for this apartment"})
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	for _, mapping := range serviceErrorMappings {
+		if errors.Is(err, mapping.target) {
+			c.JSON(mapping.status, gin.H{"error": mapping.message})
+			return
+		}
 	}
+	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 }
 
 func ownerApplicationResponseFromDomain(item application.OwnerApplication) ownerApplicationResponse {

@@ -23,6 +23,9 @@ func (f *fakeMapRepo) ListOwnerApartments(ctx context.Context, ownerID string) (
 func (f *fakeMapRepo) ListAvailableApartments(ctx context.Context, filters apartment.ListApartmentsFilters) ([]apartment.Apartment, error) {
 	return nil, nil
 }
+func (f *fakeMapRepo) GetTenantClosedApartment(ctx context.Context, tenantID string) (*apartment.Apartment, error) {
+	return nil, nil
+}
 func (f *fakeMapRepo) ListApartmentsInRadius(ctx context.Context, lat, lng, radiusKm float64) ([]apartment.Apartment, error) {
 	return []apartment.Apartment{
 		{ID: "apt-1", Title: "Piso cerca", Latitude: lat + 0.001, Longitude: lng + 0.001, TotalSpots: 3, OccupiedSpots: 1},
@@ -36,6 +39,19 @@ func (f *fakeMapRepo) GetOwnerApartmentByID(ctx context.Context, ownerID, apartm
 	return nil, nil
 }
 func (f *fakeMapRepo) UpdateOwnerApartment(ctx context.Context, ownerID, apartmentID string, input apartment.CreateApartmentInput) (*apartment.Apartment, error) {
+	return nil, nil
+}
+func (f *fakeMapRepo) CloseApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	return true, nil
+}
+func (f *fakeMapRepo) ReopenApartment(ctx context.Context, ownerID, apartmentID string) (bool, error) {
+	return true, nil
+}
+func (f *fakeMapRepo) ListApartmentTenants(ctx context.Context, ownerID, apartmentID string) ([]apartment.Tenant, error) {
+	return nil, nil
+}
+
+func (f *fakeMapRepo) ListApartmentResidents(ctx context.Context, apartmentID string) ([]apartment.Tenant, error) {
 	return nil, nil
 }
 

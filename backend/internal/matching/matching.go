@@ -227,11 +227,8 @@ func boolPtrScore(allowed *bool, tenantValue bool) float64 {
 	if allowed == nil {
 		return -1
 	}
-	if *allowed == tenantValue {
+	if !tenantValue || *allowed == tenantValue {
 		return 100
-	}
-	if !tenantValue {
-		return 80
 	}
 	return 10
 }
