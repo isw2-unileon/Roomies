@@ -66,25 +66,31 @@ type apartmentRequestResponse struct {
 }
 
 type joinRequestResponse struct {
-	ID              string             `json:"id"`
-	GroupID         string             `json:"group_id"`
-	RequesterUserID string             `json:"requester_user_id"`
-	Source          string             `json:"source"`
-	Status          string             `json:"status"`
-	CreatedAt       string             `json:"created_at"`
-	UpdatedAt       string             `json:"updated_at"`
-	Requester       candidateResponse  `json:"requester"`
-	Votes           []joinVoteResponse `json:"votes"`
+	ID                     string             `json:"id"`
+	GroupID                string             `json:"group_id"`
+	RequesterUserID        string             `json:"requester_user_id"`
+	Source                 string             `json:"source"`
+	Status                 string             `json:"status"`
+	CreatedAt              string             `json:"created_at"`
+	UpdatedAt              string             `json:"updated_at"`
+	Requester              candidateResponse  `json:"requester"`
+	Votes                  []joinVoteResponse `json:"votes"`
+	ApprovalCount          int                `json:"approval_count"`
+	RequiredApprovals      int                `json:"required_approvals"`
+	HasCurrentUserApproved bool               `json:"has_current_user_approved"`
+	HasCurrentUserRejected bool               `json:"has_current_user_rejected"`
 }
 
 type currentJoinRequestResponse struct {
-	ID              string `json:"id"`
-	GroupID         string `json:"group_id"`
-	RequesterUserID string `json:"requester_user_id"`
-	Source          string `json:"source"`
-	Status          string `json:"status"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
+	ID                string `json:"id"`
+	GroupID           string `json:"group_id"`
+	RequesterUserID   string `json:"requester_user_id"`
+	Source            string `json:"source"`
+	Status            string `json:"status"`
+	CreatedAt         string `json:"created_at"`
+	UpdatedAt         string `json:"updated_at"`
+	ApprovalCount     int    `json:"approval_count"`
+	RequiredApprovals int    `json:"required_approvals"`
 }
 
 type joinVoteResponse struct {
@@ -619,13 +625,15 @@ func currentJoinRequestResponseFromDomain(item *group.UserJoinRequest) *currentJ
 	}
 
 	return &currentJoinRequestResponse{
-		ID:              item.ID,
-		GroupID:         item.GroupID,
-		RequesterUserID: item.RequesterUserID,
-		Source:          item.Source,
-		Status:          item.Status,
-		CreatedAt:       item.CreatedAt,
-		UpdatedAt:       item.UpdatedAt,
+		ID:                item.ID,
+		GroupID:           item.GroupID,
+		RequesterUserID:   item.RequesterUserID,
+		Source:            item.Source,
+		Status:            item.Status,
+		CreatedAt:         item.CreatedAt,
+		UpdatedAt:         item.UpdatedAt,
+		ApprovalCount:     item.ApprovalCount,
+		RequiredApprovals: item.RequiredApprovals,
 	}
 }
 
@@ -633,15 +641,19 @@ func joinRequestResponses(items []group.JoinRequest) []joinRequestResponse {
 	result := make([]joinRequestResponse, 0, len(items))
 	for _, item := range items {
 		result = append(result, joinRequestResponse{
-			ID:              item.ID,
-			GroupID:         item.GroupID,
-			RequesterUserID: item.RequesterUserID,
-			Source:          item.Source,
-			Status:          item.Status,
-			CreatedAt:       item.CreatedAt,
-			UpdatedAt:       item.UpdatedAt,
-			Requester:       candidateResponseFromDomain(item.Requester),
-			Votes:           joinVoteResponses(item.Votes),
+			ID:                     item.ID,
+			GroupID:                item.GroupID,
+			RequesterUserID:        item.RequesterUserID,
+			Source:                 item.Source,
+			Status:                 item.Status,
+			CreatedAt:              item.CreatedAt,
+			UpdatedAt:              item.UpdatedAt,
+			Requester:              candidateResponseFromDomain(item.Requester),
+			Votes:                  joinVoteResponses(item.Votes),
+			ApprovalCount:          item.ApprovalCount,
+			RequiredApprovals:      item.RequiredApprovals,
+			HasCurrentUserApproved: item.HasCurrentUserApproved,
+			HasCurrentUserRejected: item.HasCurrentUserRejected,
 		})
 	}
 	return result

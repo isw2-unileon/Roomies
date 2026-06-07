@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { getGroupBadges } from './groupBadges'
+import { getGroupBadges, getGroupRequestApprovalProgress } from './groupBadges'
 import type { TenantGroupListItem } from '@/types/tenant'
 
 function makeGroup(overrides: Partial<TenantGroupListItem> = {}): TenantGroupListItem {
@@ -57,6 +57,8 @@ describe('getGroupBadges', () => {
                 status: 'REJECTED',
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
+                approvalCount: 0,
+                requiredApprovals: 2,
             },
         }))
 
@@ -73,6 +75,8 @@ describe('getGroupBadges', () => {
                 status: 'PENDING',
                 createdAt: '2026-01-01T00:00:00.000Z',
                 updatedAt: '2026-01-01T00:00:00.000Z',
+                approvalCount: 1,
+                requiredApprovals: 2,
             },
         }))
 
@@ -92,5 +96,37 @@ describe('getGroupBadges', () => {
 
     test('does not show available or acceptance badges for viewers', () => {
         expect(getGroupBadges(makeGroup())).toEqual([])
+    })
+
+    test('returns approval progress for pending current user requests', () => {
+        expect(getGroupRequestApprovalProgress(makeGroup({
+            currentJoinRequest: {
+                id: 'request-1',
+                groupId: 'group-1',
+                requesterUserId: 'user-2',
+                source: 'DIRECT_REQUEST',
+                status: 'PENDING',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+                approvalCount: 1,
+                requiredApprovals: 2,
+            },
+        }))).toEqual({ approved: 1, total: 2 })
+    })
+
+    test('does not return approval progress for rejected requests', () => {
+        expect(getGroupRequestApprovalProgress(makeGroup({
+            currentJoinRequest: {
+                id: 'request-1',
+                groupId: 'group-1',
+                requesterUserId: 'user-2',
+                source: 'DIRECT_REQUEST',
+                status: 'REJECTED',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+                approvalCount: 1,
+                requiredApprovals: 2,
+            },
+        }))).toBeNull()
     })
 })

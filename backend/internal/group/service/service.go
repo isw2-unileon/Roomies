@@ -40,7 +40,7 @@ type repository interface {
 	HasPendingJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
 	HasRejectedJoinRequest(ctx context.Context, groupID, requesterUserID string) (bool, error)
 	CreateJoinRequest(ctx context.Context, groupID, requesterUserID, source string) (string, error)
-	ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error)
+	ListJoinRequests(ctx context.Context, groupID, currentUserID string) ([]group.JoinRequest, error)
 	CanUserReviewJoinRequests(ctx context.Context, groupID, userID string) (bool, error)
 	CanUserVoteJoinRequest(ctx context.Context, requestID, voterUserID string) (bool, error)
 	VoteJoinRequest(ctx context.Context, requestID, voterUserID, decision string) error
@@ -486,7 +486,7 @@ func (s *Service) ListJoinRequests(ctx context.Context, groupID, userID, role st
 		return nil, ErrForbidden
 	}
 
-	joinRequests, err := s.repo.ListJoinRequests(ctx, groupID)
+	joinRequests, err := s.repo.ListJoinRequests(ctx, groupID, userID)
 	if err != nil {
 		return nil, err
 	}

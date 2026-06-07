@@ -231,7 +231,26 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 				AND gjr.requester_user_id = $2
 			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
 			LIMIT 1
-		), '') AS current_join_request_updated_at
+		), '') AS current_join_request_updated_at,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = (
+				SELECT gjr.id
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $2
+				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+				LIMIT 1
+			)
+				AND gjrv.decision = 'APPROVE'
+		), 0)::int AS current_join_request_approval_count,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS current_join_request_required_approvals
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE g.id = $1`
@@ -259,7 +278,7 @@ func (r *Repository) GetTenantGroupByID(ctx context.Context, groupID, userID str
 	item.PendingInvitations = invitations
 
 	if item.UserRelation == group.UserRelationCreator || item.UserRelation == group.UserRelationMember {
-		joinRequests, joinErr := r.ListJoinRequests(ctx, groupID)
+		joinRequests, joinErr := r.ListJoinRequests(ctx, groupID, userID)
 		if joinErr != nil {
 			return nil, joinErr
 		}
@@ -799,7 +818,7 @@ func (r *Repository) CanUserReviewJoinRequests(ctx context.Context, groupID, use
 }
 
 // ListJoinRequests returns pending join requests and their votes.
-func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]group.JoinRequest, error) {
+func (r *Repository) ListJoinRequests(ctx context.Context, groupID, currentUserID string) ([]group.JoinRequest, error) {
 	const query = `SELECT
 		gjr.id::text,
 		gjr.group_id::text,
@@ -808,6 +827,32 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 		gjr.status,
 		TO_CHAR(gjr.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
 		TO_CHAR(gjr.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = gjr.id
+				AND gjrv.decision = 'APPROVE'
+		), 0)::int AS approval_count,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = gjr.group_id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS required_approvals,
+		EXISTS (
+			SELECT 1
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = gjr.id
+				AND gjrv.voter_user_id = $2
+				AND gjrv.decision = 'APPROVE'
+		) AS has_current_user_approved,
+		EXISTS (
+			SELECT 1
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = gjr.id
+				AND gjrv.voter_user_id = $2
+				AND gjrv.decision = 'REJECT'
+		) AS has_current_user_rejected,
 		u.id::text,
 		u.full_name,
 		u.email,
@@ -830,7 +875,7 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 		AND gjr.status = 'PENDING'
 	ORDER BY gjr.created_at DESC`
 
-	rows, err := r.db.Query(ctx, query, groupID)
+	rows, err := r.db.Query(ctx, query, groupID, currentUserID)
 	if err != nil {
 		return nil, fmt.Errorf("list join requests: %w", err)
 	}
@@ -847,6 +892,10 @@ func (r *Repository) ListJoinRequests(ctx context.Context, groupID string) ([]gr
 			&item.Status,
 			&item.CreatedAt,
 			&item.UpdatedAt,
+			&item.ApprovalCount,
+			&item.RequiredApprovals,
+			&item.HasCurrentUserApproved,
+			&item.HasCurrentUserRejected,
 		}, candidateProfileDests(&item.Requester)...)...); err != nil {
 			return nil, fmt.Errorf("scan join request: %w", err)
 		}
@@ -1578,7 +1627,26 @@ func buildListTenantGroupsQuery(userID string, filters group.ListGroupsFilters) 
 				AND gjr.requester_user_id = $1
 			ORDER BY gjr.created_at DESC, gjr.updated_at DESC
 			LIMIT 1
-		), '') AS current_join_request_updated_at
+		), '') AS current_join_request_updated_at,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_join_request_votes gjrv
+			WHERE gjrv.request_id = (
+				SELECT gjr.id
+				FROM public.group_join_requests gjr
+				WHERE gjr.group_id = g.id
+					AND gjr.requester_user_id = $1
+				ORDER BY gjr.created_at DESC, gjr.updated_at DESC
+				LIMIT 1
+			)
+				AND gjrv.decision = 'APPROVE'
+		), 0)::int AS current_join_request_approval_count,
+		COALESCE((
+			SELECT COUNT(*)
+			FROM public.group_members gm
+			WHERE gm.group_id = g.id
+				AND gm.status = 'ACCEPTED'
+		), 0)::int AS current_join_request_required_approvals
 	FROM public.groups g
 	LEFT JOIN public.apartments a ON a.id = g.apartment_id
 	WHERE TRUE`
@@ -1849,6 +1917,8 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 	var currentJoinRequestStatus string
 	var currentJoinRequestCreatedAt string
 	var currentJoinRequestUpdatedAt string
+	var currentJoinRequestApprovalCount int
+	var currentJoinRequestRequiredApprovals int
 
 	if err := row.Scan(
 		&item.ID,
@@ -1885,6 +1955,8 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 		&currentJoinRequestStatus,
 		&currentJoinRequestCreatedAt,
 		&currentJoinRequestUpdatedAt,
+		&currentJoinRequestApprovalCount,
+		&currentJoinRequestRequiredApprovals,
 	); err != nil {
 		return group.Group{}, fmt.Errorf("scan group summary: %w", err)
 	}
@@ -1914,13 +1986,15 @@ func scanGroupSummary(row groupScanner) (group.Group, error) {
 	}
 	if currentJoinRequestID != "" {
 		item.CurrentJoinRequest = &group.UserJoinRequest{
-			ID:              currentJoinRequestID,
-			GroupID:         currentJoinRequestGroupID,
-			RequesterUserID: currentJoinRequestRequesterUserID,
-			Source:          currentJoinRequestSource,
-			Status:          currentJoinRequestStatus,
-			CreatedAt:       currentJoinRequestCreatedAt,
-			UpdatedAt:       currentJoinRequestUpdatedAt,
+			ID:                currentJoinRequestID,
+			GroupID:           currentJoinRequestGroupID,
+			RequesterUserID:   currentJoinRequestRequesterUserID,
+			Source:            currentJoinRequestSource,
+			Status:            currentJoinRequestStatus,
+			CreatedAt:         currentJoinRequestCreatedAt,
+			UpdatedAt:         currentJoinRequestUpdatedAt,
+			ApprovalCount:     currentJoinRequestApprovalCount,
+			RequiredApprovals: currentJoinRequestRequiredApprovals,
 		}
 	}
 

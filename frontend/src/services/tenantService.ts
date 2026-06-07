@@ -220,6 +220,8 @@ interface TenantGroupCurrentJoinRequestDto {
 	status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
 	created_at: string
 	updated_at: string
+	approval_count?: number
+	required_approvals?: number
 }
 
 interface TenantGroupJoinVoteDto {
@@ -241,6 +243,10 @@ interface TenantGroupJoinRequestDto {
   updated_at: string
   requester: TenantGroupCandidateDto
   votes: TenantGroupJoinVoteDto[]
+  approval_count?: number
+  required_approvals?: number
+  has_current_user_approved?: boolean
+  has_current_user_rejected?: boolean
 }
 
 interface TenantGroupProfileDto {
@@ -528,6 +534,8 @@ function tenantGroupCurrentJoinRequestFromDto(dto: TenantGroupCurrentJoinRequest
 		status: dto.status,
 		createdAt: dto.created_at,
 		updatedAt: dto.updated_at,
+		approvalCount: dto.approval_count ?? 0,
+		requiredApprovals: dto.required_approvals ?? 0,
 	}
 }
 
@@ -631,6 +639,10 @@ function tenantGroupJoinRequestFromDto(dto: TenantGroupJoinRequestDto): TenantGr
     updatedAt: dto.updated_at,
     requester: tenantGroupCandidateFromDto(dto.requester),
     votes: (dto.votes ?? []).map(tenantGroupJoinVoteFromDto),
+    approvalCount: dto.approval_count ?? 0,
+    requiredApprovals: dto.required_approvals ?? 0,
+    hasCurrentUserApproved: dto.has_current_user_approved ?? false,
+    hasCurrentUserRejected: dto.has_current_user_rejected ?? false,
   }
 }
 
