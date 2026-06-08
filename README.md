@@ -174,7 +174,6 @@ Organized into domain packages following a service-repository-handler pattern:
 │   │   ├── apartment/              # Apartment CRUD, search, detail
 │   │   ├── application/            # Application lifecycle
 │   │   ├── auth/                   # Auth service + Supabase client
-│   │   ├── closure/                # (placeholder)
 │   │   ├── geocode/                # Reverse geocoding (Nominatim)
 │   │   ├── group/                  # Tenant groups, invitations, voting
 │   │   ├── httpserver/             # Gin router, middleware, CORS

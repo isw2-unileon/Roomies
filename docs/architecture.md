@@ -64,7 +64,7 @@ HTTP Request
 | `geocode`       | Reverse geocoding via Nominatim                          |
 | `httpserver`    | Gin router, CORS, auth middleware                        |
 | `platform`      | Config, database pool                                    |
-| `closure`       | (placeholder)                                            |
+
 
 ### Request Flow
 
