@@ -42,7 +42,7 @@ func NewService() *Service {
 		client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		userAgent: "RoomiesApp/1.0",
+		userAgent: "RoomiesApp/1.0 (+https://github.com/isw2-unileon/proyect-scaffolding)",
 	}
 }
 
