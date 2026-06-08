@@ -236,6 +236,26 @@ Organized into domain packages following a service-repository-handler pattern:
 
 ---
 
+## Documentation
+
+All project documentation is available in the [`docs/`](./docs) directory. Key documents:
+
+| Document | Description |
+| -------- | ----------- |
+| [Architecture](./docs/architecture.md) | System architecture overview, backend & frontend layers |
+| [API Reference](./docs/api-reference.md) | Complete API endpoint reference |
+| [Data Model](./docs/data-model.md) | Database schema and entity relationships |
+| [Frontend](./docs/frontend.md) | Frontend architecture, routing, and component tree |
+| [Backend (Go)](./docs/golang.md) | Backend structure, domain packages, and patterns |
+| [Compatibility Engine](./docs/compatibility-engine.md) | Matching algorithm and scoring logic |
+| [Deployment](./docs/deployment.md) | Deployment guide and configuration |
+| [Testing](./docs/testing.md) | Testing strategy and how to run tests |
+| [Getting Started](./docs/getting-started.md) | Quick start guide for new contributors |
+| [Monorepo Structure](./docs/monorepo.md) | Repository layout and conventions |
+| [Design Decisions](./docs/design-decisions.md) | Architecture Decision Records (ADRs) |
+
+---
+
 ## Prerequisites
 
 - [Go](https://go.dev/dl/) `1.24+`
