@@ -89,7 +89,7 @@ Each domain defines its **output ports (interfaces)** inside `service/service.go
 | `geocode`       | Reverse geocoding via Nominatim                          |
 | `httpserver`    | Gin router, CORS, auth middleware                        |
 | `platform`      | Config, database pool                                    |
-| `closure`       | (placeholder)                                            |
+
 
 ### Request Flow (Hexagonal)
 

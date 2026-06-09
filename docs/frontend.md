@@ -59,10 +59,6 @@ frontend/src/
 ├── lib/
 │   └── utils.ts             # Utility functions
 │
-├── mocks/                   # Mock data for tests
-│   ├── ownerData.ts
-│   └── tenantData.ts
-│
 ├── pages/
 │   ├── auth/                # LoginPage, RegisterPage, AuthCallbackPage, ResetPasswordPage
 │   ├── owner/               # OwnerDashboard, OwnerApplications, OwnerMessages, etc.
