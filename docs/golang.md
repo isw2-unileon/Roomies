@@ -2,63 +2,72 @@
 
 Guidelines and conventions used in the Roomies Go backend.
 
-## Domain Package Pattern
+## Hexagonal Architecture (Ports & Adapters)
 
-Every domain (`apartment`, `application`, `auth`, `group`, `message`, `matching`, `profile`, `geocode`) follows the same layered structure:
+Every domain (`apartment`, `application`, `auth`, `group`, `message`, `matching`, `profile`, `geocode`) follows a **hexagonal (ports & adapters)** structure:
 
 ```text
 internal/<domain>/
-├── <domain>.go            # Domain models, interfaces (repository, service)
+├── <domain>.go            # DOMAIN MODELS — pure Go structs, no external imports
 ├── service/
-│   └── <domain>.go        # Business logic
+│   └── <domain>.go        # USE CASES + OUTPUT PORTS (interfaces)
+│                           • repository interface
+│                           • identityProvider interface (auth)
+│                           • imageStorage interface (profile, group)
 ├── postgres/
-│   └── <domain>.go        # PostgreSQL repository implementation
+│   └── <domain>.go        # OUTPUT ADAPTER — PostgreSQL implementation
 └── httpadapter/
-    └── <domain>.go        # HTTP handlers (Gin)
+    └── <domain>.go        # INPUT ADAPTER — Gin HTTP handlers
 ```
 
-### Example: `internal/apartment/`
+### Example: `internal/profile/`
 
 ```
-internal/apartment/
-├── apartment.go           # Apartment struct, Repository interface, Service interface
+internal/profile/
+├── profile.go             # TenantProfileInput, OwnerProfile — pure structs
 ├── service/
-│   └── apartment.go       # ServiceImpl — business logic
+│   └── service.go         # Service + repository interface + imageStorage interface
 ├── postgres/
-│   └── apartment.go       # RepositoryImpl — SQL queries via pgx
+│   └── repository.go      # Output adapter: implements repository interface via pgx
 └── httpadapter/
-    └── apartment.go       # HTTP handlers — bindings, responses
+    └── handler.go         # Input adapter: Gin handlers, bindings, validation
 ```
 
-## Dependency Injection
+## Dependency Injection (Composition Root)
 
-All services are wired in `cmd/server/main.go`. Dependencies are passed explicitly through constructors:
+All services and adapters are wired in `cmd/server/main.go` — the **composition root**. Dependencies are passed explicitly through constructors:
 
 ```go
-// Typical constructor
-func NewService(repo Repository, matchingSvc matching.Service) Service {
-    return &serviceImpl{repo: repo, matchingSvc: matchingSvc}
-}
+// Output adapters created first (bottom-up)
+profileRepo := profilepostgres.NewRepository(database.DB)
+supabaseClient, _ := authsupabase.NewClient(url, key)
+
+// Core service receives interfaces (output ports)
+profileService := profileservice.NewService(profileRepo, storageClient)
+
+// Input adapter receives core service
+r := httpserver.NewRouter(cfg, authService, profileService, apartmentService, ...)
 ```
 
-## Interfaces at the Consumer
+## Output Ports (Interfaces) at the Consumer
 
-Interfaces are defined in the domain package where they are consumed, not where they are implemented:
+Output ports are defined as **interfaces in the `service/` package** where they are consumed, not where they are implemented:
 
 ```go
-// apartment/apartment.go
-type Repository interface {
-    FindByID(ctx context.Context, id uuid.UUID) (*Apartment, error)
-    Search(ctx context.Context, filter SearchFilter) ([]Apartment, error)
+// profile/service/service.go — output port definition
+type repository interface {
+    UpsertTenantProfile(ctx context.Context, userID string, input profile.TenantProfileInput) error
+    GetTenantProfileByUserID(ctx context.Context, userID string) (*profile.TenantProfileInput, error)
+    // ...
 }
 
-type Service interface {
-    GetByID(ctx context.Context, id uuid.UUID) (*ApartmentDetail, error)
-    Search(ctx context.Context, filter SearchFilter) ([]Apartment, error)
+type imageStorage interface {
+    UploadObject(ctx context.Context, bucket, objectPath, contentType string, fileData []byte) error
+    CreateSignedURL(ctx context.Context, bucket, path string, expiresIn int) (string, error)
 }
 ```
 
-The `postgres/` and `service/` packages implement these interfaces implicitly.
+The output adapters (`postgres/repository.go`, `supabase/client.go`) implement these interfaces implicitly. The core service never imports Gin, pgx, or any external framework — it only knows about its interfaces.
 
 ## Error Handling
 
@@ -70,10 +79,11 @@ The `postgres/` and `service/` packages implement these interfaces implicitly.
   ```go
   var ErrNotFound = errors.New("apartment not found")
   ```
-- HTTP adapters map domain errors to HTTP status codes:
+- Input adapters (httpadapter) map domain errors to HTTP status codes:
   ```go
-  if errors.Is(err, ErrNotFound) {
-      c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+  // The core returns sentinel errors, the input adapter translates them to HTTP
+  if errors.Is(err, apartmentservice.ErrApartmentNotFound) {
+      c.JSON(http.StatusNotFound, gin.H{"error": "apartment not found"})
       return
   }
   ```
@@ -103,15 +113,17 @@ userID := c.GetString("user_id")
   go test -v -race ./...
   ```
 
-## Key Dependencies
+## Key Dependencies (by layer)
 
-| Library       | Purpose                    |
-|---------------|----------------------------|
-| `gin`         | HTTP framework             |
-| `pgx`         | PostgreSQL driver/pool     |
-| `google/uuid` | UUID generation            |
-| `slog`        | Structured logging (std)   |
-| `golang-jwt`  | JWT token parsing          |
+| Library       | Layer/Adapter            | Purpose                    |
+|---------------|--------------------------|----------------------------|
+| `gin`         | Input adapter            | HTTP framework             |
+| `pgx`         | Output adapter (postgres)| PostgreSQL driver/pool     |
+| `google/uuid` | Domain/Across            | UUID generation            |
+| `slog`        | Cross-cutting            | Structured logging (std)   |
+| `golang-jwt`  | Input adapter            | JWT token parsing          |
+
+Note: the **core domain and service packages** import only the standard library and their own domain package. Framework dependencies are confined to adapters (input: `httpadapter/`, output: `postgres/`, `supabase/`).
 
 ## Further Reading
 

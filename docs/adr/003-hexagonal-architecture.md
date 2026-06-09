@@ -1,4 +1,4 @@
-# ADR-003: Domain-Driven Layered Architecture
+# ADR-003: Hexagonal Architecture (Ports & Adapters)
 
 ## Status
 

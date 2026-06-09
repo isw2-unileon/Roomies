@@ -18,37 +18,62 @@ Roomies is a full-stack web application with a **Go REST API** backend and a **R
                     └──────────────┘
 ```
 
-## Backend Architecture (Go)
+## Backend Architecture (Go) — Hexagonal (Ports & Adapters)
 
-### Layer Diagram
+The backend follows a **hexagonal architecture** (also known as ports and adapters). The core domain logic is completely isolated from external concerns (HTTP, database, third-party services). All dependencies point inward toward the domain.
+
+### Hexagonal Diagram
 
 ```text
-HTTP Request
-    │
-    ▼
-┌──────────────────────┐
-│   httpserver/        │  Gin router, CORS, middleware
-│   • router.go        │  Auth middleware, role guards
-│   • middleware.go    │
-└─────────┬────────────┘
-          │
-          ▼
-┌──────────────────────┐
-│   <domain>/          │  One package per domain
-│   httpadapter/       │  HTTP handlers (bind, validate, respond)
-│   ─────────────────  │
-│   service/           │  Business logic (use cases)
-│   ─────────────────  │
-│   postgres/          │  Repository — SQL via pgx
-└─────────┬────────────┘
-          │
-          ▼
-┌──────────────────────┐
-│   platform/          │  Cross-cutting
-│   • config/          │  Environment loading
-│   • database/        │  pgx connection pool
-└──────────────────────┘
+                     ┌──────────────────────────────────────────┐
+                     │              DOMAIN CORE                 │
+                     │  (pure Go structs, no external imports)  │
+                     │  auth.go · profile.go · apartment.go     │
+                     └──────────────────┬───────────────────────┘
+                                        │
+                     ┌──────────────────┴───────────────────────┐
+                     │           SERVICE (use cases)            │
+                     │  Defines OUTPUT PORTS (interfaces):      │
+                     │    type repository interface { ... }     │
+                     │    type identityProvider interface {...}  │
+                     │    type imageStorage interface { ... }    │
+                     └──────┬────────────────────────┬──────────┘
+                            │                        │
+              ┌─────────────┴──────┐    ┌────────────┴──────────────┐
+              │  INPUT ADAPTERS    │    │     OUTPUT ADAPTERS       │
+              │  (Driving/Left)    │    │     (Driven/Right)        │
+              │                    │    │                           │
+              │  httpadapter/      │    │  postgres/                │
+              │  Gin handlers      │    │  SQL via pgx              │
+              │  parse & validate  │    │                           │
+              │  JSON → call       │    │  supabase/                │
+              │  service           │    │  HTTP calls to Supabase   │
+              │                    │    │                           │
+              │  httpserver/       │    │  nominatim/               │
+              │  router, CORS,     │    │  OSM reverse geocoding    │
+              │  auth middleware   │    │                           │
+              └────────────────────┘    └───────────────────────────┘
+                                        │
+                              ┌─────────┴─────────┐
+                              │   CROSS-CUTTING   │
+                              │   platform/       │
+                              │   config, database│
+                              └───────────────────┘
 ```
+
+### Ports & Adapters Explained
+
+Each domain defines its **output ports (interfaces)** inside `service/service.go`. These interfaces are the contract that the core needs from the outside world:
+
+| Output Port (interface in service/)   | Input Adapter (driving)         | Output Adapter (driven)              |
+|---------------------------------------|---------------------------------|--------------------------------------|
+| `identityProvider` (auth)             | `auth/httpadapter/handler.go`   | `auth/supabase/client.go`            |
+| `repository` (profile)                | `profile/httpadapter/handler.go`| `profile/postgres/repository.go`     |
+| `repository` (apartment)              | `apartment/httpadapter/handler.go` | `apartment/postgres/repository.go` |
+| `imageStorage` (profile)              | —                               | `auth/supabase/client.go`            |
+| `repository` (message)                | `message/httpadapter/handler.go`| `message/postgres/repository.go`     |
+
+**Key rule:** The service layer never imports Gin, pgx, or any external framework. It only imports its own domain package and the standard library. This is what makes it hexagonal — the core has zero knowledge of the outside world.
 
 ### Domains
 
@@ -66,14 +91,37 @@ HTTP Request
 | `platform`      | Config, database pool                                    |
 | `closure`       | (placeholder)                                            |
 
-### Request Flow
+### Request Flow (Hexagonal)
 
 ```
-Client → httpserver (auth middleware) → httpadapter (parse + validate)
-        → service (business logic)    → postgres (SQL query)
-        → service (process result)    → httpadapter (serialize response)
-        → Client
+Client (Browser/React)
+  │
+  │  HTTP request
+  ▼
+httpserver (router + auth middleware)           ← infrastructure
+  │
+  ▼
+httpadapter (parse JSON, validate input)        ← INPUT ADAPTER (driving)
+  │
+  ▼
+service (business logic, use cases)             ← CORE (defines output ports)
+  │
+  ├──► supabase (identityProvider interface)    ← OUTPUT ADAPTER (driven)
+  │       POST /auth/v1/signup
+  │
+  └──► postgres (repository interface)          ← OUTPUT ADAPTER (driven)
+          INSERT INTO users ...
+  │
+  ◄── returns result
+  │
+  ▼
+httpadapter (serialize response, set cookies)   ← INPUT ADAPTER
+  │
+  ▼
+Client ◄───── JSON response + Set-Cookie headers
 ```
+
+The key insight: **the service never calls postgres or supabase directly**. It calls interfaces (`repository`, `identityProvider`, `imageStorage`). The concrete implementations are injected at startup in `main.go`.
 
 ### Auth Middleware
 

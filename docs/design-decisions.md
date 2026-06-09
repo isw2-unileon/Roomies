@@ -51,17 +51,19 @@ The application primarily uses CRUD operations with moderate join complexity. Th
 | **Privacy** | No data sent to Google — user location data stays under our control |
 | **Features** | Provides GL rendering, custom markers, and interactive controls comparable to commercial offerings |
 
-## Why a Layered Architecture (Domain/Service/Repository/Handler)?
+## Why a Hexagonal Architecture (Ports & Adapters)?
 
-See [ADR-003](adr/003-layered-architecture.md) for the full decision record.
+See [ADR-003](adr/003-hexagonal-architecture.md) for the full decision record.
 
-**Summary:** Each domain (`apartment`, `application`, etc.) follows a strict layering:
+**Summary:** Each domain (`apartment`, `application`, etc.) follows a hexagonal pattern with ports and adapters:
 
 ```text
-Domain models → Service (business logic) → Repository (data access) → HTTP handlers
+Input adapter (HTTP handler) → Service (use cases) → Output ports (interfaces)
+                                                         ↓
+                                              Output adapters (PostgreSQL, Supabase)
 ```
 
-This provides testability (mock repositories), separation of concerns, and a clear mental model for adding new features.
+The service layer defines interfaces (ports) and depends only on them — never on Gin, pgx, or external services directly. This provides testability, swappable adapters, and a core that is completely isolated from frameworks and infrastructure.
 
 ## Why React 19 + TypeScript + Vite?
 
@@ -92,6 +94,6 @@ The matching engine uses weighted scoring rather than boolean filters to:
 - [Compatibility engine](compatibility-engine.md)
 - [ADR-001: Monorepo structure](adr/001-monorepo-structure.md)
 - [ADR-002: Supabase Auth & Storage](adr/002-supabase-auth-storage.md)
-- [ADR-003: Layered architecture](adr/003-layered-architecture.md)
+- [ADR-003: Hexagonal architecture](adr/003-hexagonal-architecture.md)
 - [ADR-004: Compatibility engine](adr/004-compatibility-engine.md)
 - [ADR-005: Frontend framework](adr/005-frontend-framework.md)
